@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>APX GP War Room</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="status-HOLD">
+  <header class="header">
+    <div class="logo">
+      <img src="/static/apx_logo.svg" alt="APX GP Logo" />
+      <div><div class="name">War Room</div><div class="name">Endurance Control</div></div>
+    </div>
+    <div class="raceTitle">
+      <h1 id="teamName">APX GP</h1>
+      <div class="sub">13H Endurance · Alcanede · Strategy Command</div>
+    </div>
+    <div class="clockBlock">
+      <div class="clock" id="raceElapsed">00:00</div>
+      <div class="phase">Phase <span id="phase">EARLY</span> · Source <span id="sourceStatus">BOOT</span></div>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="panel main">
+      <div class="kpis">
+        <div class="kpi big"><div class="label">Position</div><div class="value" id="position">P--</div><div class="small">Gap front: <span id="gapFront">--</span></div></div>
+        <div class="kpi"><div class="label">Driver</div><div class="value" id="driver">--</div><div class="small">Stint <span id="stint">00:00</span></div></div>
+        <div class="kpi"><div class="label">AVG5 Pace</div><div class="value" id="avg5">--</div><div class="small">Trend <span id="trend" class="trendStable">→</span></div></div>
+      </div>
+      <div class="driverBox">
+        <div class="metric"><div class="label">Last Lap</div><div class="value" id="lastLap">--</div></div>
+        <div class="metric"><div class="label">Best Lap</div><div class="value" id="bestLap">--</div></div>
+        <div class="metric"><div class="label">Kart Rating</div><div class="value" id="kartRating">MEDIUM</div></div>
+        <div class="metric"><div class="label">AVG3</div><div class="value small" id="avg3">--</div></div>
+        <div class="metric"><div class="label">AVG10</div><div class="value small" id="avg10">--</div></div>
+        <div class="metric"><div class="label">Gap Back</div><div class="value small" id="gapBack">--</div></div>
+        <div class="metric"><div class="label">Pit Plan</div><div class="value small" id="pitPlan">0/23</div></div>
+        <div class="metric"><div class="label">Expected Pits</div><div class="value small" id="expectedPits">0.0</div></div>
+        <div class="metric"><div class="label">Race Remaining</div><div class="value small" id="raceRemaining">13:00:00</div></div>
+      </div>
+    </section>
+
+    <section class="panel strategy">
+      <div class="status"><div class="headline" id="headline">HOLD</div><div class="reason" id="reason">Waiting for data.</div></div>
+      <div class="pillGrid">
+        <div class="pill"><div class="label">Box Window</div><div class="value" id="boxWindow">--</div></div>
+        <div class="pill"><div class="label">Undercut</div><div class="value" id="undercut">--</div></div>
+        <div class="pill"><div class="label">Risk</div><div class="value" id="risk">--</div></div>
+        <div class="pill"><div class="label">Next Driver</div><div class="value" id="recommendedDriver">--</div></div>
+        <div class="pill"><div class="label">Stint Left</div><div class="value" id="stintRemaining">45:00</div></div>
+      </div>
+      <div class="commands" id="commands"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panelTitle"><span>Live Cameras</span><b>Box first</b></div>
+      <div class="cams"><div class="cam" id="cam1"></div><div class="cam" id="cam2"></div></div>
+    </section>
+
+    <section class="bottom">
+      <div class="panel">
+        <div class="panelTitle"><span>Top Table</span><b>Timing Intelligence</b></div>
+        <div class="tableWrap">
+          <table><thead><tr><th>Pos</th><th>Team</th><th>Last</th><th>AVG5</th><th>Trend</th><th>Best</th><th>Pits</th><th>Gap</th></tr></thead><tbody id="topTable"></tbody></table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panelTitle"><span>APX Lap Trace / Events</span><b>Live</b></div>
+        <div style="height:48%;padding:10px"><canvas id="lapCanvas" style="width:100%;height:100%"></canvas></div>
+        <div class="events" id="events" style="height:calc(52% - 38px)"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="manualBar">
+    <select id="manualDriver"><option>Emil</option><option>Arthur</option><option>Gustavo</option><option>Semi-Gel</option></select>
+    <select id="manualKart"><option value="">Kart?</option><option value="GOOD">GOOD</option><option value="MEDIUM">MEDIUM</option><option value="BAD">BAD</option></select>
+    <select id="manualBox"><option>UNKNOWN</option><option>EMPTY</option><option>MEDIUM</option><option>FULL</option></select>
+    <label style="font-size:12px;color:var(--muted)"><input type="checkbox" id="resetStint"/> Reset Stint</label>
+    <button onclick="manualUpdate()">UPDATE</button>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

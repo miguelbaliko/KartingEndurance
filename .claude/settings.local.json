@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://live.apex-timing.com/kartevora/../commonv2/javascript/javascript_live_timing.min.js\")",
+      "Bash(curl -s \"https://live.apex-timing.com/gokarts/functions/request_live_timing.php\")",
+      "Bash(curl -s \"https://live.apex-timing.com/gokarts/functions/request_live_timing.php\" -X POST)",
+      "Bash(curl -s \"https://live.apex-timing.com/kartevora/javascript/config.js\")",
+      "Bash(curl -s \"https://live.apex-timing.com/kartevora/\")",
+      "WebFetch(domain:live.apex-timing.com)",
+      "Bash(curl -s \"https://live.apex-timing.com/kartalcanede/\")",
+      "Bash(curl -s \"https://live.apex-timing.com/kartalcanede/javascript/config.js\")",
+      "Bash(curl -s \"https://live.apex-timing.com/kartalcanede/../commonv2/javascript/javascript_live_timing.min.js?cache_version=09_07_2020__13_41\")",
+      "Bash(grep -oP '\\(wss?://[^\"'\\\\''\\\\\\\\s]+|configHost[^=]*=[^;]+\\)')",
+      "Bash(pip install *)",
+      "Bash(python manage.py makemigrations)",
+      "Bash(python manage.py migrate)",
+      "Bash(python manage.py setup_race)",
+      "Bash(python manage.py check)",
+      "Bash(grep -oE \".{0,200}WebSocket.{0,200}\")"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="160" viewBox="0 0 520 160" role="img" aria-label="APX GP">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#f6c500"/>
+      <stop offset="1" stop-color="#fff2a0"/>
+    </linearGradient>
+  </defs>
+  <rect width="520" height="160" rx="18" fill="#060708"/>
+  <path d="M24 118 L72 40 H106 L154 118 H118 L108 100 H68 L58 118 Z M80 76 H96 L88 61 Z" fill="url(#g)"/>
+  <path d="M168 42 H234 C266 42 282 57 282 80 C282 103 266 118 234 118 H202 V96 H230 C241 96 247 90 247 80 C247 70 241 64 230 64 H202 V118 H168 Z" fill="#ffffff"/>
+  <path d="M298 42 H338 L363 73 L388 42 H429 L385 94 L427 118 H387 L363 96 L339 118 H298 L340 94 Z" fill="#ffffff"/>
+  <text x="438" y="118" font-family="Arial Black, Impact, sans-serif" font-size="54" fill="#f6c500">GP</text>
+  <rect x="24" y="132" width="472" height="5" rx="2" fill="#f6c500"/>
+</svg>

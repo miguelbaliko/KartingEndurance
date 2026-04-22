@@ -1,0 +1,4 @@
+Django>=4.2,<5.0
+channels>=4.0
+daphne>=4.0
+websocket-client>=1.6.0

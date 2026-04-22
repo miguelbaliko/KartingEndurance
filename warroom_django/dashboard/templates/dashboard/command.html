@@ -1,0 +1,126 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Command — APX GP War Room{% endblock %}
+
+{% block content %}
+<div class="grid-command">
+
+  <!-- ── DECISION ─────────────────────────────────────── -->
+  <section class="panel panel-decision" id="panel-decision">
+    <div class="panel-label">STRATEGY</div>
+    <div class="decision-word state-HOLD" id="decision-badge">HOLD</div>
+    <div class="decision-window" id="decision-window">WAIT</div>
+
+    <div class="decision-pills">
+      <span class="dpill" id="pill-risk">LOW</span>
+      <span class="dpill" id="decision-undercut">NO</span>
+    </div>
+
+    <div class="decision-commands" id="decision-commands"></div>
+
+    <div class="decision-footer">
+      <div class="footer-item">
+        <span class="footer-label">Next Driver</span>
+        <span class="footer-val" id="next-driver">—</span>
+      </div>
+      <div class="footer-item">
+        <span class="footer-label">Kart</span>
+        <span class="kart-pill kart-AUTO" id="kart-badge">AUTO</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── STINT ─────────────────────────────────────────── -->
+  <section class="panel panel-stint">
+    <div class="panel-label">STINT TIMER</div>
+    <div class="big-timer" id="stint-elapsed">00:00</div>
+    <div class="timer-caption">of 45:00 max</div>
+    <div class="progress-track">
+      <div class="progress-fill fill-ok" id="stint-bar"></div>
+    </div>
+    <div class="panel-meta">
+      <div class="meta-item">
+        <span class="meta-label">Remaining</span>
+        <span class="meta-val" id="stint-remaining">45:00</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Driver</span>
+        <span class="meta-val" id="current-driver">—</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── RACE CLOCK ─────────────────────────────────────── -->
+  <section class="panel panel-race">
+    <div class="panel-label">RACE CLOCK</div>
+    <div class="big-timer" id="race-remaining">—</div>
+    <div class="timer-caption" id="race-elapsed-label">elapsed —</div>
+    <div class="progress-track">
+      <div class="progress-fill fill-race" id="race-bar"></div>
+    </div>
+    <div class="panel-meta">
+      <div class="meta-item">
+        <span class="meta-label">Pits Done</span>
+        <span class="meta-val" id="actual-pits">0</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Expected</span>
+        <span class="meta-val" id="expected-pits">—</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Plan</span>
+        <span class="meta-val" id="pit-plan">—</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PACE ───────────────────────────────────────────── -->
+  <section class="panel panel-pace">
+    <div class="panel-label">PACE</div>
+    <div class="pace-rows">
+      <div class="pace-row">
+        <span class="pace-lbl">AVG 3</span>
+        <span class="pace-val" id="avg3-val">—</span>
+      </div>
+      <div class="pace-row">
+        <span class="pace-lbl">AVG 5</span>
+        <span class="pace-val" id="avg5-val">—</span>
+      </div>
+      <div class="pace-row">
+        <span class="pace-lbl">DROP</span>
+        <span class="pace-val pace-ok" id="pace-drop-val">—</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── LIVE TIMING ────────────────────────────────────── -->
+  <section class="panel panel-timing">
+    <div class="panel-label">LIVE TIMING</div>
+    <table class="timing-table">
+      <thead>
+        <tr>
+          <th>P</th>
+          <th>#</th>
+          <th>TEAM</th>
+          <th>LAST LAP</th>
+          <th>BEST</th>
+          <th>LAPS</th>
+          <th>PITS</th>
+          <th>GAP</th>
+        </tr>
+      </thead>
+      <tbody id="timing-tbody"></tbody>
+    </table>
+  </section>
+
+  <!-- ── EVENTS ─────────────────────────────────────────── -->
+  <section class="panel panel-events">
+    <div class="panel-label">EVENT LOG</div>
+    <div class="events-log" id="events-log"></div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>startPolling('/api/state/', renderCommand, 2000);</script>
+{% endblock %}
