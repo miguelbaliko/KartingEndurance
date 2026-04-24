@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>War Room</title>
+<style>
+/* ── Tokens ───────────────────────────────────────────────── */
+:root{
+  --bg0:#07080d;
+  --bg1:#0d0f18;
+  --bg2:#131620;
+  --bg3:#1a1e2c;
+  --bg4:#222840;
+  --line:#1e2236;
+  --line2:#272d44;
+  --tx:  #d8deef;
+  --tx2: #8892b0;
+  --tx3: #4a5270;
+  --blue:#4f91ff;
+  --cyan:#00d4ff;
+  --grn: #00e676;
+  --ylw: #ffd740;
+  --org: #ff9100;
+  --red: #ff3d3d;
+  --r:5px;
+  --mono:'Courier New',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg0);color:var(--tx);
+  font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;overflow:hidden}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+
+/* ═══════════════════════════════════ LAYOUT ══ */
+#app{display:flex;flex-direction:column;height:100vh}
+
+/* ── Topbar ── */
+#topbar{
+  display:flex;align-items:center;gap:0;
+  height:52px;background:var(--bg1);
+  border-bottom:1px solid var(--line);
+  flex-shrink:0;padding:0 16px;
+}
+.tb-brand{
+  font-size:12px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--tx2);margin-right:20px;
+}
+.tb-brand span{color:var(--cyan)}
+.tb-clock{
+  font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;
+  letter-spacing:-.01em;color:var(--tx);min-width:100px;
+}
+.tb-clock.low{color:var(--ylw)}
+.tb-clock.crit{color:var(--red)}
+.tb-sep{width:1px;height:22px;background:var(--line2);margin:0 14px}
+#status-badge{
+  font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 10px;border-radius:99px;
+}
+.s-idle   {background:var(--bg4);color:var(--tx3)}
+.s-racing {background:#0a2a18;color:var(--grn);border:1px solid #1a5030}
+.s-pitting{background:#2a1a00;color:var(--org);border:1px solid #5a3800;animation:tb-blink 1s infinite}
+@keyframes tb-blink{0%,100%{opacity:1}50%{opacity:.6}}
+.tb-apex{
+  display:flex;align-items:center;gap:6px;
+  font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--tx3);
+  margin-left:14px;
+}
+.apex-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.apex-ok {background:var(--grn);box-shadow:0 0 8px var(--grn)}
+.apex-err{background:var(--tx3)}
+.tb-space{flex:1}
+.tb-btn{
+  padding:5px 13px;background:var(--bg3);border:1px solid var(--line2);
+  border-radius:var(--r);color:var(--tx);font-size:11px;font-weight:600;
+  letter-spacing:.04em;cursor:pointer;margin-left:6px;white-space:nowrap;
+  transition:background .15s;
+}
+.tb-btn:hover{background:var(--bg4)}
+.tb-btn.go   {border-color:var(--grn);color:var(--grn)}
+.tb-btn.go:hover{background:#0a2a18}
+.tb-btn.warn {border-color:var(--red);color:var(--red)}
+.tb-btn.warn:hover{background:#2a0a0a}
+
+/* ── Main split ── */
+#main{display:flex;flex:1;overflow:hidden;gap:0}
+
+/* ── Left: timing ── */
+#left{
+  flex:1;overflow-y:auto;padding:14px 14px 14px 14px;
+  border-right:1px solid var(--line);
+}
+.panel-hd{
+  display:flex;align-items:baseline;gap:10px;margin-bottom:10px;
+}
+.panel-hd h2{
+  font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--tx3);
+}
+.panel-hd .avg-chip{
+  font-size:11px;color:var(--tx2);
+}
+.panel-hd .avg-chip b{color:var(--cyan);font-variant-numeric:tabular-nums}
+
+/* Timing table */
+.t-table{width:100%;border-collapse:collapse}
+.t-table thead th{
+  padding:6px 8px;font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--tx3);border-bottom:1px solid var(--line2);
+  text-align:left;white-space:nowrap;
+}
+.t-table thead th.r{text-align:right}
+.t-table tbody tr{border-bottom:1px solid #0f1118;transition:background .1s}
+.t-table tbody tr:hover{background:var(--bg3)}
+.t-table tbody tr.mine{background:#0c1428}
+.t-table tbody tr.mine:hover{background:#111d38}
+.t-table tbody tr.mine td{color:var(--blue)}
+td{padding:7px 8px;white-space:nowrap}
+.td-pos{width:32px;text-align:center;font-size:13px;font-weight:800;color:var(--tx3)}
+.td-pos.top1{color:#ffd700}
+.td-pos.top3{color:var(--tx2)}
+.td-mine{color:var(--cyan)!important;font-weight:800}
+.td-team{max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.td-lap{font-family:var(--mono);font-size:12px}
+.td-avg{font-family:var(--mono);font-size:12px;font-weight:700}
+.td-dim{color:var(--tx3);font-family:var(--mono);font-size:12px}
+.td-muted{color:var(--tx3)}
+.td-r{text-align:right}
+
+/* ── Right panel ── */
+#right{
+  width:340px;flex-shrink:0;overflow-y:auto;
+  padding:10px;display:flex;flex-direction:column;gap:8px;
+}
+
+/* Card */
+.card{
+  background:var(--bg2);border:1px solid var(--line);
+  border-radius:var(--r);padding:12px 14px;
+}
+.card-hd{
+  font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--tx3);margin-bottom:10px;
+}
+
+/* ── My Team ── */
+.mt-grid{display:flex;gap:12px;align-items:flex-start}
+.mt-pos-box{
+  display:flex;flex-direction:column;align-items:center;
+  background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);
+  padding:8px 14px;min-width:60px;flex-shrink:0;
+}
+.mt-pos-num{font-size:34px;font-weight:900;color:var(--cyan);line-height:1;font-variant-numeric:tabular-nums}
+.mt-pos-label{font-size:9px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.mt-info{flex:1;min-width:0}
+.mt-driver{font-size:18px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mt-driver.none{color:var(--tx3);font-size:14px}
+.mt-kart{font-size:11px;color:var(--tx2);margin-top:3px}
+.mt-avg-row{display:flex;gap:12px;margin-top:6px}
+.mt-stat{display:flex;flex-direction:column}
+.mt-stat-val{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+.mt-stat-lbl{font-size:9px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
+
+/* Stint bar */
+.stint-bar-wrap{margin-top:10px}
+.stint-bar-track{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.stint-bar-fill{height:100%;border-radius:3px;transition:width .5s linear,background .3s}
+.stint-bar-fill.ok  {background:var(--grn)}
+.stint-bar-fill.warn{background:var(--ylw)}
+.stint-bar-fill.crit{background:var(--red);animation:crit-pulse .6s ease-in-out infinite}
+@keyframes crit-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.stint-bar-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-top:4px;font-variant-numeric:tabular-nums}
+.stint-bar-meta b{color:var(--tx2)}
+
+/* Driver select (in my team card) */
+.drv-select-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-top:12px;margin-bottom:6px}
+.drv-select-grid{display:flex;flex-wrap:wrap;gap:5px}
+.drv-sel-btn{
+  padding:5px 11px;background:var(--bg3);border:1px solid var(--line2);
+  border-radius:var(--r);color:var(--tx2);font-size:12px;font-weight:500;
+  cursor:pointer;transition:all .15s;
+}
+.drv-sel-btn:hover{border-color:var(--blue);color:var(--blue)}
+.drv-sel-btn.active{
+  background:#0e1e3a;border-color:var(--blue);
+  color:var(--cyan);font-weight:700;
+}
+
+/* ── Strategy ── */
+.dec-box{
+  text-align:center;padding:14px 10px;border-radius:var(--r);
+  margin-bottom:8px;border:1px solid transparent;
+  transition:background .3s,border-color .3s;
+}
+.dec-label{
+  font-size:28px;font-weight:900;letter-spacing:.06em;
+  line-height:1;
+}
+.dec-detail{font-size:11px;margin-top:6px;opacity:.8}
+.dec-hold   {background:#08200f;border-color:#1a4a28}
+.dec-hold   .dec-label{color:var(--grn)}
+.dec-prepare{background:#221900;border-color:#4a3800}
+.dec-prepare .dec-label{color:var(--ylw)}
+.dec-box    {background:#200808;border-color:#4a1010;animation:dec-pulse .7s ease-in-out infinite}
+.dec-box    .dec-label{color:var(--red)}
+@keyframes dec-pulse{0%,100%{opacity:1}50%{opacity:.75}}
+.pits-row{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.pits-row .lbl{color:var(--tx3)}
+.pits-val{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.pits-val span{color:var(--tx3);font-size:11px;font-weight:400}
+
+/* ── Pit stop ── */
+.pit-box-btn{
+  width:100%;padding:13px;background:var(--red);border:none;
+  border-radius:var(--r);color:#fff;font-size:15px;font-weight:900;
+  letter-spacing:.08em;cursor:pointer;text-transform:uppercase;
+  transition:background .15s;
+}
+.pit-box-btn:hover{background:#cc2020}
+.pit-offset-row{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px}
+.pit-offset-lbl{font-size:10px;color:var(--tx3)}
+.pit-offset-inp{
+  width:50px;background:var(--bg3);border:1px solid var(--line2);
+  border-radius:var(--r);color:var(--tx);padding:4px 7px;
+  font-size:12px;text-align:center;font-variant-numeric:tabular-nums;
+}
+.pit-offset-inp:focus{outline:none;border-color:var(--blue)}
+
+/* Pit active */
+.pit-clock-wrap{text-align:center;padding:8px 0 4px}
+.pit-clock{
+  font-size:64px;font-weight:900;font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em;line-height:1;
+  transition:color .3s;
+  font-family:var(--mono);
+}
+.pit-wait {color:var(--org)}
+.pit-ready{color:var(--grn)}
+.pit-ok-tag{
+  display:inline-block;background:#0a2a18;border:1px solid #1a5030;
+  color:var(--grn);font-size:10px;font-weight:700;letter-spacing:.1em;
+  padding:3px 10px;border-radius:99px;margin-top:6px;
+}
+.pit-drv-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin:10px 0 6px}
+.pit-confirm-btn{
+  width:100%;padding:10px;background:#0a2a18;border:1px solid var(--grn);
+  border-radius:var(--r);color:var(--grn);font-size:13px;font-weight:700;
+  cursor:pointer;margin-top:8px;transition:background .15s;
+}
+.pit-confirm-btn:hover{background:#0d3a20}
+
+/* ── Drivers ── */
+.drv-rows{margin-bottom:8px}
+.drv-row{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--line)}
+.drv-row:last-child{border-bottom:none}
+.drv-name{flex:1;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drv-name.cur{color:var(--cyan);font-weight:700}
+.drv-time{
+  font-size:12px;color:var(--tx2);font-variant-numeric:tabular-nums;
+  font-family:var(--mono);min-width:60px;text-align:right;
+}
+.drv-time.zero{color:var(--tx3)}
+.i-btn{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:2px 5px;line-height:1;flex-shrink:0;border-radius:3px}
+.i-btn:hover{color:var(--tx);background:var(--bg4)}
+.i-btn.del:hover{color:var(--red)}
+.drv-edit-wrap{display:none;align-items:center;gap:5px;flex:1;min-width:0}
+.drv-edit-inp{
+  flex:1;min-width:0;background:var(--bg3);border:1px solid var(--cyan);
+  border-radius:var(--r);color:var(--tx);padding:4px 8px;font-size:12px;
+}
+.drv-edit-inp:focus{outline:none}
+.add-row{display:flex;gap:6px}
+.add-inp{
+  flex:1;background:var(--bg3);border:1px solid var(--line2);
+  border-radius:var(--r);color:var(--tx);padding:7px 10px;font-size:12px;
+}
+.add-inp:focus{outline:none;border-color:var(--blue)}
+.add-inp::placeholder{color:var(--tx3)}
+.add-btn{
+  padding:7px 14px;background:var(--blue);border:none;
+  border-radius:var(--r);color:#fff;font-size:11px;font-weight:700;cursor:pointer;
+  white-space:nowrap;
+}
+.add-btn:hover{opacity:.85}
+
+/* ── Pit log ── */
+.log-empty{font-size:11px;color:var(--tx3);padding:2px 0}
+.log-row{
+  display:grid;
+  grid-template-columns:26px 1fr auto auto;
+  gap:0 8px;padding:6px 0;
+  border-bottom:1px solid var(--line);font-size:12px;align-items:center;
+}
+.log-row:last-child{border-bottom:none}
+.log-n{color:var(--tx3);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.log-driver{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-dur{font-family:var(--mono);font-weight:700;color:var(--grn);text-align:right;font-variant-numeric:tabular-nums}
+.log-time{font-size:10px;color:var(--tx3);font-family:var(--mono);text-align:right}
+
+/* ── Settings overlay ── */
+#overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);
+  z-index:500;align-items:center;justify-content:center;
+}
+#overlay.open{display:flex}
+.cfg-card{
+  background:var(--bg2);border:1px solid var(--line2);
+  border-radius:10px;padding:24px;width:440px;max-width:96vw;
+}
+.cfg-card h3{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--tx)}
+.cfg-lbl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.cfg-inp{
+  width:100%;background:var(--bg3);border:1px solid var(--line2);
+  border-radius:var(--r);color:var(--tx);padding:8px 12px;font-size:12px;margin-bottom:14px;
+}
+.cfg-inp:focus{outline:none;border-color:var(--blue)}
+.cfg-row{display:flex;gap:10px}
+.cfg-row>div{flex:1}
+.cfg-actions{display:flex;gap:8px;justify-content:flex-end}
+.cfg-save{padding:8px 18px;background:var(--blue);border:none;border-radius:var(--r);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.cfg-cancel{padding:8px 18px;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);color:var(--tx);font-size:12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ TOPBAR ═════════════════════════════════════════════ -->
+  <div id="topbar">
+    <div class="tb-brand">⚑ <span>War Room</span></div>
+    <span id="race-remaining" class="tb-clock">--:--:--</span>
+    <div class="tb-sep"></div>
+    <span id="status-badge" class="s-idle">IDLE</span>
+    <div class="tb-apex">
+      <div id="apex-dot" class="apex-dot apex-err"></div>
+      <span id="apex-label">NO SIGNAL</span>
+    </div>
+    <div class="tb-space"></div>
+    <button class="tb-btn go"  onclick="api('race/start')">START RACE</button>
+    <button class="tb-btn"     onclick="api('race/stop')">STOP</button>
+    <button class="tb-btn warn" onclick="api('race/reset')">RESET</button>
+    <button class="tb-btn"     onclick="openCfg()">⚙</button>
+  </div>
+
+  <!-- ═══ MAIN ═══════════════════════════════════════════════ -->
+  <div id="main">
+
+    <!-- Left: Live Timing -->
+    <div id="left">
+      <div class="panel-hd">
+        <h2>Live Timing</h2>
+        <div class="avg-chip">Track avg (all) <b id="track-avg">–</b></div>
+      </div>
+      <table class="t-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th>Kart</th>
+            <th>Team</th>
+            <th class="r">Last Lap</th>
+            <th class="r">Avg 5</th>
+            <th class="r">Avg 10</th>
+            <th class="r">Best</th>
+            <th class="r">Laps</th>
+            <th class="r">Pits</th>
+            <th class="r">Gap</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
+            Waiting for Apex Timing data — set URL in ⚙ Settings
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Right panel -->
+    <div id="right">
+
+      <!-- MY TEAM -->
+      <div class="card">
+        <div class="card-hd">My Team</div>
+        <div id="my-team-body">
+          <div style="color:var(--tx3);font-size:11px">Set team name in ⚙, then select a driver below.</div>
+        </div>
+      </div>
+
+      <!-- STRATEGY -->
+      <div class="card">
+        <div class="card-hd">Strategy</div>
+        <div id="dec-box" class="dec-box dec-hold">
+          <div id="dec-label" class="dec-label">HOLD</div>
+          <div id="dec-detail" class="dec-detail">–</div>
+        </div>
+        <div class="pits-row">
+          <span class="lbl">Pit stops</span>
+          <span class="pits-val" id="pits-val">0 <span>/ 23</span></span>
+        </div>
+      </div>
+
+      <!-- PIT STOP -->
+      <div class="card">
+        <div class="card-hd">Pit Stop</div>
+
+        <!-- Racing mode -->
+        <div id="pit-racing">
+          <button class="pit-box-btn" onclick="boxNow()">▼ BOX NOW</button>
+          <div class="pit-offset-row">
+            <span class="pit-offset-lbl">Entered pit</span>
+            <input id="box-offset" class="pit-offset-inp" placeholder="0:00" maxlength="5">
+            <span class="pit-offset-lbl">ago (mm:ss)</span>
+          </div>
+        </div>
+
+        <!-- Pitting mode -->
+        <div id="pit-pitting" style="display:none">
+          <div class="pit-clock-wrap">
+            <div id="pit-clock" class="pit-clock pit-wait">3:00</div>
+            <div id="pit-ok" style="display:none">
+              <span class="pit-ok-tag">✓ MIN TIME MET</span>
+            </div>
+          </div>
+          <div class="pit-drv-label">Driver going in</div>
+          <div id="pit-drv-select" class="drv-select-grid"></div>
+          <button class="pit-confirm-btn" id="btn-confirm" onclick="confirmPit()">
+            ▶ CONFIRM &amp; START STINT
+          </button>
+        </div>
+      </div>
+
+      <!-- DRIVERS -->
+      <div class="card">
+        <div class="card-hd">Drivers &amp; Time Driven</div>
+        <div class="drv-rows" id="drivers-list"></div>
+        <div class="add-row">
+          <input id="add-name" class="add-inp" placeholder="New driver…"
+                 onkeydown="if(event.key==='Enter')addDriver()">
+          <button class="add-btn" onclick="addDriver()">+ Add</button>
+        </div>
+      </div>
+
+      <!-- PIT LOG -->
+      <div class="card">
+        <div class="card-hd">Pit Stop Log</div>
+        <div id="pit-log"></div>
+      </div>
+
+    </div><!-- /right -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Settings overlay -->
+<div id="overlay">
+  <div class="cfg-card">
+    <h3>⚙ Settings</h3>
+    <div class="cfg-lbl">Apex Timing URL</div>
+    <input id="cfg-url"   class="cfg-inp" placeholder="https://live.apex-timing.com/…">
+    <div class="cfg-lbl">My Team Name (must match Apex exactly)</div>
+    <input id="cfg-team"  class="cfg-inp" placeholder="APX GP">
+    <div class="cfg-row">
+      <div>
+        <div class="cfg-lbl">Race duration (min)</div>
+        <input id="cfg-dur"   class="cfg-inp" type="number" placeholder="780">
+      </div>
+      <div>
+        <div class="cfg-lbl">Mandatory pits</div>
+        <input id="cfg-pits"  class="cfg-inp" type="number" placeholder="23">
+      </div>
+      <div>
+        <div class="cfg-lbl">Max stint (min)</div>
+        <input id="cfg-stint" class="cfg-inp" type="number" placeholder="45">
+      </div>
+    </div>
+    <div class="cfg-actions">
+      <button class="cfg-cancel" onclick="closeCfg()">Cancel</button>
+      <button class="cfg-save"   onclick="saveCfg()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ State ═════════════════════════════════════════════════════
+let S             = null;
+let pitDriverId   = null;
+let _autoPitFired = false;
+
+// ═══ SSE ═══════════════════════════════════════════════════════
+const es = new EventSource('/stream');
+es.onmessage = e => { S = JSON.parse(e.data); render(S); };
+es.onerror   = () => {};
+
+// ═══ API ═══════════════════════════════════════════════════════
+async function api(path, body) {
+  const o = body
+    ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}
+    : {method:'POST'};
+  return (await fetch('/api/'+path, o)).json();
+}
+
+// ═══ Time helpers ═══════════════════════════════════════════════
+function fmtDur(s) {
+  s = Math.max(0, Math.floor(s));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return h>0
+    ? `${h}:${pad(m)}:${pad(sec)}`
+    : `${pad(m)}:${pad(sec)}`;
+}
+function fmtMmss(s) {
+  s = Math.max(0, Math.floor(s));
+  return `${Math.floor(s/60)}:${pad(s%60)}`;
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+
+// ═══ 1-second tick ═════════════════════════════════════════════
+function tick() {
+  if (!S) return;
+  const delta = (Date.now() - new Date(S.ts).getTime()) / 1000;
+
+  // Race remaining
+  const rr = (S.status==='racing'||S.status==='pitting')
+    ? Math.max(0, S.race_remaining - delta) : S.race_remaining;
+  const el = document.getElementById('race-remaining');
+  el.textContent = fmtDur(rr);
+  el.className   = 'tb-clock' + (rr<600 ? ' crit' : rr<1800 ? ' low' : '');
+
+  // Stint
+  const stintS = S.stint_running ? S.stint_s + delta : S.stint_s;
+  const maxS   = (S.stint_max_minutes||45) * 60;
+  const pct    = Math.min(100, (stintS/maxS)*100);
+  const barCls = pct>90 ? 'crit' : pct>75 ? 'warn' : 'ok';
+
+  const sd = document.getElementById('stint-display');
+  if (sd) sd.textContent = fmtDur(stintS);
+  const bf = document.getElementById('stint-bar-fill');
+  if (bf) { bf.style.width=pct+'%'; bf.className='stint-bar-fill '+barCls; }
+  const bl = document.getElementById('stint-bar-left');
+  if (bl) bl.textContent = fmtDur(stintS);
+
+  // Pit countdown
+  if (S.status==='pitting') {
+    const pitRem = Math.max(0, S.pit_remaining - delta);
+    const met    = pitRem <= 0;
+    const clock  = document.getElementById('pit-clock');
+    if (clock) { clock.textContent = fmtMmss(pitRem); clock.className='pit-clock '+(met?'pit-ready':'pit-wait'); }
+    const ok = document.getElementById('pit-ok');
+    if (ok) ok.style.display = met ? 'block' : 'none';
+    if (met && !_autoPitFired) {
+      _autoPitFired = true;
+      const did = pitDriverId || (S.current_driver ? S.current_driver.id : null);
+      if (did) api('pit/done', {driver_id: did});
+    }
+  } else {
+    _autoPitFired = false;
+  }
+}
+setInterval(tick, 1000);
+
+// ═══ Render ═════════════════════════════════════════════════════
+function render(s) {
+  // Topbar status
+  const badge = document.getElementById('status-badge');
+  badge.textContent = s.status.toUpperCase();
+  badge.className   = 's-'+s.status;
+  const ok = s.apex_ok;
+  document.getElementById('apex-dot').className = 'apex-dot '+(ok?'apex-ok':'apex-err');
+  document.getElementById('apex-label').textContent = ok ? 'APEX LIVE' : 'NO SIGNAL';
+  document.getElementById('track-avg').textContent = s.track_avg;
+
+  renderTable(s.teams);
+  renderMyTeam(s);
+  renderStrategy(s);
+  renderPit(s);
+  renderDrivers(s);
+  renderLog(s.pit_history);
+}
+
+// ── Timing table ────────────────────────────────────────────────
+function renderTable(teams) {
+  const tb = document.getElementById('tbody');
+  if (!teams || !teams.length) {
+    tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
+    return;
+  }
+  tb.innerHTML = teams.map(t => {
+    const pos   = parseInt(t.pos)||99;
+    const posCls = pos===1 ? 'td-pos top1' : pos<=3 ? 'td-pos top3' : 'td-pos';
+    return `<tr class="${t.is_my_team?'mine':''}">
+      <td class="${posCls}${t.is_my_team?' td-mine':''}">${esc(t.pos)}</td>
+      <td>${esc(t.kart)}</td>
+      <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
+      <td class="td-lap td-r">${esc(t.last_lap)}</td>
+      <td class="td-avg td-r">${esc(t.avg5)}</td>
+      <td class="td-dim td-r">${esc(t.avg10)}</td>
+      <td class="td-dim td-r">${esc(t.best_lap)}</td>
+      <td class="td-muted td-r">${esc(t.total_laps)}</td>
+      <td class="td-muted td-r">${esc(t.pits)}</td>
+      <td class="td-muted td-r">${esc(t.gap)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── My Team ──────────────────────────────────────────────────────
+function renderMyTeam(s) {
+  const el  = document.getElementById('my-team-body');
+  const my  = s.my_team;
+  const drv = s.current_driver;
+  const pct = s.stint_pct;
+  const barCls = pct>90?'crit':pct>75?'warn':'ok';
+
+  let html = '<div class="mt-grid">';
+
+  if (my) {
+    html += `
+      <div class="mt-pos-box">
+        <div class="mt-pos-num">${esc(my.pos)}</div>
+        <div class="mt-pos-label">POS</div>
+      </div>`;
+  }
+
+  html += `<div class="mt-info">
+    <div class="mt-driver ${drv?'':'none'}">${drv ? esc(drv.name) : 'No driver'}</div>
+    <div class="mt-kart">${my ? `Kart ${esc(my.kart)} · ${esc(my.laps)} laps` : 'Not in timing data'}</div>
+    <div class="mt-avg-row">
+      <div class="mt-stat">
+        <div class="mt-stat-val" id="stint-display">${s.stint_fmt}</div>
+        <div class="mt-stat-lbl">Stint</div>
+      </div>
+      ${my ? `<div class="mt-stat">
+        <div class="mt-stat-val">${esc(my.avg5)}</div>
+        <div class="mt-stat-lbl">Avg 5</div>
+      </div>` : ''}
+    </div>
+  </div>`;
+
+  html += '</div>';
+  html += `
+    <div class="stint-bar-wrap">
+      <div class="stint-bar-track">
+        <div class="stint-bar-fill ${barCls}" id="stint-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="stint-bar-meta">
+        <b id="stint-bar-left">${s.stint_fmt}</b>
+        <span>${s.stint_max_minutes} min max</span>
+      </div>
+    </div>`;
+
+  if (s.status === 'racing') {
+    html += `<div class="drv-select-label">Current Driver</div>
+      <div class="drv-select-grid">
+        ${s.drivers.map(d=>`
+          <button class="drv-sel-btn ${d.active?'active':''}" onclick="setDriver(${d.id})">
+            ${esc(d.name)}
+          </button>`).join('')}
+      </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Strategy ────────────────────────────────────────────────────
+function renderStrategy(s) {
+  const st = s.strategy;
+  document.getElementById('dec-box').className   = 'dec-box dec-'+st.cls;
+  document.getElementById('dec-label').textContent = st.label;
+  document.getElementById('dec-detail').textContent = st.detail;
+  const pd = s.pits_done, pt = s.mandatory_pits;
+  document.getElementById('pits-val').innerHTML =
+    `${pd} <span>/ ${pt}</span>`;
+}
+
+// ── Pit ─────────────────────────────────────────────────────────
+function renderPit(s) {
+  const p = s.status === 'pitting';
+  document.getElementById('pit-racing').style.display  = p ? 'none' : 'block';
+  document.getElementById('pit-pitting').style.display = p ? 'block' : 'none';
+
+  if (p) {
+    const sel = document.getElementById('pit-drv-select');
+    sel.innerHTML = s.drivers.map(d=>`
+      <button class="drv-sel-btn ${pitDriverId===d.id?'active':''}"
+              onclick="selPitDrv(${d.id},this)">
+        ${esc(d.name)}
+      </button>`).join('');
+  } else {
+    pitDriverId = null;
+  }
+}
+
+// ── Drivers ──────────────────────────────────────────────────────
+function renderDrivers(s) {
+  const el = document.getElementById('drivers-list');
+  if (!s.drivers.length) {
+    el.innerHTML = '<div style="color:var(--tx3);font-size:11px;padding:4px 0">No drivers yet</div>';
+    return;
+  }
+  el.innerHTML = s.drivers.map(d => `
+    <div class="drv-row" id="dr-${d.id}">
+      <span class="drv-name ${d.active?'cur':''}">${esc(d.name)}</span>
+      <span class="drv-time ${d.total_seconds>0?'':'zero'}">${d.total_fmt}</span>
+      <button class="i-btn" title="Rename" onclick="startEdit(${d.id})">✎</button>
+      <button class="i-btn del" title="Delete" onclick="delDriver(${d.id})">✕</button>
+    </div>
+    <div class="drv-edit-wrap" id="de-${d.id}">
+      <input class="drv-edit-inp" id="di-${d.id}" value="${esc(d.name)}"
+             onkeydown="if(event.key==='Enter')saveEdit(${d.id});if(event.key==='Escape')cancelEdit(${d.id})">
+      <button class="i-btn" style="color:var(--grn)" onclick="saveEdit(${d.id})">✓</button>
+      <button class="i-btn" onclick="cancelEdit(${d.id})">✕</button>
+    </div>`).join('');
+}
+
+// ── Pit log ──────────────────────────────────────────────────────
+function renderLog(history) {
+  const el = document.getElementById('pit-log');
+  if (!history || !history.length) {
+    el.innerHTML = '<div class="log-empty">No stops recorded yet</div>';
+    return;
+  }
+  el.innerHTML = [...history].reverse().map(p => `
+    <div class="log-row">
+      <span class="log-n">#${p.n}</span>
+      <span class="log-driver">${esc(p.driver)}</span>
+      <span class="log-dur">${esc(p.duration)}</span>
+      <span class="log-time">${esc(p.end.slice(11,16))}</span>
+    </div>`).join('');
+}
+
+// ═══ Actions ════════════════════════════════════════════════════
+function setDriver(id)  { api('driver/set', {driver_id:id}) }
+function addDriver() {
+  const inp = document.getElementById('add-name');
+  const n = inp.value.trim(); if (!n) return;
+  api('driver/add', {name:n}); inp.value='';
+}
+function delDriver(id)  { api('driver/delete', {driver_id:id}) }
+
+function startEdit(id) {
+  document.getElementById('dr-'+id).style.display = 'none';
+  const e = document.getElementById('de-'+id);
+  e.style.display = 'flex'; e.querySelector('input').focus();
+}
+function cancelEdit(id) {
+  document.getElementById('dr-'+id).style.display = 'flex';
+  document.getElementById('de-'+id).style.display = 'none';
+}
+function saveEdit(id) {
+  const v = document.getElementById('di-'+id).value.trim(); if (!v) return;
+  api('driver/rename', {driver_id:id, name:v}); cancelEdit(id);
+}
+
+function boxNow() {
+  if (S && S.status !== 'racing') return;
+  const raw = (document.getElementById('box-offset').value||'').trim();
+  let off = 0;
+  if (raw) {
+    const p = raw.split(':');
+    off = p.length===2 ? Math.max(0,parseInt(p[0]||0)*60+parseInt(p[1]||0)) : Math.max(0,parseInt(raw)||0);
+  }
+  document.getElementById('box-offset').value = '';
+  _autoPitFired = false;
+  api('pit/box', {offset_seconds:off});
+}
+function selPitDrv(id, btn) {
+  pitDriverId = id;
+  document.querySelectorAll('#pit-drv-select .drv-sel-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function confirmPit() {
+  const did = pitDriverId || (S&&S.current_driver ? S.current_driver.id : null);
+  if (!did) return;
+  api('pit/done', {driver_id:did}); pitDriverId=null;
+}
+
+// ═══ Settings ════════════════════════════════════════════════════
+function openCfg() {
+  if (S) {
+    document.getElementById('cfg-url').value  = S.apex_url  || '';
+    document.getElementById('cfg-team').value = S.team_name || '';
+  }
+  document.getElementById('cfg-dur').value='';
+  document.getElementById('cfg-pits').value='';
+  document.getElementById('cfg-stint').value='';
+  document.getElementById('overlay').classList.add('open');
+}
+function closeCfg() { document.getElementById('overlay').classList.remove('open'); }
+async function saveCfg() {
+  const b={};
+  const url=document.getElementById('cfg-url').value.trim();
+  const team=document.getElementById('cfg-team').value.trim();
+  const dur=document.getElementById('cfg-dur').value.trim();
+  const pits=document.getElementById('cfg-pits').value.trim();
+  const stint=document.getElementById('cfg-stint').value.trim();
+  if (url)   b.apex_url          = url;
+  if (team)  b.team_name         = team;
+  if (dur)   b.duration_minutes  = parseInt(dur);
+  if (pits)  b.mandatory_pits    = parseInt(pits);
+  if (stint) b.stint_max_minutes = parseInt(stint);
+  await api('settings', b); closeCfg();
+}
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target===e.currentTarget) closeCfg();
+});
+
+// ═══ Utils ══════════════════════════════════════════════════════
+function esc(s) {
+  if (s==null) return '-';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

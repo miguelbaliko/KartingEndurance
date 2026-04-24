@@ -1,8 +1,0 @@
-timestamp,type,message,payload_json
-2026-04-19T14:20:39.593657+00:00,MANUAL_OVERRIDE,Manual race control update,"{""current_driver"": ""Emil"", ""current_kart"": """", ""box_status"": ""UNKNOWN"", ""stint_started_at"": ""2026-04-19T14:20:39.593657+00:00"", ""race_started_at"": ""2026-04-19T14:20:39.593657+00:00""}"
-2026-04-19T14:21:08.641213+00:00,MANUAL_OVERRIDE,Manual race control update,"{""box_status"": ""FULL"", ""current_kart"": ""MEDIUM"", ""current_driver"": ""Arthur""}"
-2026-04-19T14:21:09.721841+00:00,MANUAL_OVERRIDE,Manual race control update,"{""box_status"": ""FULL"", ""current_kart"": ""MEDIUM"", ""current_driver"": ""Arthur""}"
-2026-04-19T14:21:10.305282+00:00,MANUAL_OVERRIDE,Manual race control update,"{""box_status"": ""FULL"", ""current_kart"": ""MEDIUM"", ""current_driver"": ""Arthur""}"
-2026-04-19T14:21:10.864786+00:00,MANUAL_OVERRIDE,Manual race control update,"{""box_status"": ""FULL"", ""current_kart"": ""MEDIUM"", ""current_driver"": ""Arthur""}"
-2026-04-19T14:21:12.849037+00:00,MANUAL_OVERRIDE,Manual race control update,"{""box_status"": ""FULL"", ""current_kart"": ""MEDIUM"", ""current_driver"": ""Arthur""}"
-2026-04-19T14:21:20.928958+00:00,MANUAL_OVERRIDE,Manual race control update,"{""box_status"": ""FULL"", ""current_kart"": ""MEDIUM"", ""current_driver"": ""Arthur"", ""stint_started_at"": ""2026-04-19T14:21:20.928958+00:00""}"

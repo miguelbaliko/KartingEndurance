@@ -1,5 +1,0 @@
-# APX GP War Room v1 runs with Python standard library only.
-# Optional, for programmer if Apex parser must be improved:
-# requests
-# beautifulsoup4
-# selenium
