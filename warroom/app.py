@@ -574,9 +574,12 @@ def api_settings():
     broadcast()
     return jsonify(ok=True)
 
+# ── Startup (runs for both direct execution and gunicorn) ─────────────────────
+init_db()
+threading.Thread(target=worker, daemon=True).start()
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    init_db()
-    threading.Thread(target=worker, daemon=True).start()
-    print("\n  APX GP WAR ROOM  ->  http://localhost:8080\n")
-    app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
+    port = int(os.environ.get("PORT", 8080))
+    print(f"\n  APX GP WAR ROOM  ->  http://localhost:{port}\n")
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
