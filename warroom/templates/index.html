@@ -487,17 +487,26 @@ let S             = null;
 let pitDriverId   = null;
 let _autoPitFired = false;
 
-// ═══ SSE ═══════════════════════════════════════════════════════
-const es = new EventSource('/stream');
-es.onmessage = e => { S = JSON.parse(e.data); render(S); };
-es.onerror   = () => {};
+// ═══ Polling ════════════════════════════════════════════════════
+async function fetchState() {
+  try {
+    const r = await fetch('/api/state');
+    S = await r.json();
+    render(S);
+  } catch(_) {}
+}
+fetchState();
+setInterval(fetchState, 1000);
 
 // ═══ API ═══════════════════════════════════════════════════════
 async function api(path, body) {
   const o = body
     ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}
     : {method:'POST'};
-  return (await fetch('/api/'+path, o)).json();
+  const r = await fetch('/api/'+path, o);
+  const data = await r.json();
+  await fetchState();
+  return data;
 }
 
 // ═══ Time helpers ═══════════════════════════════════════════════
