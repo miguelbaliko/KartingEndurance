@@ -387,10 +387,6 @@ td{padding:7px 8px;white-space:nowrap}
       <span id="apex-label">NO SIGNAL</span>
       <span id="apex-session" style="margin-left:8px;font-size:11px;color:var(--tx2);letter-spacing:.06em"></span>
     </div>
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="mode-race" onclick="setMode('race')">Race</button>
-      <button class="mode-btn" id="mode-quali" onclick="setMode('qualifying')">Quali</button>
-    </div>
     <div class="tb-space"></div>
     <button class="tb-btn go"  onclick="api('race/start')">START RACE</button>
     <button class="tb-btn"     onclick="api('race/stop')">STOP</button>
@@ -420,15 +416,6 @@ td{padding:7px 8px;white-space:nowrap}
             <th class="r">Laps</th>
             <th class="r">Pits</th>
             <th class="r">Gap</th>
-          </tr>
-          <tr id="quali-cols" style="display:none">
-            <th style="width:32px"></th>
-            <th>Kart</th>
-            <th>Team</th>
-            <th class="r">Best Lap</th>
-            <th class="r">Last Lap</th>
-            <th class="r">Gap</th>
-            <th class="r">Laps</th>
           </tr>
         </thead>
         <tbody id="tbody">
@@ -485,8 +472,6 @@ td{padding:7px 8px;white-space:nowrap}
               <span class="pit-ok-tag">✓ MIN TIME MET</span>
             </div>
           </div>
-          <div class="pit-drv-label">Driver going in</div>
-          <div id="pit-drv-select" class="drv-select-grid"></div>
           <button class="pit-confirm-btn" id="btn-confirm" onclick="confirmPit()">
             ▶ CONFIRM &amp; START STINT
           </button>
@@ -556,10 +541,8 @@ td{padding:7px 8px;white-space:nowrap}
 // ═══ State ═════════════════════════════════════════════════════
 let S               = null;
 let _stateAt        = null;   // Date.now() when last state arrived
-let pitDriverId     = null;
 let _autoPitFired   = false;
 let _planEdit       = null;
-let _mode           = 'race';
 
 // ═══ Polling ════════════════════════════════════════════════════
 async function fetchState() {
@@ -653,28 +636,8 @@ function tick() {
 }
 setInterval(tick, 100);
 
-// ═══ Mode ═══════════════════════════════════════════════════════
-function setMode(m) {
-  _mode = m;
-  document.getElementById('mode-race').className = 'mode-btn' + (m==='race' ? ' active' : '');
-  document.getElementById('mode-quali').className = 'mode-btn' + (m==='qualifying' ? ' active' : '');
-  document.getElementById('race-cols').style.display  = m==='race' ? '' : 'none';
-  document.getElementById('quali-cols').style.display = m==='qualifying' ? '' : 'none';
-  document.getElementById('strategy-card').style.display = m==='race' ? '' : 'none';
-  document.getElementById('pit-card').style.display      = m==='race' ? '' : 'none';
-  document.getElementById('plan-card').style.display     = m==='race' ? '' : 'none';
-  document.getElementById('timing-heading').textContent  = m==='qualifying' ? 'Qualifying' : 'Live Timing';
-  api('mode', {mode: m});
-  if (S) renderTable(S.teams);
-}
-
 // ═══ Render ═════════════════════════════════════════════════════
 function render(s) {
-  // Sync mode toggle from server state
-  if (s.session_mode && s.session_mode !== _mode) {
-    setMode(s.session_mode);
-  }
-
   // Topbar status
   const badge = document.getElementById('status-badge');
   badge.textContent = s.status.toUpperCase();
@@ -710,32 +673,6 @@ function renderTable(teams) {
     tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
     return;
   }
-
-  if (_mode === 'qualifying') {
-    // Sort by best lap (ascending), nulls last
-    const sorted = [...teams].sort((a, b) => {
-      const ta = parseLapS(a.best_lap), tb2 = parseLapS(b.best_lap);
-      if (ta == null && tb2 == null) return 0;
-      if (ta == null) return 1;
-      if (tb2 == null) return -1;
-      return ta - tb2;
-    });
-    tb.innerHTML = sorted.map((t, i) => {
-      const pos = i + 1;
-      const posCls = pos===1 ? 'td-pos top1' : pos<=3 ? 'td-pos top3' : 'td-pos';
-      return `<tr class="${t.is_my_team?'mine':''}">
-        <td class="${posCls}${t.is_my_team?' td-mine':''}">${pos}</td>
-        <td>${esc(t.kart)}</td>
-        <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
-        <td class="td-best td-r">${esc(t.best_lap)}</td>
-        <td class="td-lap td-r">${esc(t.last_lap)}</td>
-        <td class="td-dim td-r">${esc(t.gap)}</td>
-        <td class="td-muted td-r">${esc(t.total_laps)}</td>
-      </tr>`;
-    }).join('');
-    return;
-  }
-
   tb.innerHTML = teams.map(t => {
     const pos   = parseInt(t.pos)||99;
     const posCls = pos===1 ? 'td-pos top1' : pos<=3 ? 'td-pos top3' : 'td-pos';
@@ -808,16 +745,6 @@ function renderMyTeam(s) {
       </div>
     </div>`;
 
-  if (s.status === 'racing') {
-    html += `<div class="drv-select-label">Current Driver</div>
-      <div class="drv-select-grid">
-        ${s.drivers.map(d=>`
-          <button class="drv-sel-btn ${d.active?'active':''}" onclick="setDriver(${d.id})">
-            ${esc(d.name)}
-          </button>`).join('')}
-      </div>`;
-  }
-
   el.innerHTML = html;
 }
 
@@ -837,17 +764,6 @@ function renderPit(s) {
   const p = s.status === 'pitting';
   document.getElementById('pit-racing').style.display  = p ? 'none' : 'block';
   document.getElementById('pit-pitting').style.display = p ? 'block' : 'none';
-
-  if (p) {
-    const sel = document.getElementById('pit-drv-select');
-    sel.innerHTML = s.drivers.map(d=>`
-      <button class="drv-sel-btn ${pitDriverId===d.id?'active':''}"
-              onclick="selPitDrv(${d.id},this)">
-        ${esc(d.name)}
-      </button>`).join('');
-  } else {
-    pitDriverId = null;
-  }
 }
 
 // ── Drivers ──────────────────────────────────────────────────────
@@ -967,7 +883,6 @@ function saveEdit(id) {
 }
 
 function boxNow() {
-  if (S && S.status !== 'racing') return;
   const raw = (document.getElementById('box-offset').value||'').trim();
   let off = 0;
   if (raw) {
@@ -978,15 +893,9 @@ function boxNow() {
   _autoPitFired = false;
   api('pit/box', {offset_seconds:off});
 }
-function selPitDrv(id, btn) {
-  pitDriverId = id;
-  document.querySelectorAll('#pit-drv-select .drv-sel-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
 function confirmPit() {
-  const did = pitDriverId || (S&&S.current_driver ? S.current_driver.id : null);
-  if (!did) return;
-  api('pit/done', {driver_id:did}); pitDriverId=null;
+  const did = S && S.current_driver ? S.current_driver.id : null;
+  api('pit/done', {driver_id: did});
 }
 
 // ═══ Settings ════════════════════════════════════════════════════
