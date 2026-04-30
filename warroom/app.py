@@ -105,7 +105,12 @@ _CELL_MAP = {
     "dr": "team", "name": "team", "team": "team",
     "llp": "last_lap", "blp": "best_lap", "tlp": "total_laps",
     "pit": "pits", "gap": "gap", "int": "interval",
+    # Apex timing state classes (only appear on lap-time cells)
+    "tb": "last_lap", "ti": "last_lap", "tn": "last_lap", "ib": "best_lap",
 }
+
+_global_col_types: dict = {}   # "c6" -> "last_lap" (built from grid header row)
+_row_kart_map: dict     = {}   # "r14915" -> "17"    (built from parsed data rows)
 
 class ApexParser(html.parser.HTMLParser):
     def __init__(self):
@@ -113,6 +118,10 @@ class ApexParser(html.parser.HTMLParser):
         self.rows, self._cur, self._col = [], None, None
         self.meta: dict = {}        # data-id -> {"text":..., "cls":...}
         self._meta_id: Optional[str] = None
+        self._is_head  = False
+        self._row_did: Optional[str] = None
+        self.col_types: dict    = {}   # c6 -> "last_lap" (from head row data-type)
+        self.row_kart_map: dict = {}   # r14915 -> "17"
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -123,14 +132,30 @@ class ApexParser(html.parser.HTMLParser):
             if cls:
                 self.meta.setdefault(did, {})["cls"] = cls
         if tag == "tr":
-            self._cur = {}
+            tr_cls = a.get("class", "").split()
+            self._is_head = "head" in tr_cls
+            self._row_did = did
+            self._cur = None if self._is_head else {}
             self._meta_id = None
-        elif tag in ("td", "th") and self._cur is not None:
+        elif tag in ("td", "th"):
             self._col = None
-            for cls in a.get("class", "").split():
-                if cls in _CELL_MAP:
-                    self._col = _CELL_MAP[cls]
-                    break
+            dt = a.get("data-type", "")
+            if dt in _CELL_MAP:
+                # Header row: register column type; data row: map column
+                if self._is_head and did:
+                    self.col_types[did] = _CELL_MAP[dt]
+                if self._cur is not None:
+                    self._col = _CELL_MAP[dt]
+            elif self._cur is not None:
+                for cls in a.get("class", "").split():
+                    if cls in _CELL_MAP:
+                        self._col = _CELL_MAP[cls]
+                        break
+                # Fallback: use cell data-id to look up column field
+                if self._col is None and did:
+                    col_m = re.search(r'(c\d+)$', did)
+                    if col_m:
+                        self._col = _global_col_types.get(col_m.group(1))
 
     def handle_data(self, data):
         v = data.strip()
@@ -145,8 +170,11 @@ class ApexParser(html.parser.HTMLParser):
     def handle_endtag(self, tag):
         if tag in ("td", "th", "div", "span"):
             self._meta_id = None
-        if tag == "tr" and self._cur and len(self._cur) >= 2:
-            self.rows.append(self._cur)
+        if tag == "tr":
+            if self._cur and len(self._cur) >= 2:
+                self.rows.append(self._cur)
+                if self._row_did and self._cur.get("kart"):
+                    self.row_kart_map[self._row_did] = self._cur["kart"]
             self._cur = None
 
 def parse_laptime(s: str) -> Optional[float]:
@@ -234,31 +262,43 @@ def broadcast():
             pass
 
 # ── Apex Timing data ingestion ─────────────────────────────────────────────────
+def _enrich(t: dict) -> dict:
+    key = t.get("kart") or t.get("team") or str(t.get("pos", ""))
+    ll = parse_laptime(t.get("last_lap", ""))
+    hist = _lap_hist.setdefault(key, [])
+    if ll and (not hist or hist[-1] != ll):
+        hist.append(ll)
+        del hist[:-30]
+    t["last_lap_s"]  = ll
+    t["best_lap_s"]  = parse_laptime(t.get("best_lap", ""))
+    t["avg5_s"]  = sum(hist[-5:])  / len(hist[-5:])  if hist else None
+    t["avg10_s"] = sum(hist[-10:]) / len(hist[-10:]) if hist else None
+    t["avg5"]    = fmt_laptime(t["avg5_s"])
+    t["avg10"]   = fmt_laptime(t["avg10_s"])
+    return t
+
 def _process_rows(rows: list) -> bool:
-    """Merge a list of parsed row dicts into global _teams. Returns True if any rows."""
+    """Replace _teams with a newly-parsed full grid. Returns True if any rows."""
     global _teams, _apex_ok
     if not rows:
         return False
     with _lock:
-        built = []
-        for r in rows:
-            t = dict(r)
-            key = t.get("kart") or t.get("team") or str(t.get("pos", ""))
-            ll = parse_laptime(t.get("last_lap", ""))
-            hist = _lap_hist.setdefault(key, [])
-            if ll and (not hist or hist[-1] != ll):
-                hist.append(ll)
-                del hist[:-30]
-            t["last_lap_s"]  = ll
-            t["best_lap_s"]  = parse_laptime(t.get("best_lap", ""))
-            t["avg5_s"]  = sum(hist[-5:])  / len(hist[-5:])  if hist else None
-            t["avg10_s"] = sum(hist[-10:]) / len(hist[-10:]) if hist else None
-            t["avg5"]    = fmt_laptime(t["avg5_s"])
-            t["avg10"]   = fmt_laptime(t["avg10_s"])
-            built.append(t)
+        built = [_enrich(dict(r)) for r in rows]
         if built:
             _teams = built
             _apex_ok = True
+    return True
+
+def _apply_cell_updates(cell_updates: dict) -> bool:
+    """Apply incremental C-command cell updates to existing _teams in-place."""
+    if not cell_updates:
+        return False
+    with _lock:
+        for t in _teams:
+            kart = t.get("kart")
+            if kart in cell_updates:
+                t.update(cell_updates[kart])
+                _enrich(t)
     return True
 
 _ws_url_cache: Optional[str] = None   # "" means checked and not found
@@ -360,10 +400,14 @@ def _fetch_http(page_url: str) -> list:
 
 def _parse_apex_pipe(msg: str) -> tuple:
     """Parse Apex Timing pipe-delimited WebSocket protocol.
-    Format: cmd|modifier|value  (split on first 2 pipes only).
-    Returns (rows, meta)."""
-    rows = []
-    meta = {}
+    Returns (rows, cell_updates, meta).
+    rows = full row dicts for _process_rows,
+    cell_updates = {kart: {field: value}} for _apply_cell_updates,
+    meta = session info for _process_meta."""
+    global _global_col_types, _row_kart_map
+    rows: list = []
+    cell_updates: dict = {}
+    meta: dict = {}
     for line in msg.replace('\r', '').split('\n'):
         line = line.strip()
         if not line:
@@ -374,16 +418,32 @@ def _parse_apex_pipe(msg: str) -> tuple:
         val = parts[2]         if len(parts) > 2 else ''
 
         if cmd == 'grid' and val:
-            # Full HTML grid embedded in message — use existing parser
             hp = ApexParser()
             hp.feed(val)
+            if hp.col_types:
+                _global_col_types.update(hp.col_types)
+            if hp.row_kart_map:
+                _row_kart_map.update(hp.row_kart_map)
             rows.extend(hp.rows)
 
         elif cmd in ('R', 'row') and val:
-            # Individual row HTML update
             hp = ApexParser()
             hp.feed(val)
+            if hp.row_kart_map:
+                _row_kart_map.update(hp.row_kart_map)
             rows.extend(hp.rows)
+
+        elif cmd == 'C' and mod:
+            # Incremental cell update: mod="r14915c6", val="<td ...>0:52.3</td>"
+            m = re.match(r'(r\w+?)(c\d+)$', mod)
+            if m:
+                row_id, col_id = m.group(1), m.group(2)
+                kart  = _row_kart_map.get(row_id)
+                field = _global_col_types.get(col_id)
+                if kart and field:
+                    text = re.sub(r'<[^>]+>', '', val).strip()
+                    if text:
+                        cell_updates.setdefault(kart, {})[field] = text
 
         elif cmd in ('title1', 'title2') and val.strip():
             meta['name'] = val.strip()
@@ -401,7 +461,7 @@ def _parse_apex_pipe(msg: str) -> tuple:
         elif cmd == 'track' and val.strip():
             meta['track'] = val.strip()
 
-    return rows, meta
+    return rows, cell_updates, meta
 
 def _ws_run(ws_url: str, done_evt: threading.Event):
     """Connect to Apex Timing WebSocket, push rows on every message."""
@@ -424,6 +484,7 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
                 log("APEX WS", f"msg #{_ws_msg_count} | teams={len(_teams)} | session={_apex_session.get('name','?')}")
 
             rows = []
+            cell_updates = {}
             meta = {}
             if s[0] in ('{', '['):
                 d = json.loads(s)
@@ -434,12 +495,15 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
                         p = ApexParser(); p.feed(html_s); rows = p.rows; meta = p.meta
             elif '|' in s:
                 # Apex Timing pipe-delimited protocol
-                rows, meta = _parse_apex_pipe(s)
+                rows, cell_updates, meta = _parse_apex_pipe(s)
             else:
                 p = ApexParser(); p.feed(s); rows = p.rows; meta = p.meta
 
             if meta:
                 _process_meta(meta)
+            if cell_updates:
+                _apply_cell_updates(cell_updates)
+                _apex_ok = True
             if _process_rows(rows):
                 _apex_ok = True
                 if _ws_msg_count <= 3:
@@ -473,57 +537,6 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
         ping_interval=30, ping_timeout=10,
     )
 
-# ── Mock data (for testing when no Apex URL is configured) ─────────────────────
-import random as _random
-
-# Base lap times per mock team (seconds) — realistic endurance karting pace
-_MOCK_ROSTER = [
-    ("APX GP",        51.8),
-    ("SPEED KINGS",   51.6),
-    ("FAST LANE RT",  52.1),
-    ("RED DEVILS",    52.4),
-    ("THUNDER GP",    52.7),
-    ("APEX HUNTERS",  51.9),
-    ("TRACK WOLVES",  53.1),
-    ("MIDNIGHT KART", 53.5),
-    ("GRID WARRIORS", 52.5),
-    ("PIT CREW PRO",  53.9),
-    ("NITRO TEAM",    52.0),
-    ("ENDURO ACES",   54.2),
-]
-_mock_laps_done = [55, 57, 54, 54, 52, 56, 51, 49, 53, 48, 55, 47]
-_mock_pits      = [ 2,  2,  2,  2,  1,  2,  1,  1,  2,  1,  2,  1]
-
-def _mock_teams() -> list:
-    my = CFG.get("team_name", "").strip().upper()
-    roster = list(_MOCK_ROSTER)
-    # Replace first entry with the configured team name so My Team section works
-    if my and my != roster[0][0]:
-        roster[0] = (my, roster[0][1])
-    # Sort by base lap time to give realistic ordering
-    roster.sort(key=lambda x: x[1])
-
-    leader_laps = _mock_laps_done[0] + _random.randint(0, 1)
-    rows = []
-    for i, (name, base) in enumerate(roster):
-        ll = base + _random.uniform(-0.15, 0.60)
-        best = base - _random.uniform(0.05, 0.25)
-        laps = max(40, leader_laps - i + _random.randint(-1, 1))
-        pits = _mock_pits[i]
-        gap  = "" if i == 0 else f"+{(laps - (leader_laps - i)) * base + _random.uniform(1,5):.3f}"
-        rows.append({
-            "pos":        str(i + 1),
-            "kart":       str((i + 1) * 7),
-            "team":       name,
-            "last_lap":   fmt_laptime(ll),
-            "best_lap":   fmt_laptime(best),
-            "total_laps": str(laps),
-            "pits":       str(pits),
-            "gap":        gap,
-            "interval":   f"+{_random.uniform(0.1, 3.5):.3f}" if i > 0 else "",
-        })
-    return rows
-
 # ── Pit plan ───────────────────────────────────────────────────────────────────
 def get_pit_plan() -> list:
     raw = kv_get("pit_plan")
@@ -553,17 +566,7 @@ def worker():
         url = CFG.get("apex_url", "")
 
         if not url:
-            # No URL configured — inject mock data so UI is testable
-            try:
-                with _lock:
-                    _apex_session = {"name": "MOCK SESSION", "light": "green", "dyn1": "", "dyn2": ""}
-                rows = _mock_teams()
-                _process_rows(rows)
-                _apex_ok = True
-                log("MOCK DATA", f"{len(rows)} teams")
-            except Exception as e:
-                log("MOCK ERROR", str(e))
-            time.sleep(3)
+            time.sleep(5)
             continue
 
         if _HAS_WS:
