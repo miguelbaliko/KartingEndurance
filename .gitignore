@@ -30,3 +30,10 @@ db.sqlite3
 config.json
 data/state.json
 
+# Ignore AI tool settings
+.claude/
+
+# Ignore SQLite databases and temp files
+warroom/data/*.db
+warroom/data/*.db-*
+

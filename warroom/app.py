@@ -79,6 +79,8 @@ def init_db():
             INSERT OR IGNORE INTO kv VALUES ('stint_start',  '');
             INSERT OR IGNORE INTO kv VALUES ('pit_start',    '');
             INSERT OR IGNORE INTO kv VALUES ('driver_id',    '');
+            INSERT OR IGNORE INTO kv VALUES ('pit_plan',     '');
+            INSERT OR IGNORE INTO kv VALUES ('session_mode', 'race');
                 """)
 
 def get_db():
@@ -193,17 +195,29 @@ _ws_msg_count = 0
 _sse_queues: list = []
 
 def _process_meta(meta: dict):
-    """Update session state from parsed data-id elements."""
+    """Update session state from parsed data-id elements.
+    Handles both ApexParser dict format {text,cls} and pipe parser plain strings."""
     global _apex_session
+
+    def _val(v):
+        return (v.get("text", "") or v.get("cls", "")) if isinstance(v, dict) else str(v)
+
     updated = {}
-    for key, field in [("title1","name"),("title2","name2"),
-                        ("light","light"),("dyn1","dyn1"),("dyn2","dyn2")]:
-        if key in meta:
-            updated[field] = meta[key].get("text", "") or meta[key].get("cls", "")
+    for key, field in [
+        ("title1", "name"), ("title2", "name"), ("name", "name"),
+        ("light", "light"),
+        ("dyn1", "dyn1"), ("dyn2", "dyn2"),
+        ("track", "track"),
+    ]:
+        if key in meta and field not in updated:
+            v = _val(meta[key])
+            if v:
+                updated[field] = v
+
     if updated:
         with _lock:
             _apex_session.update(updated)
-        log("APEX SESSION", "  ".join(f"{k}={v}" for k,v in updated.items() if v))
+        log("APEX SESSION", "  ".join(f"{k}={v}" for k, v in updated.items() if v))
 
 def broadcast():
     data = "data: " + json.dumps(make_snapshot()) + "\n\n"
@@ -344,47 +358,49 @@ def _fetch_http(page_url: str) -> list:
             continue
     return []
 
-_LAPTIME_RE = re.compile(r'^\d+:\d{2}\.\d{3}$')
-
 def _parse_apex_pipe(msg: str) -> tuple:
     """Parse Apex Timing pipe-delimited WebSocket protocol.
-    Returns (rows, meta) where rows are timing dicts and meta has session info."""
+    Format: cmd|modifier|value  (split on first 2 pipes only).
+    Returns (rows, meta)."""
     rows = []
     meta = {}
     for line in msg.replace('\r', '').split('\n'):
         line = line.strip()
         if not line:
             continue
-        parts = line.split('|')
+        parts = line.split('|', 2)   # max 3 fields; value may contain pipes
         cmd = parts[0]
+        mod = parts[1].strip() if len(parts) > 1 else ''
+        val = parts[2]         if len(parts) > 2 else ''
 
-        def p(i, default=''):
-            return parts[i].strip() if len(parts) > i else default
+        if cmd == 'grid' and val:
+            # Full HTML grid embedded in message — use existing parser
+            hp = ApexParser()
+            hp.feed(val)
+            rows.extend(hp.rows)
 
-        if cmd == 'r' and len(parts) >= 7:
-            # r|pos|kart|team|last_lap|best_lap|laps|gap|pits|...
-            rows.append({
-                'pos': p(1), 'kart': p(2), 'team': p(3),
-                'last_lap': p(4), 'best_lap': p(5),
-                'total_laps': p(6), 'gap': p(7), 'pits': p(8),
-            })
-        elif cmd in ('title', 't') and len(parts) > 1:
-            meta['name'] = p(1)
-        elif cmd == 'dyn' and len(parts) > 1:
-            idx = p(1); val = p(2)
-            if idx == '1': meta['dyn1'] = val
-            if idx == '2': meta['dyn2'] = val
-        elif cmd == 'light' and len(parts) > 1:
-            meta['light'] = p(1)
-        elif cmd == 'init' and len(parts) > 1:
-            meta['format'] = p(1)
-        # Heuristic fallback: 8+ pipe fields where field[4] looks like a lap time
-        elif len(parts) >= 7 and _LAPTIME_RE.match(p(4)):
-            rows.append({
-                'pos': p(1), 'kart': p(2), 'team': p(3),
-                'last_lap': p(4), 'best_lap': p(5),
-                'total_laps': p(6), 'gap': p(7), 'pits': p(8),
-            })
+        elif cmd in ('R', 'row') and val:
+            # Individual row HTML update
+            hp = ApexParser()
+            hp.feed(val)
+            rows.extend(hp.rows)
+
+        elif cmd in ('title1', 'title2') and val.strip():
+            meta['name'] = val.strip()
+
+        elif cmd == 'dyn1':
+            meta['dyn1'] = val.strip()
+
+        elif cmd == 'dyn2':
+            meta['dyn2'] = val.strip()
+
+        elif cmd == 'light':
+            # mod = lr (red) | lg (green) | ly (yellow) | lsc (safety car)
+            meta['light'] = mod
+
+        elif cmd == 'track' and val.strip():
+            meta['track'] = val.strip()
+
     return rows, meta
 
 def _ws_run(ws_url: str, done_evt: threading.Event):
@@ -507,6 +523,28 @@ def _mock_teams() -> list:
             "interval":   f"+{_random.uniform(0.1, 3.5):.3f}" if i > 0 else "",
         })
     return rows
+
+# ── Pit plan ───────────────────────────────────────────────────────────────────
+def get_pit_plan() -> list:
+    raw = kv_get("pit_plan")
+    if raw:
+        try:
+            return json.loads(raw)
+        except Exception:
+            pass
+    n = CFG["race"]["mandatory_pits"]
+    plan = [{"driver_id": None, "note": ""} for _ in range(n)]
+    kv_set("pit_plan", json.dumps(plan))
+    return plan
+
+def set_plan_stop(stop_idx: int, driver_id):
+    plan = get_pit_plan()
+    n = CFG["race"]["mandatory_pits"]
+    while len(plan) < n:
+        plan.append({"driver_id": None, "note": ""})
+    if 0 <= stop_idx < n:
+        plan[stop_idx]["driver_id"] = driver_id
+    kv_set("pit_plan", json.dumps(plan[:n]))
 
 # ── Background worker ──────────────────────────────────────────────────────────
 def worker():
@@ -689,6 +727,29 @@ def make_snapshot() -> dict:
 
     stint_pct = min(100, (stint_s / (CFG["race"]["stint_max_minutes"] * 60)) * 100) if stint_s else 0
 
+    # Session mode (qualifying vs race)
+    session_mode = kv_get("session_mode") or "race"
+
+    # Pit plan
+    raw_plan = get_pit_plan()
+    n_planned = CFG["race"]["mandatory_pits"]
+    avg_stint_s = (CFG["race"]["duration_minutes"] * 60) / max(1, n_planned)
+    drv_by_id = {d["id"]: d["name"] for d in drivers}
+    pit_plan_out = []
+    for i in range(n_planned):
+        stop = raw_plan[i] if i < len(raw_plan) else {"driver_id": None}
+        did = stop.get("driver_id")
+        actual = pit_history[i] if i < len(pit_history) else None
+        pit_plan_out.append({
+            "n": i + 1,
+            "driver_id": did,
+            "driver": drv_by_id.get(int(did), "") if did is not None else "",
+            "planned_s": int((i + 1) * avg_stint_s),
+            "planned_fmt": fmt_duration((i + 1) * avg_stint_s),
+            "done": i < len(pit_history),
+            "actual_end": actual["end"] if actual else "",
+        })
+
     return {
         "ts":               now.isoformat() + "Z",  # explicit UTC so JS Date() parses correctly
         "status":           status,
@@ -715,6 +776,8 @@ def make_snapshot() -> dict:
         "team_name":        my_name,
         "apex_url":         CFG.get("apex_url", ""),
         "teams":            teams_out,
+        "session_mode":     session_mode,
+        "pit_plan":         pit_plan_out,
         "my_team":          {
             "pos":   my_team.get("pos", "?"),
             "kart":  my_team.get("kart", "?"),
@@ -901,6 +964,29 @@ def pit_done():
         row = con.execute("SELECT name FROM drivers WHERE id=?", (new_did,)).fetchone()
         new_name = row["name"] if row else new_did
     log("PIT DONE", f"driver={new_name}  pit_time={fmt_mmss(pit_elapsed)}")
+    broadcast()
+    return jsonify(ok=True)
+
+# ── Pit plan route ─────────────────────────────────────────────────────────────
+@app.post("/api/plan/set")
+def api_plan_set():
+    data = request.json or {}
+    stop = int(data.get("stop", 1)) - 1  # 1-indexed from client
+    driver_id = data.get("driver_id")    # None to unassign
+    set_plan_stop(stop, driver_id)
+    return jsonify(ok=True)
+
+@app.post("/api/plan/reset")
+def api_plan_reset():
+    kv_set("pit_plan", "")
+    return jsonify(ok=True)
+
+# ── Session mode ────────────────────────────────────────────────────────────────
+@app.post("/api/mode")
+def api_mode():
+    mode = (request.json or {}).get("mode", "race")
+    if mode in ("race", "qualifying"):
+        kv_set("session_mode", mode)
     broadcast()
     return jsonify(ok=True)
 
