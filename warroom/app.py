@@ -162,6 +162,13 @@ def fmt_mmss(secs: float) -> str:
     m, s = divmod(secs, 60)
     return f"{m}:{s:02d}"
 
+def log(event: str, detail: str = ""):
+    ts = datetime.utcnow().strftime("%H:%M:%S")
+    line = f"[{ts}] {event}"
+    if detail:
+        line += f"  {detail}"
+    print(line, flush=True)
+
 # ── Shared live state ──────────────────────────────────────────────────────────
 _lock = threading.Lock()
 _teams: list = []
@@ -595,12 +602,14 @@ def race_start():
     kv_set("race_start", now)
     kv_set("stint_start", now)   # stint clock always starts with the race
     kv_set("status", "racing")
+    log("RACE START")
     broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/race/stop")
 def race_stop():
     kv_set("status", "idle")
+    log("RACE STOP")
     broadcast()
     return jsonify(ok=True)
 
@@ -612,6 +621,7 @@ def race_reset():
     with get_db() as con:
         con.execute("DELETE FROM stints")
         con.execute("UPDATE drivers SET total_seconds=0")
+    log("RACE RESET")
     broadcast()
     return jsonify(ok=True)
 
@@ -620,7 +630,10 @@ def race_reset():
 def driver_set():
     did = str(request.json.get("driver_id", ""))
     kv_set("driver_id", did)
-    # No timer logic here — set before or during the race freely without side effects
+    with get_db() as con:
+        row = con.execute("SELECT name FROM drivers WHERE id=?", (did,)).fetchone()
+    name = row["name"] if row else did
+    log("DRIVER SET", name)
     broadcast()
     return jsonify(ok=True)
 
@@ -631,6 +644,7 @@ def driver_add():
         return jsonify(ok=False, error="Name required"), 400
     with get_db() as con:
         con.execute("INSERT INTO drivers(name) VALUES(?)", (name,))
+    log("DRIVER ADD", name)
     broadcast()
     return jsonify(ok=True)
 
@@ -677,6 +691,7 @@ def pit_box():
 
     did         = kv_get("driver_id")
     stint_start = kv_get("stint_start")
+    dur = 0.0
 
     if did and stint_start and kv_get("status") == "racing":
         try:
@@ -695,6 +710,13 @@ def pit_box():
 
     kv_set("pit_start", box_time.isoformat())
     kv_set("status", "pitting")
+    driver_name = ""
+    if did:
+        with get_db() as con:
+            row = con.execute("SELECT name FROM drivers WHERE id=?", (did,)).fetchone()
+            driver_name = row["name"] if row else did
+    offset_note = f"  (retroactive -{int(offset_s)}s)" if offset_s else ""
+    log("BOX NOW", f"driver={driver_name}  stint={fmt_duration(dur if did and stint_start else 0)}{offset_note}")
     broadcast()
     return jsonify(ok=True)
 
@@ -702,10 +724,18 @@ def pit_box():
 def pit_done():
     """New driver seated — start fresh stint."""
     new_did = str(request.json.get("driver_id") or kv_get("driver_id"))
+    pit_s = kv_get("pit_start")
+    pit_elapsed = 0.0
+    if pit_s:
+        pit_elapsed = (datetime.utcnow() - datetime.fromisoformat(pit_s)).total_seconds()
     kv_set("driver_id",   new_did)
     kv_set("stint_start", datetime.utcnow().isoformat())
     kv_set("pit_start",   "")
     kv_set("status",      "racing")
+    with get_db() as con:
+        row = con.execute("SELECT name FROM drivers WHERE id=?", (new_did,)).fetchone()
+        new_name = row["name"] if row else new_did
+    log("PIT DONE", f"driver={new_name}  pit_time={fmt_mmss(pit_elapsed)}")
     broadcast()
     return jsonify(ok=True)
 
