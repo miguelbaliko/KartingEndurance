@@ -109,11 +109,20 @@ class ApexParser(html.parser.HTMLParser):
     def __init__(self):
         super().__init__()
         self.rows, self._cur, self._col = [], None, None
+        self.meta: dict = {}        # data-id -> {"text":..., "cls":...}
+        self._meta_id: Optional[str] = None
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
+        did = a.get("data-id")
+        if did:
+            self._meta_id = did
+            cls = a.get("class", "").strip()
+            if cls:
+                self.meta.setdefault(did, {})["cls"] = cls
         if tag == "tr":
             self._cur = {}
+            self._meta_id = None
         elif tag in ("td", "th") and self._cur is not None:
             self._col = None
             for cls in a.get("class", "").split():
@@ -122,13 +131,18 @@ class ApexParser(html.parser.HTMLParser):
                     break
 
     def handle_data(self, data):
+        v = data.strip()
+        if not v:
+            return
+        if self._meta_id:
+            self.meta.setdefault(self._meta_id, {})["text"] = v
         if self._col and self._cur is not None:
-            v = data.strip()
-            if v:
-                self._cur.setdefault(self._col, v)
+            self._cur.setdefault(self._col, v)
             self._col = None
 
     def handle_endtag(self, tag):
+        if tag in ("td", "th", "div", "span"):
+            self._meta_id = None
         if tag == "tr" and self._cur and len(self._cur) >= 2:
             self.rows.append(self._cur)
             self._cur = None
@@ -174,7 +188,22 @@ _lock = threading.Lock()
 _teams: list = []
 _lap_hist: dict = {}   # team_key -> [float, ...]
 _apex_ok = False
+_apex_session: dict = {"name": "", "light": "", "dyn1": "", "dyn2": ""}
+_ws_msg_count = 0
 _sse_queues: list = []
+
+def _process_meta(meta: dict):
+    """Update session state from parsed data-id elements."""
+    global _apex_session
+    updated = {}
+    for key, field in [("title1","name"),("title2","name2"),
+                        ("light","light"),("dyn1","dyn1"),("dyn2","dyn2")]:
+        if key in meta:
+            updated[field] = meta[key].get("text", "") or meta[key].get("cls", "")
+    if updated:
+        with _lock:
+            _apex_session.update(updated)
+        log("APEX SESSION", "  ".join(f"{k}={v}" for k,v in updated.items() if v))
 
 def broadcast():
     data = "data: " + json.dumps(make_snapshot()) + "\n\n"
@@ -317,41 +346,60 @@ def _fetch_http(page_url: str) -> list:
 
 def _ws_run(ws_url: str, done_evt: threading.Event):
     """Connect to Apex Timing WebSocket, push rows on every message."""
-    global _apex_ok
+    global _apex_ok, _ws_msg_count
 
     def on_msg(ws, msg):
+        global _ws_msg_count, _apex_ok
         if not msg:
             return
+        _ws_msg_count += 1
         try:
             s = msg.strip()
+            if not s:
+                return
+
+            # Log first message in full, then every 20th for heartbeat confirmation
+            if _ws_msg_count == 1:
+                log("APEX WS MSG#1", f"{len(s)} bytes | {s[:120]}")
+            elif _ws_msg_count % 20 == 0:
+                log("APEX WS", f"msg #{_ws_msg_count} | teams={len(_teams)} | session={_apex_session.get('name','?')}")
+
             rows = []
-            if s and s[0] in ('{', '['):
+            meta = {}
+            if s[0] in ('{', '['):
                 d = json.loads(s)
                 rows = d if isinstance(d, list) else d.get('rows', d.get('data', d.get('grid', [])))
                 if not rows and isinstance(d, dict):
                     html_s = d.get('html', d.get('content', d.get('grid_html', '')))
                     if html_s:
-                        p = ApexParser(); p.feed(html_s); rows = p.rows
+                        p = ApexParser(); p.feed(html_s); rows = p.rows; meta = p.meta
             else:
-                p = ApexParser(); p.feed(s); rows = p.rows
+                p = ApexParser(); p.feed(s); rows = p.rows; meta = p.meta
+
+            if meta:
+                _process_meta(meta)
             if _process_rows(rows):
-                broadcast()
-        except Exception:
-            pass
+                _apex_ok = True
+        except Exception as e:
+            if _ws_msg_count <= 3:
+                log("APEX WS ERR", str(e))
 
     def on_open(ws):
-        global _apex_ok
+        global _apex_ok, _ws_msg_count
+        _ws_msg_count = 0
         _apex_ok = True
-        broadcast()
+        log("APEX WS CONNECTED", ws_url)
 
     def on_close(ws, code, msg):
         global _apex_ok
         _apex_ok = False
+        log("APEX WS CLOSED", f"code={code}")
         done_evt.set()
 
     def on_error(ws, _err):
         global _apex_ok
         _apex_ok = False
+        log("APEX WS ERROR", str(_err))
 
     ws = _ws_mod.WebSocketApp(ws_url,
         on_message=on_msg, on_error=on_error,
@@ -361,13 +409,38 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
         ping_interval=30, ping_timeout=10,
     )
 
+# ── Mock data (for testing when no Apex URL is configured) ─────────────────────
+import random as _random
+
+def _mock_teams() -> list:
+    base_laps = [52.1, 52.8, 53.4, 51.9, 54.2, 52.5, 53.0, 51.7]
+    rows = []
+    for i, bl in enumerate(base_laps, start=1):
+        ll = bl + _random.uniform(-0.3, 0.8)
+        rows.append({
+            "pos": str(i), "kart": str(i * 10), "team": f"TEAM {i:02d}",
+            "last_lap": fmt_laptime(ll), "best_lap": fmt_laptime(bl - 0.1),
+            "total_laps": str(55 - i + _random.randint(0, 2)),
+            "pits": str(max(0, i // 3)), "gap": "" if i == 1 else f"+{(i-1)*1.23:.3f}",
+        })
+    return rows
+
 # ── Background worker ──────────────────────────────────────────────────────────
 def worker():
-    global _apex_ok
+    global _apex_ok, _apex_session
     while True:
         url = CFG.get("apex_url", "")
 
-        if _HAS_WS and url:
+        if not url:
+            # No URL configured — inject mock data so UI is testable
+            with _lock:
+                _apex_session = {"name": "MOCK SESSION", "light": "green", "dyn1": "", "dyn2": ""}
+            _process_rows(_mock_teams())
+            _apex_ok = True
+            time.sleep(3)
+            continue
+
+        if _HAS_WS:
             ws_url = _find_ws_url(url)
             if ws_url:
                 done = threading.Event()
@@ -383,7 +456,6 @@ def worker():
         if not _process_rows(rows):
             with _lock:
                 _apex_ok = False
-        broadcast()
         time.sleep(CFG.get("refresh_interval", 5))
 
 # ── Strategy engine ────────────────────────────────────────────────────────────
@@ -431,8 +503,9 @@ def make_snapshot() -> dict:
     global _prev_avg5
 
     with _lock:
-        teams_raw = list(_teams)
-        apex_ok   = _apex_ok
+        teams_raw    = list(_teams)
+        apex_ok      = _apex_ok
+        apex_session = dict(_apex_session)
 
     now = datetime.utcnow()
     status = kv_get("status")
@@ -529,6 +602,7 @@ def make_snapshot() -> dict:
         "ts":               now.isoformat() + "Z",  # explicit UTC so JS Date() parses correctly
         "status":           status,
         "apex_ok":          apex_ok,
+        "apex_session":     apex_session,
         "race_elapsed":     race_elapsed,
         "race_remaining":   race_remaining,
         "race_remaining_fmt": fmt_duration(race_remaining),

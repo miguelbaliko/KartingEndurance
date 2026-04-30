@@ -337,6 +337,7 @@ td{padding:7px 8px;white-space:nowrap}
     <div class="tb-apex">
       <div id="apex-dot" class="apex-dot apex-err"></div>
       <span id="apex-label">NO SIGNAL</span>
+      <span id="apex-session" style="margin-left:8px;font-size:11px;color:var(--tx2);letter-spacing:.06em"></span>
     </div>
     <div class="tb-space"></div>
     <button class="tb-btn go"  onclick="api('race/start')">START RACE</button>
@@ -574,8 +575,18 @@ function render(s) {
   badge.textContent = s.status.toUpperCase();
   badge.className   = 's-'+s.status;
   const ok = s.apex_ok;
-  document.getElementById('apex-dot').className = 'apex-dot '+(ok?'apex-ok':'apex-err');
+  const sess = s.apex_session || {};
+  const light = sess.light || '';
+  const lightColor = light.includes('green') ? 'var(--grn)'
+                   : light.includes('yellow') || light.includes('sc') ? 'var(--ylw)'
+                   : light.includes('red') ? 'var(--red)'
+                   : ok ? 'var(--grn)' : null;
+  const dot = document.getElementById('apex-dot');
+  dot.className = 'apex-dot ' + (ok ? 'apex-ok' : 'apex-err');
+  if (lightColor) dot.style.background = lightColor;
   document.getElementById('apex-label').textContent = ok ? 'APEX LIVE' : 'NO SIGNAL';
+  const sname = [sess.name, sess.name2].filter(Boolean).join(' · ');
+  document.getElementById('apex-session').textContent = sname;
   document.getElementById('track-avg').textContent = s.track_avg;
 
   renderTable(s.teams);
