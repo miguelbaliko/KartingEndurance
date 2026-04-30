@@ -215,8 +215,8 @@ _ws_url_cache: Optional[str] = None   # "" means checked and not found
 _ws_url_checked_at: float = 0.0
 
 def _find_ws_url(page_url: str) -> Optional[str]:
-    """Fetch the Apex Timing event page and extract WebSocket connection URL.
-    Result is cached for 5 minutes so the page is only fetched once."""
+    """Fetch the Apex Timing event page + config.js and extract WebSocket URL.
+    Result is cached for 5 minutes."""
     global _ws_url_cache, _ws_url_checked_at
     now_t = time.time()
     if _ws_url_checked_at and now_t - _ws_url_checked_at < 300:
@@ -226,38 +226,50 @@ def _find_ws_url(page_url: str) -> Optional[str]:
     if not page_url:
         _ws_url_cache = ""
         return None
+
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"}
+
+    def _fetch(url):
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as r:
+            return r.read().decode("utf-8", errors="ignore")
+
     try:
         base = page_url.split('#')[0].rstrip('/')
-        req = urllib.request.Request(base, headers={
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"
-        })
-        with urllib.request.urlopen(req, timeout=5) as r:
-            src = r.read().decode("utf-8", errors="ignore")
+        src = _fetch(base)
 
-        # Pattern 1: explicit WebSocket URL literal in JS
+        # 1. Apex Timing pattern: event-specific config.js holds configPort
+        for script_src in re.findall(r'''<script[^>]+src=['"]([^'"]+)['"]''', src):
+            if "config.js" in script_src:
+                config_url = urllib.parse.urljoin(base + "/", script_src)
+                try:
+                    cfg_src = _fetch(config_url)
+                    m = re.search(r'configPort\s*=\s*(\d+)', cfg_src)
+                    if m:
+                        ws_url = f"wss://www.apex-timing.com:{int(m.group(1)) + 3}/"
+                        _ws_url_cache = ws_url
+                        print(f"[apex] WS URL from configPort: {ws_url}", flush=True)
+                        return ws_url
+                except Exception:
+                    pass
+
+        # 2. Fallback: explicit WebSocket URL in page JS
         m = re.search(r'''new\s+WebSocket\s*\(\s*['"]([^'"]+)['"]''', src)
         if m:
             _ws_url_cache = m.group(1)
-            print(f"[apex] WS URL found (explicit): {_ws_url_cache}", flush=True)
+            print(f"[apex] WS URL explicit: {_ws_url_cache}", flush=True)
             return _ws_url_cache
 
-        # Pattern 2: port variable — Apex Timing WS is typically at port+3
-        m = re.search(r'''(?<![a-zA-Z])port\s*[:=]\s*(\d{3,5})''', src, re.I)
+        # 3. Fallback: generic port variable
+        m = re.search(r'''(?:configPort|wsPort|ws_port)\s*=\s*(\d{3,5})''', src, re.I)
         if m:
             _ws_url_cache = f"wss://www.apex-timing.com:{int(m.group(1)) + 3}/"
-            print(f"[apex] WS URL from port: {_ws_url_cache}", flush=True)
+            print(f"[apex] WS URL from inline port: {_ws_url_cache}", flush=True)
             return _ws_url_cache
 
-        # Pattern 3: wsPort or ws_port
-        m = re.search(r'''(?:wsPort|ws_port)\s*[:=]\s*(\d{3,5})''', src, re.I)
-        if m:
-            _ws_url_cache = f"wss://www.apex-timing.com:{int(m.group(1))}/"
-            print(f"[apex] WS URL from wsPort: {_ws_url_cache}", flush=True)
-            return _ws_url_cache
-
-        print("[apex] No WS URL in page source — using HTTP fallback", flush=True)
+        print("[apex] No WS URL found — using HTTP fallback", flush=True)
     except Exception as e:
-        print(f"[apex] Page fetch error: {e}", flush=True)
+        print(f"[apex] Discovery error: {e}", flush=True)
     _ws_url_cache = ""
     return None
 
@@ -716,6 +728,29 @@ def api_settings():
     save_cfg()
     broadcast()
     return jsonify(ok=True)
+
+# ── Debug ──────────────────────────────────────────────────────────────────────
+@app.get("/debug/apex")
+def debug_apex():
+    url = CFG.get("apex_url", "")
+    result = {"url": url, "ws_url_cache": _ws_url_cache, "apex_ok": _apex_ok}
+    if url:
+        try:
+            base = url.split('#')[0].rstrip('/')
+            req = urllib.request.Request(base, headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"
+            })
+            with urllib.request.urlopen(req, timeout=8) as r:
+                src = r.read().decode("utf-8", errors="ignore")
+            result["page_length"] = len(src)
+            result["page_snippet"] = src[:4000]
+            # Find all script src references
+            result["script_srcs"] = re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', src)
+            # Look for any port/ws patterns
+            result["ws_matches"] = re.findall(r'.{0,60}(?:WebSocket|wsPort|ws_port|wss?://|port\s*[:=]\s*\d{3,5}).{0,60}', src)
+        except Exception as e:
+            result["error"] = str(e)
+    return jsonify(result)
 
 # ── Startup (runs for both direct execution and gunicorn) ─────────────────────
 init_db()
