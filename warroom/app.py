@@ -412,16 +412,51 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
 # ── Mock data (for testing when no Apex URL is configured) ─────────────────────
 import random as _random
 
+# Base lap times per mock team (seconds) — realistic endurance karting pace
+_MOCK_ROSTER = [
+    ("APX GP",        51.8),
+    ("SPEED KINGS",   51.6),
+    ("FAST LANE RT",  52.1),
+    ("RED DEVILS",    52.4),
+    ("THUNDER GP",    52.7),
+    ("APEX HUNTERS",  51.9),
+    ("TRACK WOLVES",  53.1),
+    ("MIDNIGHT KART", 53.5),
+    ("GRID WARRIORS", 52.5),
+    ("PIT CREW PRO",  53.9),
+    ("NITRO TEAM",    52.0),
+    ("ENDURO ACES",   54.2),
+]
+_mock_laps_done = [55, 57, 54, 54, 52, 56, 51, 49, 53, 48, 55, 47]
+_mock_pits      = [ 2,  2,  2,  2,  1,  2,  1,  1,  2,  1,  2,  1]
+
 def _mock_teams() -> list:
-    base_laps = [52.1, 52.8, 53.4, 51.9, 54.2, 52.5, 53.0, 51.7]
+    my = CFG.get("team_name", "").strip().upper()
+    roster = list(_MOCK_ROSTER)
+    # Replace first entry with the configured team name so My Team section works
+    if my and my != roster[0][0]:
+        roster[0] = (my, roster[0][1])
+    # Sort by base lap time to give realistic ordering
+    roster.sort(key=lambda x: x[1])
+
+    leader_laps = _mock_laps_done[0] + _random.randint(0, 1)
     rows = []
-    for i, bl in enumerate(base_laps, start=1):
-        ll = bl + _random.uniform(-0.3, 0.8)
+    for i, (name, base) in enumerate(roster):
+        ll = base + _random.uniform(-0.15, 0.60)
+        best = base - _random.uniform(0.05, 0.25)
+        laps = max(40, leader_laps - i + _random.randint(-1, 1))
+        pits = _mock_pits[i]
+        gap  = "" if i == 0 else f"+{(laps - (leader_laps - i)) * base + _random.uniform(1,5):.3f}"
         rows.append({
-            "pos": str(i), "kart": str(i * 10), "team": f"TEAM {i:02d}",
-            "last_lap": fmt_laptime(ll), "best_lap": fmt_laptime(bl - 0.1),
-            "total_laps": str(55 - i + _random.randint(0, 2)),
-            "pits": str(max(0, i // 3)), "gap": "" if i == 1 else f"+{(i-1)*1.23:.3f}",
+            "pos":        str(i + 1),
+            "kart":       str((i + 1) * 7),
+            "team":       name,
+            "last_lap":   fmt_laptime(ll),
+            "best_lap":   fmt_laptime(best),
+            "total_laps": str(laps),
+            "pits":       str(pits),
+            "gap":        gap,
+            "interval":   f"+{_random.uniform(0.1, 3.5):.3f}" if i > 0 else "",
         })
     return rows
 
