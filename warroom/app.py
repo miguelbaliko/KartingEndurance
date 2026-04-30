@@ -468,10 +468,15 @@ def worker():
 
         if not url:
             # No URL configured — inject mock data so UI is testable
-            with _lock:
-                _apex_session = {"name": "MOCK SESSION", "light": "green", "dyn1": "", "dyn2": ""}
-            _process_rows(_mock_teams())
-            _apex_ok = True
+            try:
+                with _lock:
+                    _apex_session = {"name": "MOCK SESSION", "light": "green", "dyn1": "", "dyn2": ""}
+                rows = _mock_teams()
+                _process_rows(rows)
+                _apex_ok = True
+                log("MOCK DATA", f"{len(rows)} teams")
+            except Exception as e:
+                log("MOCK ERROR", str(e))
             time.sleep(3)
             continue
 
@@ -488,9 +493,12 @@ def worker():
 
         # HTTP/AJAX polling fallback (no WebSocket library or no WS URL found)
         rows = _fetch_http(url)
-        if not _process_rows(rows):
+        if _process_rows(rows):
+            log("HTTP DATA", f"{len(rows)} teams")
+        else:
             with _lock:
                 _apex_ok = False
+            log("HTTP POLL", "no data received")
         time.sleep(CFG.get("refresh_interval", 5))
 
 # ── Strategy engine ────────────────────────────────────────────────────────────
