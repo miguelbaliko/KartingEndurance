@@ -711,6 +711,8 @@ function renderPit(s) {
 
 // ── Drivers ──────────────────────────────────────────────────────
 function renderDrivers(s) {
+  // Don't re-render while user is actively editing a driver name
+  if (document.querySelector('.drv-edit-inp:focus')) return;
   const el = document.getElementById('drivers-list');
   if (!s.drivers.length) {
     el.innerHTML = '<div style="color:var(--tx3);font-size:11px;padding:4px 0">No drivers yet</div>';
@@ -812,7 +814,7 @@ async function saveCfg() {
   const dur=document.getElementById('cfg-dur').value.trim();
   const pits=document.getElementById('cfg-pits').value.trim();
   const stint=document.getElementById('cfg-stint').value.trim();
-  if (url)   b.apex_url          = url;
+  b.apex_url = url;
   if (team)  b.team_name         = team;
   if (dur)   b.duration_minutes  = parseInt(dur);
   if (pits)  b.mandatory_pits    = parseInt(pits);

@@ -344,6 +344,49 @@ def _fetch_http(page_url: str) -> list:
             continue
     return []
 
+_LAPTIME_RE = re.compile(r'^\d+:\d{2}\.\d{3}$')
+
+def _parse_apex_pipe(msg: str) -> tuple:
+    """Parse Apex Timing pipe-delimited WebSocket protocol.
+    Returns (rows, meta) where rows are timing dicts and meta has session info."""
+    rows = []
+    meta = {}
+    for line in msg.replace('\r', '').split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split('|')
+        cmd = parts[0]
+
+        def p(i, default=''):
+            return parts[i].strip() if len(parts) > i else default
+
+        if cmd == 'r' and len(parts) >= 7:
+            # r|pos|kart|team|last_lap|best_lap|laps|gap|pits|...
+            rows.append({
+                'pos': p(1), 'kart': p(2), 'team': p(3),
+                'last_lap': p(4), 'best_lap': p(5),
+                'total_laps': p(6), 'gap': p(7), 'pits': p(8),
+            })
+        elif cmd in ('title', 't') and len(parts) > 1:
+            meta['name'] = p(1)
+        elif cmd == 'dyn' and len(parts) > 1:
+            idx = p(1); val = p(2)
+            if idx == '1': meta['dyn1'] = val
+            if idx == '2': meta['dyn2'] = val
+        elif cmd == 'light' and len(parts) > 1:
+            meta['light'] = p(1)
+        elif cmd == 'init' and len(parts) > 1:
+            meta['format'] = p(1)
+        # Heuristic fallback: 8+ pipe fields where field[4] looks like a lap time
+        elif len(parts) >= 7 and _LAPTIME_RE.match(p(4)):
+            rows.append({
+                'pos': p(1), 'kart': p(2), 'team': p(3),
+                'last_lap': p(4), 'best_lap': p(5),
+                'total_laps': p(6), 'gap': p(7), 'pits': p(8),
+            })
+    return rows, meta
+
 def _ws_run(ws_url: str, done_evt: threading.Event):
     """Connect to Apex Timing WebSocket, push rows on every message."""
     global _apex_ok, _ws_msg_count
@@ -358,9 +401,9 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
             if not s:
                 return
 
-            # Log first message in full, then every 20th for heartbeat confirmation
+            # Log first message in full so we can see the protocol
             if _ws_msg_count == 1:
-                log("APEX WS MSG#1", f"{len(s)} bytes | {s[:120]}")
+                log("APEX WS MSG#1", f"{len(s)} bytes\n{s[:3000]}")
             elif _ws_msg_count % 20 == 0:
                 log("APEX WS", f"msg #{_ws_msg_count} | teams={len(_teams)} | session={_apex_session.get('name','?')}")
 
@@ -373,6 +416,9 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
                     html_s = d.get('html', d.get('content', d.get('grid_html', '')))
                     if html_s:
                         p = ApexParser(); p.feed(html_s); rows = p.rows; meta = p.meta
+            elif '|' in s:
+                # Apex Timing pipe-delimited protocol
+                rows, meta = _parse_apex_pipe(s)
             else:
                 p = ApexParser(); p.feed(s); rows = p.rows; meta = p.meta
 
@@ -380,6 +426,8 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
                 _process_meta(meta)
             if _process_rows(rows):
                 _apex_ok = True
+                if _ws_msg_count <= 3:
+                    log("APEX PARSED", f"{len(rows)} teams, meta={meta}")
         except Exception as e:
             if _ws_msg_count <= 3:
                 log("APEX WS ERR", str(e))
