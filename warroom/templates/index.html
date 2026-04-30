@@ -472,6 +472,9 @@ td{padding:7px 8px;white-space:nowrap}
               <span class="pit-ok-tag">✓ MIN TIME MET</span>
             </div>
           </div>
+          <div class="pit-drv-label">In pit: <span id="pit-current-drv" style="color:var(--tx2)">—</span></div>
+          <div class="pit-drv-label" style="margin-top:8px">Next driver</div>
+          <div id="pit-drv-select" class="drv-select-grid" style="margin-bottom:10px"></div>
           <button class="pit-confirm-btn" id="btn-confirm" onclick="confirmPit()">
             ▶ CONFIRM &amp; START STINT
           </button>
@@ -543,6 +546,7 @@ let S               = null;
 let _stateAt        = null;   // Date.now() when last state arrived
 let _autoPitFired   = false;
 let _planEdit       = null;
+let _nextDriverId   = null;
 
 // ═══ Polling ════════════════════════════════════════════════════
 async function fetchState() {
@@ -627,8 +631,9 @@ function tick() {
     if (ok) ok.style.display = met ? 'block' : 'none';
     if (met && !_autoPitFired) {
       _autoPitFired = true;
-      const did = pitDriverId || (S.current_driver ? S.current_driver.id : null);
+      const did = _nextDriverId || (S.current_driver ? S.current_driver.id : null);
       if (did) api('pit/done', {driver_id: did});
+      _nextDriverId = null;
     }
   } else {
     _autoPitFired = false;
@@ -764,6 +769,21 @@ function renderPit(s) {
   const p = s.status === 'pitting';
   document.getElementById('pit-racing').style.display  = p ? 'none' : 'block';
   document.getElementById('pit-pitting').style.display = p ? 'block' : 'none';
+
+  if (p) {
+    // Show who is currently in the pit
+    const cur = s.current_driver ? s.current_driver.name : '—';
+    document.getElementById('pit-current-drv').textContent = cur;
+    // Next driver selector
+    const sel = document.getElementById('pit-drv-select');
+    sel.innerHTML = s.drivers.map(d => `
+      <button class="drv-sel-btn ${_nextDriverId === d.id ? 'active' : ''}"
+              onclick="pickNextDriver(${d.id},this)">
+        ${esc(d.name)}
+      </button>`).join('');
+  } else {
+    _nextDriverId = null;
+  }
 }
 
 // ── Drivers ──────────────────────────────────────────────────────
@@ -893,9 +913,15 @@ function boxNow() {
   _autoPitFired = false;
   api('pit/box', {offset_seconds:off});
 }
+function pickNextDriver(id, btn) {
+  _nextDriverId = id;
+  document.querySelectorAll('#pit-drv-select .drv-sel-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
 function confirmPit() {
-  const did = S && S.current_driver ? S.current_driver.id : null;
+  const did = _nextDriverId || (S && S.current_driver ? S.current_driver.id : null);
   api('pit/done', {driver_id: did});
+  _nextDriverId = null;
 }
 
 // ═══ Settings ════════════════════════════════════════════════════
