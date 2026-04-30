@@ -750,6 +750,16 @@ function renderMyTeam(s) {
       </div>
     </div>`;
 
+  if (s.drivers.length) {
+    html += `<div class="drv-select-label">Current Driver</div>
+      <div class="drv-select-grid">
+        ${s.drivers.map(d => `
+          <button class="drv-sel-btn ${d.active ? 'active' : ''}" onclick="setDriver(${d.id})">
+            ${esc(d.name)}
+          </button>`).join('')}
+      </div>`;
+  }
+
   el.innerHTML = html;
 }
 
