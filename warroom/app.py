@@ -2,10 +2,17 @@
 """APX GP War Room — Karting Endurance Strategy Tool"""
 
 from flask import Flask, render_template, jsonify, request, Response
-import threading, time, json, sqlite3, urllib.request, urllib.error
+import threading, time, json, sqlite3, urllib.request, urllib.error, urllib.parse
 import html.parser, re, os, queue
 from datetime import datetime, timedelta
 from typing import Optional
+
+try:
+    import websocket as _ws_mod
+    import ssl as _ssl
+    _HAS_WS = True
+except ImportError:
+    _HAS_WS = False
 
 app = Flask(__name__)
 
@@ -155,32 +162,6 @@ def fmt_mmss(secs: float) -> str:
     m, s = divmod(secs, 60)
     return f"{m}:{s:02d}"
 
-# ── Apex fetch ─────────────────────────────────────────────────────────────────
-def fetch_apex() -> list:
-    url = CFG.get("apex_url", "")
-    if not url:
-        return []
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=8) as r:
-            html_text = r.read().decode("utf-8", errors="ignore")
-
-        p = ApexParser()
-        p.feed(html_text)
-        if p.rows:
-            return p.rows
-
-        # Fallback: embedded JSON grid variable
-        m = re.search(
-            r'(?:grid|rows|data|results)\s*=\s*(\[.*?\]);',
-            html_text, re.DOTALL | re.IGNORECASE
-        )
-        if m:
-            return json.loads(m.group(1))
-    except Exception:
-        pass
-    return []
-
 # ── Shared live state ──────────────────────────────────────────────────────────
 _lock = threading.Lock()
 _teams: list = []
@@ -202,32 +183,186 @@ def broadcast():
         except ValueError:
             pass
 
+# ── Apex Timing data ingestion ─────────────────────────────────────────────────
+def _process_rows(rows: list) -> bool:
+    """Merge a list of parsed row dicts into global _teams. Returns True if any rows."""
+    global _teams, _apex_ok
+    if not rows:
+        return False
+    with _lock:
+        built = []
+        for r in rows:
+            t = dict(r)
+            key = t.get("kart") or t.get("team") or str(t.get("pos", ""))
+            ll = parse_laptime(t.get("last_lap", ""))
+            hist = _lap_hist.setdefault(key, [])
+            if ll and (not hist or hist[-1] != ll):
+                hist.append(ll)
+                del hist[:-30]
+            t["last_lap_s"]  = ll
+            t["best_lap_s"]  = parse_laptime(t.get("best_lap", ""))
+            t["avg5_s"]  = sum(hist[-5:])  / len(hist[-5:])  if hist else None
+            t["avg10_s"] = sum(hist[-10:]) / len(hist[-10:]) if hist else None
+            t["avg5"]    = fmt_laptime(t["avg5_s"])
+            t["avg10"]   = fmt_laptime(t["avg10_s"])
+            built.append(t)
+        if built:
+            _teams = built
+            _apex_ok = True
+    return True
+
+_ws_url_cache: Optional[str] = None   # "" means checked and not found
+_ws_url_checked_at: float = 0.0
+
+def _find_ws_url(page_url: str) -> Optional[str]:
+    """Fetch the Apex Timing event page and extract WebSocket connection URL.
+    Result is cached for 5 minutes so the page is only fetched once."""
+    global _ws_url_cache, _ws_url_checked_at
+    now_t = time.time()
+    if _ws_url_checked_at and now_t - _ws_url_checked_at < 300:
+        return _ws_url_cache or None
+    _ws_url_checked_at = now_t
+
+    if not page_url:
+        _ws_url_cache = ""
+        return None
+    try:
+        base = page_url.split('#')[0].rstrip('/')
+        req = urllib.request.Request(base, headers={
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"
+        })
+        with urllib.request.urlopen(req, timeout=5) as r:
+            src = r.read().decode("utf-8", errors="ignore")
+
+        # Pattern 1: explicit WebSocket URL literal in JS
+        m = re.search(r'''new\s+WebSocket\s*\(\s*['"]([^'"]+)['"]''', src)
+        if m:
+            _ws_url_cache = m.group(1)
+            print(f"[apex] WS URL found (explicit): {_ws_url_cache}", flush=True)
+            return _ws_url_cache
+
+        # Pattern 2: port variable — Apex Timing WS is typically at port+3
+        m = re.search(r'''(?<![a-zA-Z])port\s*[:=]\s*(\d{3,5})''', src, re.I)
+        if m:
+            _ws_url_cache = f"wss://www.apex-timing.com:{int(m.group(1)) + 3}/"
+            print(f"[apex] WS URL from port: {_ws_url_cache}", flush=True)
+            return _ws_url_cache
+
+        # Pattern 3: wsPort or ws_port
+        m = re.search(r'''(?:wsPort|ws_port)\s*[:=]\s*(\d{3,5})''', src, re.I)
+        if m:
+            _ws_url_cache = f"wss://www.apex-timing.com:{int(m.group(1))}/"
+            print(f"[apex] WS URL from wsPort: {_ws_url_cache}", flush=True)
+            return _ws_url_cache
+
+        print("[apex] No WS URL in page source — using HTTP fallback", flush=True)
+    except Exception as e:
+        print(f"[apex] Page fetch error: {e}", flush=True)
+    _ws_url_cache = ""
+    return None
+
+def _fetch_http(page_url: str) -> list:
+    """Try AJAX endpoint to get timing data (HTTP fallback when WS not available)."""
+    if not page_url:
+        return []
+    m = re.search(r'apex-timing\.com/([^/#"\'? ]+)', page_url)
+    event = m.group(1) if m else ""
+    for endpoint, body in [
+        ("https://live.apex-timing.com/commonv2/functions/live_ajax.php",
+         urllib.parse.urlencode({"action": "getGrid", "event": event}).encode()),
+        (f"https://live.apex-timing.com/{event}/grid.json", None),
+    ]:
+        try:
+            headers = {"User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest",
+                       "Referer": page_url}
+            if body:
+                headers["Content-Type"] = "application/x-www-form-urlencoded"
+            req = urllib.request.Request(endpoint, data=body, headers=headers)
+            with urllib.request.urlopen(req, timeout=4) as r:
+                text = r.read().decode("utf-8", errors="ignore")
+            text = text.strip()
+            if not text:
+                continue
+            if text[0] in ('{', '['):
+                d = json.loads(text)
+                rows = d if isinstance(d, list) else d.get('rows', d.get('data', d.get('grid', [])))
+                if rows:
+                    return rows
+            p = ApexParser()
+            p.feed(text)
+            if p.rows:
+                return p.rows
+        except Exception:
+            continue
+    return []
+
+def _ws_run(ws_url: str, done_evt: threading.Event):
+    """Connect to Apex Timing WebSocket, push rows on every message."""
+    global _apex_ok
+
+    def on_msg(ws, msg):
+        if not msg:
+            return
+        try:
+            s = msg.strip()
+            rows = []
+            if s and s[0] in ('{', '['):
+                d = json.loads(s)
+                rows = d if isinstance(d, list) else d.get('rows', d.get('data', d.get('grid', [])))
+                if not rows and isinstance(d, dict):
+                    html_s = d.get('html', d.get('content', d.get('grid_html', '')))
+                    if html_s:
+                        p = ApexParser(); p.feed(html_s); rows = p.rows
+            else:
+                p = ApexParser(); p.feed(s); rows = p.rows
+            if _process_rows(rows):
+                broadcast()
+        except Exception:
+            pass
+
+    def on_open(ws):
+        global _apex_ok
+        _apex_ok = True
+        broadcast()
+
+    def on_close(ws, code, msg):
+        global _apex_ok
+        _apex_ok = False
+        done_evt.set()
+
+    def on_error(ws, _err):
+        global _apex_ok
+        _apex_ok = False
+
+    ws = _ws_mod.WebSocketApp(ws_url,
+        on_message=on_msg, on_error=on_error,
+        on_close=on_close, on_open=on_open)
+    ws.run_forever(
+        sslopt={"cert_reqs": _ssl.CERT_NONE},
+        ping_interval=30, ping_timeout=10,
+    )
+
 # ── Background worker ──────────────────────────────────────────────────────────
 def worker():
-    global _teams, _apex_ok
+    global _apex_ok
     while True:
-        raw = fetch_apex()
-        with _lock:
-            if raw:
-                _apex_ok = True
-                built = []
-                for r in raw:
-                    t = dict(r)
-                    key = t.get("kart") or t.get("team") or str(t.get("pos", ""))
-                    ll = parse_laptime(t.get("last_lap", ""))
-                    hist = _lap_hist.setdefault(key, [])
-                    if ll and (not hist or hist[-1] != ll):
-                        hist.append(ll)
-                        del hist[:-30]
-                    t["last_lap_s"] = ll
-                    t["best_lap_s"] = parse_laptime(t.get("best_lap", ""))
-                    t["avg5_s"]  = sum(hist[-5:])  / len(hist[-5:])  if hist else None
-                    t["avg10_s"] = sum(hist[-10:]) / len(hist[-10:]) if hist else None
-                    t["avg5"]    = fmt_laptime(t["avg5_s"])
-                    t["avg10"]   = fmt_laptime(t["avg10_s"])
-                    built.append(t)
-                _teams = built
-            else:
+        url = CFG.get("apex_url", "")
+
+        if _HAS_WS and url:
+            ws_url = _find_ws_url(url)
+            if ws_url:
+                done = threading.Event()
+                t = threading.Thread(target=_ws_run, args=(ws_url, done), daemon=True)
+                t.start()
+                done.wait(timeout=600)  # reconnect after 10 min max or on disconnect
+                t.join(timeout=5)
+                time.sleep(3)  # brief pause before reconnect to avoid tight loop
+                continue
+
+        # HTTP/AJAX polling fallback (no WebSocket library or no WS URL found)
+        rows = _fetch_http(url)
+        if not _process_rows(rows):
+            with _lock:
                 _apex_ok = False
         broadcast()
         time.sleep(CFG.get("refresh_interval", 5))
@@ -420,20 +555,26 @@ def sse_stream():
 
     def gen():
         try:
-            yield "data: " + json.dumps(make_snapshot()) + "\n\n"
+            try:
+                yield "data: " + json.dumps(make_snapshot()) + "\n\n"
+            except Exception:
+                yield ": init-error\n\n"
             while True:
                 try:
-                    yield q.get(timeout=25)
+                    yield q.get(timeout=15)
                 except queue.Empty:
                     yield ": ping\n\n"
         except GeneratorExit:
+            pass
+        finally:
             try:
                 _sse_queues.remove(q)
             except ValueError:
                 pass
 
     return Response(gen(), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no",
+                             "Connection": "keep-alive"})
 
 # ── Race control ───────────────────────────────────────────────────────────────
 @app.post("/api/race/start")
@@ -562,6 +703,8 @@ def api_settings():
     data = request.json or {}
     if "apex_url" in data:
         CFG["apex_url"] = data["apex_url"].strip()
+        global _ws_url_cache, _ws_url_checked_at
+        _ws_url_cache, _ws_url_checked_at = None, 0.0  # force re-scan on next cycle
     if "team_name" in data:
         CFG["team_name"] = data["team_name"].strip()
     if "duration_minutes" in data:

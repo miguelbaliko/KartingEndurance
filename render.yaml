@@ -4,7 +4,7 @@ services:
     runtime: python
     rootDir: warroom
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --worker-class gthread --threads 8 --timeout 120
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --worker-class gevent --workers 2 --timeout 0
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
