@@ -3,664 +3,634 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>War Room</title>
+<title>Delta Endurance Manager</title>
 <style>
 /* ── Tokens ───────────────────────────────────────────────── */
 :root{
-  --bg0:#07080d;
-  --bg1:#0d0f18;
-  --bg2:#131620;
-  --bg3:#1a1e2c;
-  --bg4:#222840;
-  --line:#1e2236;
-  --line2:#272d44;
-  --tx:  #d8deef;
-  --tx2: #8892b0;
-  --tx3: #4a5270;
+  --bg0:#080a10;
+  --bg1:#0c0f17;
+  --bg2:#11141e;
+  --bg3:#171b28;
+  --bg4:#20263a;
+  --line:#1b2032;
+  --line2:#282f47;
+  --tx:  #e6e9f4;
+  --tx2: #8b93b0;
+  --tx3: #565f7d;
+  --amber:#ff9a2e;       /* Delta brand accent */
+  --amber2:#ffb968;
   --blue:#4f91ff;
-  --cyan:#00d4ff;
-  --grn: #00e676;
+  --cyan:#22d3ee;
+  --purple:#b98bff;
+  --grn: #34d07f;
+  --lime:#d9d94a;
   --ylw: #ffd740;
-  --org: #ff9100;
-  --red: #ff3d3d;
+  --org: #ff9f43;
+  --red: #ff5c5c;
+  --mine:#7c5cff;        /* my-team highlight */
   --r:5px;
-  --mono:'Courier New',monospace;
+  --mono:'JetBrains Mono','SF Mono','Courier New',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg0);color:var(--tx);
   font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;overflow:hidden}
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
 
-/* ═══════════════════════════════════ LAYOUT ══ */
 #app{display:flex;flex-direction:column;height:100vh}
 
-/* ── Topbar ── */
+/* ═══════════════════════════════════ TOPBAR ══ */
 #topbar{
-  display:flex;align-items:center;gap:0;
-  height:52px;background:var(--bg1);
-  border-bottom:1px solid var(--line);
-  flex-shrink:0;padding:0 16px;
+  display:flex;align-items:center;gap:0;height:50px;
+  background:linear-gradient(180deg,#12151f,#0c0f17);
+  border-bottom:2px solid var(--amber);
+  flex-shrink:0;padding:0 14px;position:relative;
 }
-.tb-brand{
-  font-size:12px;font-weight:800;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--tx2);margin-right:20px;
+.brand{display:flex;align-items:center;gap:9px;margin-right:16px}
+.brand-mark{
+  width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  color:var(--amber);font-size:19px;line-height:1;
 }
-.tb-brand span{color:var(--cyan)}
+.brand-txt{line-height:1.05}
+.brand-txt .b1{font-size:12px;font-weight:900;letter-spacing:.22em;color:var(--tx)}
+.brand-txt .b2{font-size:7px;font-weight:700;letter-spacing:.34em;color:var(--tx3);text-transform:uppercase}
+.tb-session{
+  font-size:11px;color:var(--tx2);font-weight:600;letter-spacing:.02em;
+  max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:16px;
+}
 .tb-clock{
-  font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;
-  letter-spacing:-.01em;color:var(--tx);min-width:100px;
+  font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+  font-family:var(--mono);color:var(--tx);white-space:nowrap;
 }
+.tb-clock .of{color:var(--tx3);font-weight:600}
 .tb-clock.low{color:var(--ylw)}
 .tb-clock.crit{color:var(--red)}
-.tb-sep{width:1px;height:22px;background:var(--line2);margin:0 14px}
+.tb-sep{width:1px;height:22px;background:var(--line2);margin:0 14px;flex-shrink:0}
+.tb-conn{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;
+  letter-spacing:.05em;color:var(--tx3);white-space:nowrap}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--tx3);flex-shrink:0}
+.conn-dot.ok{background:var(--grn);box-shadow:0 0 7px var(--grn)}
 #status-badge{
-  font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  padding:3px 10px;border-radius:99px;
+  font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  padding:3px 9px;border-radius:99px;margin-left:12px;
 }
 .s-idle   {background:var(--bg4);color:var(--tx3)}
-.s-racing {background:#0a2a18;color:var(--grn);border:1px solid #1a5030}
-.s-pitting{background:#2a1a00;color:var(--org);border:1px solid #5a3800;animation:tb-blink 1s infinite}
-@keyframes tb-blink{0%,100%{opacity:1}50%{opacity:.6}}
-.tb-apex{
-  display:flex;align-items:center;gap:6px;
-  font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--tx3);
-  margin-left:14px;
-}
-.apex-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.apex-ok {background:var(--grn);box-shadow:0 0 8px var(--grn)}
-.apex-err{background:var(--tx3)}
+.s-racing {background:#0c2a1a;color:var(--grn);border:1px solid #1a5030}
+.s-pitting{background:#2c1c04;color:var(--org);border:1px solid #5a3a08;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
 .tb-space{flex:1}
+.tb-ctl{display:flex;gap:6px;margin-right:6px}
 .tb-btn{
-  padding:5px 13px;background:var(--bg3);border:1px solid var(--line2);
-  border-radius:var(--r);color:var(--tx);font-size:11px;font-weight:600;
-  letter-spacing:.04em;cursor:pointer;margin-left:6px;white-space:nowrap;
-  transition:background .15s;
+  padding:5px 11px;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--tx);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s;
 }
 .tb-btn:hover{background:var(--bg4)}
-.tb-btn.go   {border-color:var(--grn);color:var(--grn)}
-.tb-btn.go:hover{background:#0a2a18}
-.tb-btn.warn {border-color:var(--red);color:var(--red)}
-.tb-btn.warn:hover{background:#2a0a0a}
-.tb-btn.active-mode{background:var(--bg4);border-color:var(--cyan);color:var(--cyan)}
+.tb-btn.go{border-color:#2a6a44;color:var(--grn)}
+.tb-btn.go:hover{background:#0c2a1a}
+.tb-btn.warn{border-color:#6a2a2a;color:var(--red)}
+.tb-btn.warn:hover{background:#2a0c0c}
 
-/* ── Mode toggle ── */
-.mode-toggle{
-  display:flex;background:var(--bg3);border:1px solid var(--line2);
-  border-radius:var(--r);overflow:hidden;margin-left:10px;
+/* Nav tabs */
+.nav{display:flex;align-items:center;gap:2px}
+.nav-tab{
+  display:flex;align-items:center;gap:5px;padding:6px 11px;background:none;border:none;
+  border-radius:var(--r);color:var(--tx3);font-size:11px;font-weight:600;letter-spacing:.02em;
+  cursor:pointer;white-space:nowrap;transition:all .15s;
 }
-.mode-btn{
-  padding:4px 10px;background:none;border:none;color:var(--tx3);
-  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  cursor:pointer;transition:all .15s;
-}
-.mode-btn.active{background:var(--bg4);color:var(--cyan)}
+.nav-tab:hover{color:var(--tx2);background:var(--bg2)}
+.nav-tab.active{background:var(--bg3);color:var(--amber);box-shadow:inset 0 0 0 1px rgba(255,154,46,.35)}
+.nav-ico{font-size:12px;line-height:1}
 
-/* ── Main split ── */
-#main{display:flex;flex:1;overflow:hidden;gap:0}
+/* ═══ ALERT BANNER ═══ */
+#banner{
+  display:none;align-items:center;gap:10px;padding:6px 16px;
+  background:linear-gradient(90deg,rgba(255,154,46,.16),rgba(255,154,46,.05));
+  border-bottom:1px solid rgba(255,154,46,.3);
+  font-size:11px;color:var(--amber2);font-weight:500;flex-shrink:0;
+}
+#banner.show{display:flex}
+#banner .x{margin-left:auto;cursor:pointer;color:var(--tx3);font-weight:700;padding:0 4px}
+#banner .x:hover{color:var(--tx)}
 
-/* ── Left: timing ── */
-#left{
-  flex:1;overflow-y:auto;padding:14px 14px 14px 14px;
-  border-right:1px solid var(--line);
-}
-.panel-hd{
-  display:flex;align-items:baseline;gap:10px;margin-bottom:10px;
-}
-.panel-hd h2{
-  font-size:10px;font-weight:700;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--tx3);
-}
-.panel-hd .avg-chip{
-  font-size:11px;color:var(--tx2);
-}
-.panel-hd .avg-chip b{color:var(--cyan);font-variant-numeric:tabular-nums}
+/* ═══ MAIN ═══ */
+#main{display:flex;flex:1;overflow:hidden}
+#left{flex:1;overflow-y:auto;padding:12px 12px 40px;border-right:1px solid var(--line);position:relative}
+.panel-hd{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+.panel-hd h2{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)}
+.panel-hd .chip{font-size:11px;color:var(--tx2)}
+.panel-hd .chip b{color:var(--amber);font-variant-numeric:tabular-nums;font-family:var(--mono)}
 
-/* Timing table */
+/* ═══ TIMING TABLE ═══ */
 .t-table{width:100%;border-collapse:collapse}
 .t-table thead th{
-  padding:6px 8px;font-size:10px;font-weight:700;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--tx3);border-bottom:1px solid var(--line2);
-  text-align:left;white-space:nowrap;
+  padding:5px 8px;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--tx3);border-bottom:1px solid var(--line2);text-align:left;white-space:nowrap;
+  position:sticky;top:-12px;background:var(--bg0);z-index:2;
 }
 .t-table thead th.r{text-align:right}
-.t-table tbody tr{border-bottom:1px solid #0f1118;transition:background .1s}
-.t-table tbody tr:hover{background:var(--bg3)}
-.t-table tbody tr.mine{background:#0c1428}
-.t-table tbody tr.mine:hover{background:#111d38}
-.t-table tbody tr.mine td{color:var(--blue)}
-td{padding:7px 8px;white-space:nowrap}
-.td-pos{width:32px;text-align:center;font-size:13px;font-weight:800;color:var(--tx3)}
-.td-pos.top1{color:#ffd700}
+.t-table thead th.c{text-align:center}
+.t-table tbody tr{border-bottom:1px solid #0e1017;transition:background .1s}
+.t-table tbody tr:hover{background:var(--bg2)}
+.t-table tbody tr.mine{background:linear-gradient(90deg,rgba(124,92,255,.22),rgba(124,92,255,.08))}
+.t-table tbody tr.mine:hover{background:rgba(124,92,255,.28)}
+.t-table tbody tr.mine td{color:#d9ccff}
+td{padding:6px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.td-pos{width:34px;text-align:center;font-size:13px;font-weight:800;color:var(--tx3)}
+.td-pos.top1{color:var(--ylw)}
 .td-pos.top3{color:var(--tx2)}
-.td-mine{color:var(--cyan)!important;font-weight:800}
-.td-team{max-width:160px;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:13px}
-.td-lap{font-family:var(--mono);font-size:13px}
-.td-avg{font-family:var(--mono);font-size:13px;font-weight:700}
-.td-best{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ylw)}
-.t-table tbody tr.mine .td-best{color:var(--cyan)}
-.td-dim{color:var(--tx3);font-family:var(--mono);font-size:12px}
-.td-muted{color:var(--tx3)}
-.td-r{text-align:right}
+.td-num{width:30px;text-align:center;color:var(--tx3);font-family:var(--mono);font-size:12px;font-weight:700}
+.td-team{max-width:180px;overflow:hidden;text-overflow:ellipsis;font-weight:700;font-size:13px;letter-spacing:.01em;text-transform:uppercase}
+.td-driver{max-width:190px;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:12px;color:var(--tx2);text-transform:uppercase}
+.td-driver .stint{color:var(--tx3);font-family:var(--mono);font-size:11px;margin-left:4px}
+.td-lap{font-family:var(--mono);font-size:13px;text-align:right}
+.td-best{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--tx2);text-align:right}
+.t-table tbody tr.mine .td-best{color:#d9ccff}
+.td-dim{color:var(--tx3);font-family:var(--mono);font-size:12px;text-align:right}
+.td-muted{color:var(--tx3);text-align:right;font-family:var(--mono);font-size:12px}
+.td-c{text-align:center}
 
-/* ── Right panel ── */
-#right{
-  width:360px;flex-shrink:0;overflow-y:auto;
-  padding:10px;display:flex;flex-direction:column;gap:8px;
-}
+/* LAST-lap colouring */
+.lap-best{color:var(--purple)!important;font-weight:700}
+.lap-pb  {color:var(--grn)!important}
+.lap-slow{color:var(--org)!important}
 
-/* Card */
-.card{
-  background:var(--bg2);border:1px solid var(--line);
-  border-radius:var(--r);padding:12px 14px;
+/* Kart rating badge */
+.kbadge{
+  display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 7px;
+  border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.02em;cursor:default;
+  border:1px solid currentColor;background:rgba(255,255,255,.02);white-space:nowrap;
 }
+.kbadge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.kbadge .kn{font-family:var(--mono);font-weight:800;opacity:.95}
+.kbadge .lbl{font-weight:600;opacity:.92}
+.kbadge.none{color:var(--tx3);border-style:dashed;cursor:default}
+.k-godlike{color:var(--purple)}
+.k-vgood  {color:var(--grn)}
+.k-good   {color:var(--lime)}
+.k-avg    {color:var(--org)}
+.k-bad    {color:var(--red)}
+
+/* Kart tooltip */
+#ktip{
+  position:fixed;z-index:600;display:none;pointer-events:none;
+  width:260px;background:#0a0c13;border:1px solid var(--line2);border-radius:8px;
+  box-shadow:0 14px 44px rgba(0,0,0,.7);padding:12px 13px;
+}
+#ktip.show{display:block}
+.kt-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.kt-title{font-size:14px;font-weight:800}
+.kt-title .kn{font-family:var(--mono)}
+.kt-band{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.kt-stats{display:flex;gap:0;margin-bottom:4px}
+.kt-stat{flex:1;text-align:center}
+.kt-stat .v{font-size:14px;font-weight:800;font-family:var(--mono);color:var(--tx)}
+.kt-stat .l{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-top:1px}
+.kt-formula{font-size:9px;color:var(--tx3);text-align:center;margin:5px 0 9px;letter-spacing:.02em}
+.kt-sub{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx2);
+  border-top:1px solid var(--line);padding-top:8px;margin-bottom:6px}
+.kt-lap{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;padding:1px 0;color:var(--tx2)}
+.kt-lap .n{color:var(--tx3);width:44px}
+.kt-lap .t{width:60px;text-align:right;color:var(--tx)}
+.kt-lap .tm{flex:1;text-align:right;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:8px;text-transform:uppercase;font-family:'Inter',sans-serif}
+.kt-note{font-size:9px;color:var(--tx3);margin-top:7px;font-style:italic}
+
+/* ═══ RIGHT RAIL ═══ */
+#right{width:344px;flex-shrink:0;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.view{display:none;flex-direction:column;gap:8px}
+.view.active{display:flex}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px}
+.card.accent-blue{border-top:2px solid var(--blue)}
+.card.accent-red {border-top:2px solid var(--red)}
 .card-hd{
-  font-size:10px;font-weight:700;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--tx3);margin-bottom:10px;
-  display:flex;align-items:center;justify-content:space-between;
+  font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);
+  margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;
 }
-.card-hd-action{
-  font-size:10px;font-weight:600;color:var(--tx3);background:none;
-  border:none;cursor:pointer;letter-spacing:.06em;padding:0;
-}
+.card-hd .tag{font-size:9px;color:var(--tx2);font-weight:600;letter-spacing:.04em}
+.card-hd-action{font-size:9px;font-weight:700;color:var(--tx3);background:none;border:none;cursor:pointer;letter-spacing:.06em;padding:0;text-transform:uppercase}
 .card-hd-action:hover{color:var(--tx2)}
 
-/* ── My Team ── */
+/* My Team */
 .mt-grid{display:flex;gap:12px;align-items:flex-start}
-.mt-pos-box{
-  display:flex;flex-direction:column;align-items:center;
-  background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);
-  padding:8px 14px;min-width:60px;flex-shrink:0;
-}
-.mt-pos-num{font-size:34px;font-weight:900;color:var(--cyan);line-height:1;font-variant-numeric:tabular-nums}
-.mt-pos-label{font-size:9px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.mt-pos-box{display:flex;flex-direction:column;align-items:center;background:var(--bg3);
+  border:1px solid var(--line2);border-radius:var(--r);padding:7px 13px;min-width:58px;flex-shrink:0}
+.mt-pos-num{font-size:32px;font-weight:900;color:var(--purple);line-height:1;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+.mt-pos-label{font-size:8px;color:var(--tx3);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
 .mt-info{flex:1;min-width:0}
-.mt-driver{font-size:18px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mt-driver.none{color:var(--tx3);font-size:14px}
-.mt-kart{font-size:11px;color:var(--tx2);margin-top:3px}
-.mt-avg-row{display:flex;gap:12px;margin-top:6px}
+.mt-driver{font-size:17px;font-weight:800;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase}
+.mt-driver.none{color:var(--tx3);font-size:13px;text-transform:none}
+.mt-kart{font-size:11px;color:var(--tx2);margin-top:3px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.mt-avg-row{display:flex;gap:14px;margin-top:7px}
 .mt-stat{display:flex;flex-direction:column}
-.mt-stat-val{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;font-family:var(--mono)}
-.mt-stat-lbl{font-size:9px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
-
-/* Stint bar */
+.mt-stat-val{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+.mt-stat-lbl{font-size:8px;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase}
 .stint-bar-wrap{margin-top:10px}
 .stint-bar-track{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
 .stint-bar-fill{height:100%;border-radius:3px;transition:width .5s linear,background .3s}
-.stint-bar-fill.ok  {background:var(--grn)}
+.stint-bar-fill.ok{background:var(--grn)}
 .stint-bar-fill.warn{background:var(--ylw)}
-.stint-bar-fill.crit{background:var(--red);animation:crit-pulse .6s ease-in-out infinite}
-@keyframes crit-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.stint-bar-fill.crit{background:var(--red);animation:blink .6s infinite}
 .stint-bar-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-top:4px;font-variant-numeric:tabular-nums}
-.stint-bar-meta b{color:var(--tx2)}
-
-/* Driver select (in my team card) */
-.drv-select-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-top:12px;margin-bottom:6px}
+.stint-bar-meta b{color:var(--tx2);font-family:var(--mono)}
+.drv-select-label{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin:12px 0 6px}
 .drv-select-grid{display:flex;flex-wrap:wrap;gap:5px}
-.drv-sel-btn{
-  padding:5px 11px;background:var(--bg3);border:1px solid var(--line2);
-  border-radius:var(--r);color:var(--tx2);font-size:12px;font-weight:500;
-  cursor:pointer;transition:all .15s;
-}
-.drv-sel-btn:hover{border-color:var(--blue);color:var(--blue)}
-.drv-sel-btn.active{
-  background:#0e1e3a;border-color:var(--blue);
-  color:var(--cyan);font-weight:700;
-}
+.drv-sel-btn{padding:5px 11px;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--tx2);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.drv-sel-btn:hover{border-color:var(--amber);color:var(--amber)}
+.drv-sel-btn.active{background:rgba(124,92,255,.18);border-color:var(--mine);color:#d9ccff;font-weight:700}
 
-/* ── Strategy ── */
-.dec-box{
-  text-align:center;padding:14px 10px;border-radius:var(--r);
-  margin-bottom:8px;border:1px solid transparent;
-  transition:background .3s,border-color .3s;
-}
-.dec-label{
-  font-size:28px;font-weight:900;letter-spacing:.06em;
-  line-height:1;
-}
-.dec-detail{font-size:11px;margin-top:6px;opacity:.8}
-.dec-hold   {background:#08200f;border-color:#1a4a28}
-.dec-hold   .dec-label{color:var(--grn)}
+/* Strategy */
+.dec-box{text-align:center;padding:13px 10px;border-radius:var(--r);margin-bottom:8px;
+  border:1px solid transparent;transition:background .3s,border-color .3s}
+.dec-label{font-size:26px;font-weight:900;letter-spacing:.05em;line-height:1}
+.dec-detail{font-size:11px;margin-top:6px;opacity:.85}
+.dec-hold{background:#08200f;border-color:#1a4a28}
+.dec-hold .dec-label{color:var(--grn)}
 .dec-prepare{background:#221900;border-color:#4a3800}
 .dec-prepare .dec-label{color:var(--ylw)}
-.dec-box    {background:#200808;border-color:#4a1010;animation:dec-pulse .7s ease-in-out infinite}
-.dec-box    .dec-label{color:var(--red)}
-@keyframes dec-pulse{0%,100%{opacity:1}50%{opacity:.75}}
+.dec-box.dec-box{background:#200808;border-color:#4a1010;animation:blink .7s infinite}
+.dec-box .dec-label{color:var(--red)}
 .pits-row{display:flex;justify-content:space-between;align-items:center;font-size:12px}
 .pits-row .lbl{color:var(--tx3)}
-.pits-val{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.pits-val{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--mono)}
 .pits-val span{color:var(--tx3);font-size:11px;font-weight:400}
 
-/* ── Pit stop ── */
-.pit-box-btn{
-  width:100%;padding:13px;background:var(--red);border:none;
-  border-radius:var(--r);color:#fff;font-size:15px;font-weight:900;
-  letter-spacing:.08em;cursor:pointer;text-transform:uppercase;
-  transition:background .15s;
-}
-.pit-box-btn:hover{background:#cc2020}
+/* Pit stop */
+.pit-box-btn{width:100%;padding:12px;background:var(--red);border:none;border-radius:var(--r);
+  color:#fff;font-size:15px;font-weight:900;letter-spacing:.08em;cursor:pointer;text-transform:uppercase;transition:background .15s}
+.pit-box-btn:hover{background:#e04545}
 .pit-offset-row{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:8px}
 .pit-offset-lbl{font-size:10px;color:var(--tx3)}
-.pit-offset-inp{
-  width:50px;background:var(--bg3);border:1px solid var(--line2);
-  border-radius:var(--r);color:var(--tx);padding:4px 7px;
-  font-size:12px;text-align:center;font-variant-numeric:tabular-nums;
-}
-.pit-offset-inp:focus{outline:none;border-color:var(--blue)}
-
-/* Pit active */
-.pit-clock-wrap{text-align:center;padding:8px 0 4px}
-.pit-clock{
-  font-size:64px;font-weight:900;font-variant-numeric:tabular-nums;
-  letter-spacing:-.02em;line-height:1;
-  transition:color .3s;
-  font-family:var(--mono);
-}
-.pit-wait {color:var(--org)}
+.pit-offset-inp{width:52px;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--tx);padding:4px 7px;font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
+.pit-offset-inp:focus{outline:none;border-color:var(--amber)}
+.pit-clock-wrap{text-align:center;padding:6px 0 4px}
+.pit-clock{font-size:56px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1;font-family:var(--mono);transition:color .3s}
+.pit-wait{color:var(--org)}
 .pit-ready{color:var(--grn)}
-.pit-ok-tag{
-  display:inline-block;background:#0a2a18;border:1px solid #1a5030;
-  color:var(--grn);font-size:10px;font-weight:700;letter-spacing:.1em;
-  padding:3px 10px;border-radius:99px;margin-top:6px;
-}
-.pit-drv-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin:10px 0 6px}
-.pit-confirm-btn{
-  width:100%;padding:10px;background:#0a2a18;border:1px solid var(--grn);
-  border-radius:var(--r);color:var(--grn);font-size:13px;font-weight:700;
-  cursor:pointer;margin-top:8px;transition:background .15s;
-}
-.pit-confirm-btn:hover{background:#0d3a20}
+.pit-ok-tag{display:inline-block;background:#0c2a1a;border:1px solid #1a5030;color:var(--grn);
+  font-size:10px;font-weight:700;letter-spacing:.1em;padding:3px 10px;border-radius:99px;margin-top:6px}
+.pit-drv-label{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin:10px 0 6px}
+.pit-confirm-btn{width:100%;padding:10px;background:#0c2a1a;border:1px solid var(--grn);border-radius:var(--r);
+  color:var(--grn);font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;transition:background .15s}
+.pit-confirm-btn:hover{background:#0f3a24}
 
-/* ── Drivers ── */
+/* Drivers */
 .drv-rows{margin-bottom:8px}
-.drv-row{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--line)}
+.drv-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}
 .drv-row:last-child{border-bottom:none}
 .drv-name{flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.drv-name.cur{color:var(--cyan);font-weight:700}
-.drv-time{
-  font-size:13px;color:var(--tx2);font-variant-numeric:tabular-nums;
-  font-family:var(--mono);font-weight:600;min-width:65px;text-align:right;
-}
+.drv-name.cur{color:var(--purple);font-weight:700}
+.drv-time{font-size:13px;color:var(--tx2);font-variant-numeric:tabular-nums;font-family:var(--mono);font-weight:600;min-width:64px;text-align:right}
 .drv-time.zero{color:var(--tx3)}
 .i-btn{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:2px 5px;line-height:1;flex-shrink:0;border-radius:3px}
 .i-btn:hover{color:var(--tx);background:var(--bg4)}
 .i-btn.del:hover{color:var(--red)}
 .drv-edit-wrap{display:none;align-items:center;gap:5px;flex:1;min-width:0}
-.drv-edit-inp{
-  flex:1;min-width:0;background:var(--bg3);border:1px solid var(--cyan);
-  border-radius:var(--r);color:var(--tx);padding:4px 8px;font-size:12px;
-}
+.drv-edit-inp{flex:1;min-width:0;background:var(--bg3);border:1px solid var(--amber);border-radius:var(--r);color:var(--tx);padding:4px 8px;font-size:12px}
 .drv-edit-inp:focus{outline:none}
 .add-row{display:flex;gap:6px}
-.add-inp{
-  flex:1;background:var(--bg3);border:1px solid var(--line2);
-  border-radius:var(--r);color:var(--tx);padding:7px 10px;font-size:12px;
-}
-.add-inp:focus{outline:none;border-color:var(--blue)}
+.add-inp{flex:1;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);color:var(--tx);padding:7px 10px;font-size:12px}
+.add-inp:focus{outline:none;border-color:var(--amber)}
 .add-inp::placeholder{color:var(--tx3)}
-.add-btn{
-  padding:7px 14px;background:var(--blue);border:none;
-  border-radius:var(--r);color:#fff;font-size:11px;font-weight:700;cursor:pointer;
-  white-space:nowrap;
-}
-.add-btn:hover{opacity:.85}
+.add-btn{padding:7px 14px;background:var(--amber);border:none;border-radius:var(--r);color:#111;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.add-btn:hover{background:var(--amber2)}
 
-/* ── Pit log ── */
+/* Pit log */
 .log-empty{font-size:11px;color:var(--tx3);padding:2px 0}
-.log-row{
-  display:grid;
-  grid-template-columns:26px 1fr auto auto;
-  gap:0 8px;padding:6px 0;
-  border-bottom:1px solid var(--line);font-size:12px;align-items:center;
-}
+.log-row{display:grid;grid-template-columns:24px 1fr auto auto;gap:0 8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12px;align-items:center}
 .log-row:last-child{border-bottom:none}
 .log-n{color:var(--tx3);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
-.log-driver{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.log-driver{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;text-transform:uppercase}
 .log-dur{font-family:var(--mono);font-weight:700;color:var(--grn);text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
 .log-time{font-size:11px;color:var(--tx3);font-family:var(--mono);text-align:right}
 
-/* ── Race Plan ── */
-.plan-row{
-  display:grid;grid-template-columns:26px 1fr auto 12px;
-  gap:0 6px;padding:4px 0;border-bottom:1px solid var(--line);align-items:center;
-}
+/* Race plan */
+.plan-row{display:grid;grid-template-columns:24px 1fr auto 12px;gap:0 6px;padding:4px 0;border-bottom:1px solid var(--line);align-items:center}
 .plan-row:last-child{border-bottom:none}
 .plan-n{color:var(--tx3);font-weight:700;font-variant-numeric:tabular-nums;text-align:right;font-size:11px}
-.plan-drv-btn{
-  background:none;border:1px solid transparent;color:var(--tx);
-  font-size:12px;font-weight:600;padding:2px 5px;border-radius:3px;
-  cursor:pointer;text-align:left;width:100%;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  transition:all .15s;
-}
+.plan-drv-btn{background:none;border:1px solid transparent;color:var(--tx);font-size:12px;font-weight:600;padding:2px 5px;border-radius:3px;cursor:pointer;text-align:left;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s}
 .plan-drv-btn:hover{border-color:var(--line2);background:var(--bg3)}
 .plan-drv-btn.empty{color:var(--tx3);font-style:italic;font-weight:400}
 .plan-drv-btn.done-row{color:var(--tx2)}
 .plan-time{font-size:11px;color:var(--tx3);font-family:var(--mono);text-align:right;white-space:nowrap}
-.plan-dot{width:10px;height:10px;border-radius:50%;background:var(--bg4);flex-shrink:0}
+.plan-dot{width:9px;height:9px;border-radius:50%;background:var(--bg4);flex-shrink:0}
 .plan-dot.done{background:var(--grn)}
-.plan-dot.next{background:var(--ylw);animation:tb-blink 1s infinite}
-.plan-picker{
-  display:none;flex-wrap:wrap;gap:4px;
-  padding:4px 0 6px 32px;border-bottom:1px solid var(--line2);
-}
+.plan-dot.next{background:var(--ylw);animation:blink 1s infinite}
+.plan-picker{display:none;flex-wrap:wrap;gap:4px;padding:4px 0 6px 30px;border-bottom:1px solid var(--line2)}
 .plan-picker.open{display:flex}
 
-/* ── Settings overlay ── */
-#overlay{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);
-  z-index:500;align-items:center;justify-content:center;
-}
+/* Analysis — kart ranking */
+.krank-row{display:grid;grid-template-columns:22px auto 1fr auto;gap:0 9px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.krank-row:last-child{border-bottom:none}
+.krank-rank{font-size:11px;font-weight:800;color:var(--tx3);text-align:right;font-variant-numeric:tabular-nums}
+.krank-score{font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;color:var(--tx2)}
+.krank-meta{font-size:10px;color:var(--tx3);font-family:var(--mono)}
+
+/* Weather placeholder */
+.wx-empty{text-align:center;padding:22px 10px;color:var(--tx3)}
+.wx-empty .ico{font-size:34px;margin-bottom:8px}
+.wx-empty .t{font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:4px}
+.wx-empty .s{font-size:11px}
+
+/* Settings overlay */
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:700;align-items:center;justify-content:center}
 #overlay.open{display:flex}
-.cfg-card{
-  background:var(--bg2);border:1px solid var(--line2);
-  border-radius:10px;padding:24px;width:440px;max-width:96vw;
-}
-.cfg-card h3{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--tx)}
-.cfg-lbl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
-.cfg-inp{
-  width:100%;background:var(--bg3);border:1px solid var(--line2);
-  border-radius:var(--r);color:var(--tx);padding:8px 12px;font-size:12px;margin-bottom:14px;
-}
-.cfg-inp:focus{outline:none;border-color:var(--blue)}
+.cfg-card{background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:22px;width:440px;max-width:96vw}
+.cfg-card h3{font-size:15px;font-weight:800;margin-bottom:18px;color:var(--tx);display:flex;align-items:center;gap:8px}
+.cfg-card h3 .m{color:var(--amber)}
+.cfg-lbl{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700}
+.cfg-inp{width:100%;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);color:var(--tx);padding:8px 12px;font-size:12px;margin-bottom:14px}
+.cfg-inp:focus{outline:none;border-color:var(--amber)}
 .cfg-row{display:flex;gap:10px}
 .cfg-row>div{flex:1}
 .cfg-actions{display:flex;gap:8px;justify-content:flex-end}
-.cfg-save{padding:8px 18px;background:var(--blue);border:none;border-radius:var(--r);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.cfg-save{padding:8px 18px;background:var(--amber);border:none;border-radius:var(--r);color:#111;font-size:12px;font-weight:800;cursor:pointer}
 .cfg-cancel{padding:8px 18px;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);color:var(--tx);font-size:12px;cursor:pointer}
+
+.footer{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:9px;color:var(--tx3);letter-spacing:.06em}
+.footer b{color:var(--tx2);font-weight:700}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ═══ TOPBAR ═════════════════════════════════════════════ -->
+  <!-- ═══ TOPBAR ═══ -->
   <div id="topbar">
-    <div class="tb-brand">⚑ <span>War Room</span></div>
-    <span id="race-remaining" class="tb-clock">--:--:--</span>
-    <div class="tb-sep"></div>
-    <span id="status-badge" class="s-idle">IDLE</span>
-    <div class="tb-apex">
-      <div id="apex-dot" class="apex-dot apex-err"></div>
-      <span id="apex-label">NO SIGNAL</span>
-      <span id="apex-session" style="margin-left:8px;font-size:11px;color:var(--tx2);letter-spacing:.06em"></span>
+    <div class="brand">
+      <div class="brand-mark">◭</div>
+      <div class="brand-txt">
+        <div class="b1">DELTA</div>
+        <div class="b2">Endurance Manager</div>
+      </div>
     </div>
+    <span id="tb-session" class="tb-session">—</span>
+    <span id="race-clock" class="tb-clock">0:00:00 <span class="of">/ 0:00:00</span></span>
+    <div class="tb-sep"></div>
+    <div class="tb-conn"><span id="conn-dot" class="conn-dot"></span><span id="conn-label">no signal</span></div>
+    <span id="status-badge" class="s-idle">IDLE</span>
+
     <div class="tb-space"></div>
-    <button class="tb-btn go"  onclick="api('race/start')">START RACE</button>
-    <button class="tb-btn"     onclick="api('race/stop')">STOP</button>
-    <button class="tb-btn warn" onclick="api('race/reset')">RESET</button>
-    <button class="tb-btn"     onclick="openCfg()">⚙</button>
+
+    <div class="tb-ctl">
+      <button class="tb-btn go"   onclick="api('race/start')">Start race</button>
+      <button class="tb-btn"      onclick="api('race/stop')">Stop</button>
+      <button class="tb-btn warn" onclick="api('race/reset')">Reset</button>
+    </div>
+    <nav class="nav">
+      <button class="nav-tab active" data-view="box"      onclick="setView('box',this)"><span class="nav-ico">▤</span>Box Control</button>
+      <button class="nav-tab"        data-view="analysis" onclick="setView('analysis',this)"><span class="nav-ico">◷</span>Analysis</button>
+      <button class="nav-tab"        data-view="strategy" onclick="setView('strategy',this)"><span class="nav-ico">◈</span>Strategy</button>
+      <button class="nav-tab"        data-view="weather"  onclick="setView('weather',this)"><span class="nav-ico">☁</span>Weather</button>
+      <button class="nav-tab"        onclick="openCfg()"><span class="nav-ico">⚙</span>Settings</button>
+    </nav>
   </div>
 
-  <!-- ═══ MAIN ═══════════════════════════════════════════════ -->
+  <!-- ═══ BANNER ═══ -->
+  <div id="banner">
+    <span id="banner-txt"></span>
+    <span class="x" onclick="document.getElementById('banner').classList.remove('show')">✕</span>
+  </div>
+
+  <!-- ═══ MAIN ═══ -->
   <div id="main">
 
     <!-- Left: Live Timing -->
     <div id="left">
       <div class="panel-hd">
         <h2 id="timing-heading">Live Timing</h2>
-        <div class="avg-chip">Track avg <b id="track-avg">–</b></div>
+        <div class="chip">Track avg <b id="track-avg">–</b></div>
+        <div class="chip">Session best <b id="session-best">–</b></div>
+        <div class="chip"><b id="team-count">0</b> teams</div>
       </div>
       <table class="t-table" id="timing-table">
-        <thead id="timing-thead">
-          <tr id="race-cols">
-            <th style="width:32px"></th>
-            <th>Kart</th>
+        <thead>
+          <tr>
+            <th class="c" style="width:34px">Pos</th>
+            <th class="c" style="width:30px">#</th>
             <th>Team</th>
-            <th class="r">Last Lap</th>
-            <th class="r">Avg 5</th>
-            <th class="r">Avg 10</th>
+            <th>Driver</th>
+            <th>Kart</th>
+            <th class="c">Pits</th>
+            <th class="r">Diff</th>
+            <th class="r">Interval</th>
+            <th class="r">Last</th>
             <th class="r">Best</th>
-            <th class="r">Laps</th>
-            <th class="r">Pits</th>
-            <th class="r">Gap</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
-            Waiting for Apex Timing data — set URL in ⚙ Settings
+          <tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:40px;font-size:12px">
+            Waiting for Apex Timing data — set the live URL in ⚙ Settings
           </td></tr>
         </tbody>
       </table>
+      <div class="footer">DELTA ENDURANCE MANAGER · replica build · <b>kart scoring</b> = best × 0.8 + average × 0.2</div>
     </div>
 
-    <!-- Right panel -->
+    <!-- Right rail -->
     <div id="right">
 
-      <!-- MY TEAM -->
-      <div class="card">
-        <div class="card-hd">My Team</div>
-        <div id="my-team-body">
-          <div style="color:var(--tx3);font-size:11px">Set team name in ⚙, then select a driver below.</div>
-        </div>
-      </div>
-
-      <!-- STRATEGY -->
-      <div class="card" id="strategy-card">
-        <div class="card-hd">Strategy</div>
-        <div id="dec-box" class="dec-box dec-hold">
-          <div id="dec-label" class="dec-label">HOLD</div>
-          <div id="dec-detail" class="dec-detail">–</div>
-        </div>
-        <div class="pits-row">
-          <span class="lbl">Pit stops</span>
-          <span class="pits-val" id="pits-val">0 <span>/ 23</span></span>
-        </div>
-      </div>
-
-      <!-- PIT STOP -->
-      <div class="card" id="pit-card">
-        <div class="card-hd">Pit Stop</div>
-
-        <!-- Racing mode -->
-        <div id="pit-racing">
-          <button class="pit-box-btn" onclick="boxNow()">▼ BOX NOW</button>
-          <div class="pit-offset-row">
-            <span class="pit-offset-lbl">Entered pit</span>
-            <input id="box-offset" class="pit-offset-inp" placeholder="0:00" maxlength="5">
-            <span class="pit-offset-lbl">ago (mm:ss)</span>
+      <!-- ═══ BOX CONTROL VIEW ═══ -->
+      <div class="view active" id="view-box">
+        <div class="card">
+          <div class="card-hd">My Team</div>
+          <div id="my-team-body">
+            <div style="color:var(--tx3);font-size:11px">Set your team name in ⚙ Settings, then pick a driver below.</div>
           </div>
         </div>
 
-        <!-- Pitting mode -->
-        <div id="pit-pitting" style="display:none">
-          <div class="pit-clock-wrap">
-            <div id="pit-clock" class="pit-clock pit-wait">3:00</div>
-            <div id="pit-ok" style="display:none">
-              <span class="pit-ok-tag">✓ MIN TIME MET</span>
+        <div class="card" id="pit-card">
+          <div class="card-hd">Pit Stop</div>
+          <div id="pit-racing">
+            <button class="pit-box-btn" onclick="boxNow()">▼ Box Now</button>
+            <div class="pit-offset-row">
+              <span class="pit-offset-lbl">Entered pit</span>
+              <input id="box-offset" class="pit-offset-inp" placeholder="0:00" maxlength="5">
+              <span class="pit-offset-lbl">ago (mm:ss)</span>
             </div>
           </div>
-          <div class="pit-drv-label">In pit: <span id="pit-current-drv" style="color:var(--tx2)">—</span></div>
-          <div class="pit-drv-label" style="margin-top:8px">Next driver</div>
-          <div id="pit-drv-select" class="drv-select-grid" style="margin-bottom:10px"></div>
-          <button class="pit-confirm-btn" id="btn-confirm" onclick="confirmPit()">
-            ▶ CONFIRM &amp; START STINT
-          </button>
+          <div id="pit-pitting" style="display:none">
+            <div class="pit-clock-wrap">
+              <div id="pit-clock" class="pit-clock pit-wait">3:00</div>
+              <div id="pit-ok" style="display:none"><span class="pit-ok-tag">✓ Min time met</span></div>
+            </div>
+            <div class="pit-drv-label">In pit: <span id="pit-current-drv" style="color:var(--tx2)">—</span></div>
+            <div class="pit-drv-label" style="margin-top:8px">Next driver</div>
+            <div id="pit-drv-select" class="drv-select-grid" style="margin-bottom:10px"></div>
+            <button class="pit-confirm-btn" id="btn-confirm" onclick="confirmPit()">▶ Confirm &amp; start stint</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">Drivers &amp; time driven</div>
+          <div class="drv-rows" id="drivers-list"></div>
+          <div class="add-row">
+            <input id="add-name" class="add-inp" placeholder="New driver…" onkeydown="if(event.key==='Enter')addDriver()">
+            <button class="add-btn" onclick="addDriver()">+ Add</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">Pit Log</div>
+          <div id="pit-log"></div>
         </div>
       </div>
 
-      <!-- DRIVERS -->
-      <div class="card">
-        <div class="card-hd">Drivers &amp; Time Driven</div>
-        <div class="drv-rows" id="drivers-list"></div>
-        <div class="add-row">
-          <input id="add-name" class="add-inp" placeholder="New driver…"
-                 onkeydown="if(event.key==='Enter')addDriver()">
-          <button class="add-btn" onclick="addDriver()">+ Add</button>
+      <!-- ═══ ANALYSIS VIEW ═══ -->
+      <div class="view" id="view-analysis">
+        <div class="card">
+          <div class="card-hd">Kart Rankings <span class="tag" id="krank-count"></span></div>
+          <div style="font-size:10px;color:var(--tx3);margin:-4px 0 8px">score = best × 0.8 + average × 0.2 · lower is faster</div>
+          <div id="kart-ranking"></div>
         </div>
       </div>
 
-      <!-- PIT LOG -->
-      <div class="card">
-        <div class="card-hd">Pit Stop Log</div>
-        <div id="pit-log"></div>
+      <!-- ═══ STRATEGY VIEW ═══ -->
+      <div class="view" id="view-strategy">
+        <div class="card" id="strategy-card">
+          <div class="card-hd">Strategy Call</div>
+          <div id="dec-box" class="dec-box dec-hold">
+            <div id="dec-label" class="dec-label">HOLD</div>
+            <div id="dec-detail" class="dec-detail">–</div>
+          </div>
+          <div class="pits-row">
+            <span class="lbl">Pit stops</span>
+            <span class="pits-val" id="pits-val">0 <span>/ 23</span></span>
+          </div>
+        </div>
+        <div class="card" id="plan-card">
+          <div class="card-hd">Race Plan <button class="card-hd-action" onclick="clearPlan()">clear</button></div>
+          <div id="pit-plan-body"></div>
+        </div>
       </div>
 
-      <!-- RACE PLAN -->
-      <div class="card" id="plan-card">
-        <div class="card-hd">
-          Race Plan
-          <button class="card-hd-action" onclick="clearPlan()">clear</button>
+      <!-- ═══ WEATHER VIEW ═══ -->
+      <div class="view" id="view-weather">
+        <div class="card">
+          <div class="card-hd">Weather</div>
+          <div class="wx-empty">
+            <div class="ico">☁</div>
+            <div class="t">No weather feed connected</div>
+            <div class="s">Track conditions will appear here once a weather source is configured.</div>
+          </div>
         </div>
-        <div id="pit-plan-body"></div>
       </div>
 
     </div><!-- /right -->
   </div><!-- /main -->
 </div><!-- /app -->
 
+<!-- Kart tooltip -->
+<div id="ktip"></div>
+
 <!-- Settings overlay -->
 <div id="overlay">
   <div class="cfg-card">
-    <h3>⚙ Settings</h3>
+    <h3><span class="m">◭</span> Settings</h3>
     <div class="cfg-lbl">Apex Timing URL</div>
-    <input id="cfg-url"   class="cfg-inp" placeholder="https://live.apex-timing.com/…">
-    <div class="cfg-lbl">My Team Name (must match Apex exactly)</div>
-    <input id="cfg-team"  class="cfg-inp" placeholder="APX GP">
+    <input id="cfg-url" class="cfg-inp" placeholder="https://live.apex-timing.com/…">
+    <div class="cfg-lbl">My team name (must match timing exactly)</div>
+    <input id="cfg-team" class="cfg-inp" placeholder="STF PERFORMANCE">
     <div class="cfg-row">
-      <div>
-        <div class="cfg-lbl">Race duration (min)</div>
-        <input id="cfg-dur"   class="cfg-inp" type="number" placeholder="780">
-      </div>
-      <div>
-        <div class="cfg-lbl">Mandatory pits</div>
-        <input id="cfg-pits"  class="cfg-inp" type="number" placeholder="23">
-      </div>
-      <div>
-        <div class="cfg-lbl">Max stint (min)</div>
-        <input id="cfg-stint" class="cfg-inp" type="number" placeholder="45">
-      </div>
+      <div><div class="cfg-lbl">Race duration (min)</div><input id="cfg-dur" class="cfg-inp" type="number" placeholder="780"></div>
+      <div><div class="cfg-lbl">Mandatory pits</div><input id="cfg-pits" class="cfg-inp" type="number" placeholder="23"></div>
+      <div><div class="cfg-lbl">Max stint (min)</div><input id="cfg-stint" class="cfg-inp" type="number" placeholder="45"></div>
     </div>
     <div class="cfg-actions">
       <button class="cfg-cancel" onclick="closeCfg()">Cancel</button>
-      <button class="cfg-save"   onclick="saveCfg()">Save</button>
+      <button class="cfg-save" onclick="saveCfg()">Save</button>
     </div>
   </div>
 </div>
 
 <script>
-// ═══ State ═════════════════════════════════════════════════════
-let S               = null;
-let _stateAt        = null;   // Date.now() when last state arrived
-let _autoPitFired   = false;
-let _planEdit       = null;
-let _nextDriverId   = null;
+// ═══ State ═══
+let S = null, _stateAt = null, _autoPitFired = false, _planEdit = null, _nextDriverId = null;
+let _view = 'box';
 
-// ═══ Polling ════════════════════════════════════════════════════
-async function fetchState() {
-  try {
-    const r = await fetch('/api/state');
-    S = await r.json();
-    _stateAt = Date.now();
-    render(S);
-  } catch(_) {}
+// ═══ Polling ═══
+async function fetchState(){
+  try{ const r = await fetch('/api/state'); S = await r.json(); _stateAt = Date.now(); render(S); }catch(_){}
 }
 fetchState();
 setInterval(fetchState, 1000);
 
-// ═══ API ═══════════════════════════════════════════════════════
-async function api(path, body) {
-  const o = body
-    ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}
-    : {method:'POST'};
-  const r = await fetch('/api/'+path, o);
-  const data = await r.json();
-  await fetchState();
-  return data;
+// ═══ API ═══
+async function api(path, body){
+  const o = body ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)} : {method:'POST'};
+  const r = await fetch('/api/'+path, o); const data = await r.json(); await fetchState(); return data;
 }
 
-// ═══ Time helpers ═══════════════════════════════════════════════
-function fmtDur(s) {
-  s = Math.max(0, Math.floor(s));
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-  return h>0
-    ? `${h}:${pad(m)}:${pad(sec)}`
-    : `${pad(m)}:${pad(sec)}`;
-}
-function fmtMmss(s) {
-  s = Math.max(0, Math.floor(s));
-  return `${Math.floor(s/60)}:${pad(s%60)}`;
-}
-function pad(n) { return String(n).padStart(2,'0'); }
+// ═══ Time helpers ═══
+function fmtDur(s){ s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  return h>0?`${h}:${pad(m)}:${pad(sec)}`:`${pad(m)}:${pad(sec)}`; }
+function fmtHMS(s){ s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  return `${h}:${pad(m)}:${pad(sec)}`; }
+function fmtMmss(s){ s=Math.max(0,Math.floor(s)); return `${Math.floor(s/60)}:${pad(s%60)}`; }
+function pad(n){ return String(n).padStart(2,'0'); }
+function pitTimestamp(u){ if(!u||u==='-')return '-';
+  try{ return new Date(u.replace(' ','T')+'Z').toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false}); }
+  catch(_){ return u.slice(11,16); } }
 
-// Convert UTC timestamp string to browser local time HH:MM
-function pitTimestamp(utcStr) {
-  if (!utcStr || utcStr === '-') return '-';
-  try {
-    // Python stores "2024-01-01T10:22:00" or "2024-01-01 10:22:00" — append Z for UTC
-    const d = new Date(utcStr.replace(' ', 'T') + 'Z');
-    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
-  } catch(_) { return utcStr.slice(11,16); }
+// ═══ View switching ═══
+function setView(v, btn){
+  _view = v;
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(S) render(S);
 }
 
-// ═══ Smooth tick (100ms) ════════════════════════════════════════
-function tick() {
-  if (!S || !_stateAt) return;
-  // Use wall-clock elapsed since state arrived — immune to server clock skew
-  const elapsed = (Date.now() - _stateAt) / 1000;
+// ═══ Smooth tick ═══
+function tick(){
+  if(!S||!_stateAt) return;
+  const elapsed=(Date.now()-_stateAt)/1000;
+  const live=(S.status==='racing'||S.status==='pitting');
+  const raceEl=live?S.race_elapsed+elapsed:S.race_elapsed;
+  const total=S.race_elapsed+S.race_remaining;
+  const rr=live?Math.max(0,S.race_remaining-elapsed):S.race_remaining;
+  const ck=document.getElementById('race-clock');
+  ck.innerHTML=`${fmtHMS(raceEl)} <span class="of">/ ${fmtHMS(total)}</span>`;
+  ck.className='tb-clock'+(rr<600?' crit':rr<1800?' low':'');
 
-  // Race remaining
-  const rr = (S.status==='racing'||S.status==='pitting')
-    ? Math.max(0, S.race_remaining - elapsed) : S.race_remaining;
-  const el = document.getElementById('race-remaining');
-  el.textContent = fmtDur(rr);
-  el.className   = 'tb-clock' + (rr<600 ? ' crit' : rr<1800 ? ' low' : '');
+  const stintS=S.stint_running?S.stint_s+elapsed:S.stint_s;
+  const maxS=(S.stint_max_minutes||45)*60, pct=Math.min(100,(stintS/maxS)*100);
+  const barCls=pct>90?'crit':pct>75?'warn':'ok';
+  const sd=document.getElementById('stint-display'); if(sd)sd.textContent=fmtDur(stintS);
+  const bf=document.getElementById('stint-bar-fill'); if(bf){bf.style.width=pct+'%';bf.className='stint-bar-fill '+barCls;}
+  const bl=document.getElementById('stint-bar-left'); if(bl)bl.textContent=fmtDur(stintS);
 
-  // Stint
-  const stintS = S.stint_running ? S.stint_s + elapsed : S.stint_s;
-  const maxS   = (S.stint_max_minutes||45) * 60;
-  const pct    = Math.min(100, (stintS/maxS)*100);
-  const barCls = pct>90 ? 'crit' : pct>75 ? 'warn' : 'ok';
-
-  const sd = document.getElementById('stint-display');
-  if (sd) sd.textContent = fmtDur(stintS);
-  const bf = document.getElementById('stint-bar-fill');
-  if (bf) { bf.style.width=pct+'%'; bf.className='stint-bar-fill '+barCls; }
-  const bl = document.getElementById('stint-bar-left');
-  if (bl) bl.textContent = fmtDur(stintS);
-
-  // Pit countdown
-  if (S.status==='pitting') {
-    const pitRem = Math.max(0, S.pit_remaining - elapsed);
-    const met    = pitRem <= 0;
-    const clock  = document.getElementById('pit-clock');
-    if (clock) { clock.textContent = fmtMmss(pitRem); clock.className='pit-clock '+(met?'pit-ready':'pit-wait'); }
-    const ok = document.getElementById('pit-ok');
-    if (ok) ok.style.display = met ? 'block' : 'none';
-    if (met && !_autoPitFired) {
-      _autoPitFired = true;
-      const did = _nextDriverId || (S.current_driver ? S.current_driver.id : null);
-      if (did) api('pit/done', {driver_id: did});
-      _nextDriverId = null;
-    }
-  } else {
-    _autoPitFired = false;
-  }
+  if(S.status==='pitting'){
+    const pitRem=Math.max(0,S.pit_remaining-elapsed), met=pitRem<=0;
+    const clock=document.getElementById('pit-clock');
+    if(clock){clock.textContent=fmtMmss(pitRem);clock.className='pit-clock '+(met?'pit-ready':'pit-wait');}
+    const ok=document.getElementById('pit-ok'); if(ok)ok.style.display=met?'block':'none';
+    if(met&&!_autoPitFired){ _autoPitFired=true;
+      const did=_nextDriverId||(S.current_driver?S.current_driver.id:null);
+      if(did)api('pit/done',{driver_id:did}); _nextDriverId=null; }
+  }else{ _autoPitFired=false; }
 }
-setInterval(tick, 100);
+setInterval(tick,100);
 
-// ═══ Render ═════════════════════════════════════════════════════
-function render(s) {
-  // Topbar status
-  const badge = document.getElementById('status-badge');
-  badge.textContent = s.status.toUpperCase();
-  badge.className   = 's-'+s.status;
-  const ok = s.apex_ok;
-  const sess = s.apex_session || {};
-  const light = sess.light || '';
-  const lightColor = (light === 'lg' || light.includes('green')) ? 'var(--grn)'
-                   : (light === 'ly' || light === 'lsc' || light.includes('yellow') || light.includes('sc')) ? 'var(--ylw)'
-                   : (light === 'lr' || light.includes('red')) ? 'var(--red)'
-                   : ok ? 'var(--grn)' : null;
-  const dot = document.getElementById('apex-dot');
-  dot.className = 'apex-dot ' + (ok ? 'apex-ok' : 'apex-err');
-  if (lightColor) dot.style.background = lightColor;
-  document.getElementById('apex-label').textContent = ok ? 'APEX LIVE' : 'NO SIGNAL';
-  const sname = [sess.name, sess.name2].filter(Boolean).join(' · ');
-  document.getElementById('apex-session').textContent = sname;
-  document.getElementById('track-avg').textContent = s.track_avg;
+// ═══ Render ═══
+function render(s){
+  const badge=document.getElementById('status-badge');
+  badge.textContent=s.status.toUpperCase(); badge.className='s-'+s.status;
+  const ok=s.apex_ok, sess=s.apex_session||{}, light=sess.light||'';
+  const lightColor=(light==='lg'||light.includes('green'))?'var(--grn)'
+    :(light==='ly'||light==='lsc'||light.includes('yellow')||light.includes('sc'))?'var(--ylw)'
+    :(light==='lr'||light.includes('red'))?'var(--red)':ok?'var(--grn)':null;
+  const dot=document.getElementById('conn-dot');
+  dot.className='conn-dot'+(ok?' ok':''); if(lightColor&&ok)dot.style.background=lightColor;
+  document.getElementById('conn-label').textContent=ok?'connected':'no signal';
+  const sname=[sess.name,sess.name2].filter(Boolean).join(' · ');
+  document.getElementById('tb-session').textContent=sname||s.team_name||'—';
+  document.getElementById('track-avg').textContent=s.track_avg;
+  document.getElementById('session-best').textContent=s.session_best||'–';
+  document.getElementById('team-count').textContent=(s.teams||[]).length;
 
   renderTable(s.teams);
   renderMyTeam(s);
@@ -669,143 +639,128 @@ function render(s) {
   renderDrivers(s);
   renderLog(s.pit_history);
   renderPlan(s);
+  renderRanking(s);
 }
 
-// ── Timing table ────────────────────────────────────────────────
-function renderTable(teams) {
-  const tb = document.getElementById('tbody');
-  if (!teams || !teams.length) {
-    tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
+// ── Kart badge markup ──
+function kartBadge(t){
+  const ks=t.kart_score;
+  if(!ks) return `<span class="kbadge none"><span class="dot"></span><span class="kn">${esc(t.kart)}</span><span class="lbl">—</span></span>`;
+  return `<span class="kbadge k-${ks.band_cls}"
+      onmousemove="showTip(event,'${esc(t.kart)}')" onmouseleave="hideTip()">
+      <span class="dot"></span><span class="kn">${esc(ks.kart)}</span><span class="lbl">${esc(ks.band)}</span></span>`;
+}
+
+// ── Timing table ──
+function renderTable(teams){
+  const tb=document.getElementById('tbody');
+  if(!teams||!teams.length){
+    tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:40px;font-size:12px">No data</td></tr>';
     return;
   }
-  tb.innerHTML = teams.map(t => {
-    const pos   = parseInt(t.pos)||99;
-    const posCls = pos===1 ? 'td-pos top1' : pos<=3 ? 'td-pos top3' : 'td-pos';
+  tb.innerHTML=teams.map(t=>{
+    const pos=parseInt(t.pos)||99;
+    const posCls=pos===1?'td-pos top1':pos<=3?'td-pos top3':'td-pos';
     return `<tr class="${t.is_my_team?'mine':''}">
-      <td class="${posCls}${t.is_my_team?' td-mine':''}">${esc(t.pos)}</td>
-      <td>${esc(t.kart)}</td>
+      <td class="${posCls}">${esc(t.pos)}</td>
+      <td class="td-num">${esc(t.kart)}</td>
       <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
-      <td class="td-lap td-r">${esc(t.last_lap)}</td>
-      <td class="td-avg td-r">${esc(t.avg5)}</td>
-      <td class="td-dim td-r">${esc(t.avg10)}</td>
-      <td class="td-best td-r">${esc(t.best_lap)}</td>
-      <td class="td-muted td-r">${esc(t.total_laps)}</td>
-      <td class="td-muted td-r">${esc(t.pits)}</td>
-      <td class="td-muted td-r">${esc(t.gap)}</td>
+      <td class="td-driver" title="${esc(t.driver)}">${t.driver?esc(t.driver):'<span style="color:var(--tx3)">—</span>'}</td>
+      <td>${kartBadge(t)}</td>
+      <td class="td-c td-muted">${esc(t.pits)}</td>
+      <td class="td-dim">${esc(t.gap)}</td>
+      <td class="td-dim">${esc(t.interval)}</td>
+      <td class="td-lap ${t.last_cls||''}">${esc(t.last_lap)}</td>
+      <td class="td-best">${esc(t.best_lap)}</td>
     </tr>`;
   }).join('');
 }
 
-function parseLapS(s) {
-  if (!s || s === '-') return null;
-  if (s.includes(':')) {
-    const p = s.split(':');
-    return parseFloat(p[0]) * 60 + parseFloat(p[1]);
-  }
-  return parseFloat(s) || null;
-}
-
-// ── My Team ──────────────────────────────────────────────────────
-function renderMyTeam(s) {
-  const el  = document.getElementById('my-team-body');
-  const my  = s.my_team;
-  const drv = s.current_driver;
-  const pct = s.stint_pct;
-  const barCls = pct>90?'crit':pct>75?'warn':'ok';
-
-  let html = '<div class="mt-grid">';
-
-  if (my) {
-    html += `
-      <div class="mt-pos-box">
-        <div class="mt-pos-num">${esc(my.pos)}</div>
-        <div class="mt-pos-label">POS</div>
-      </div>`;
-  }
-
-  html += `<div class="mt-info">
-    <div class="mt-driver ${drv?'':'none'}">${drv ? esc(drv.name) : 'No driver'}</div>
-    <div class="mt-kart">${my ? `Kart ${esc(my.kart)} · ${esc(my.laps)} laps` : 'Not in timing data'}</div>
-    <div class="mt-avg-row">
-      <div class="mt-stat">
-        <div class="mt-stat-val" id="stint-display">${s.stint_fmt}</div>
-        <div class="mt-stat-lbl">Stint</div>
-      </div>
-      ${my ? `<div class="mt-stat">
-        <div class="mt-stat-val">${esc(my.avg5)}</div>
-        <div class="mt-stat-lbl">Avg 5</div>
-      </div>` : ''}
+// ── Kart tooltip ──
+function showTip(ev, kart){
+  if(!S||!S.teams) return;
+  const t=S.teams.find(x=>String(x.kart)===String(kart));
+  const ks=t&&t.kart_score; if(!ks){ hideTip(); return; }
+  const tip=document.getElementById('ktip');
+  const laps=(ks.recent||[]).slice().reverse().map(l=>
+    `<div class="kt-lap"><span class="n">L${l.n}</span><span class="t">${esc(l.lap_fmt)}</span><span class="tm">${esc(l.team)}</span></div>`).join('');
+  tip.innerHTML=`
+    <div class="kt-hd">
+      <div class="kt-title">Kart <span class="kn">${esc(ks.kart)}</span></div>
+      <div class="kt-band k-${ks.band_cls}">${esc(ks.band)}</div>
     </div>
-  </div>`;
+    <div class="kt-stats">
+      <div class="kt-stat"><div class="v">${esc(ks.best_fmt)}</div><div class="l">Best</div></div>
+      <div class="kt-stat"><div class="v">${esc(ks.avg_fmt)}</div><div class="l">Average</div></div>
+      <div class="kt-stat"><div class="v">${esc(ks.score_fmt)}</div><div class="l">Score</div></div>
+    </div>
+    <div class="kt-formula">best × 0.8 + average × 0.2 · rank ${ks.rank}/${ks.field}</div>
+    <div class="kt-sub">${ks.counted} laps counted</div>
+    ${laps||'<div style="font-size:10px;color:var(--tx3)">No clean laps yet</div>'}
+    <div class="kt-note">Pit laps and outliers are never counted.</div>`;
+  tip.classList.add('show');
+  const pad=14, w=tip.offsetWidth, h=tip.offsetHeight;
+  let x=ev.clientX+pad, y=ev.clientY+pad;
+  if(x+w>window.innerWidth-8) x=ev.clientX-w-pad;
+  if(y+h>window.innerHeight-8) y=window.innerHeight-h-8;
+  tip.style.left=x+'px'; tip.style.top=Math.max(8,y)+'px';
+}
+function hideTip(){ document.getElementById('ktip').classList.remove('show'); }
 
-  html += '</div>';
-  html += `
-    <div class="stint-bar-wrap">
-      <div class="stint-bar-track">
-        <div class="stint-bar-fill ${barCls}" id="stint-bar-fill" style="width:${pct}%"></div>
-      </div>
-      <div class="stint-bar-meta">
-        <b id="stint-bar-left">${s.stint_fmt}</b>
-        <span>${s.stint_max_minutes} min max</span>
-      </div>
-    </div>`;
-
-  if (s.drivers.length) {
-    html += `<div class="drv-select-label">Current Driver</div>
-      <div class="drv-select-grid">
-        ${s.drivers.map(d => `
-          <button class="drv-sel-btn ${d.active ? 'active' : ''}" onclick="setDriver(${d.id})">
-            ${esc(d.name)}
-          </button>`).join('')}
-      </div>`;
+// ── My Team ──
+function renderMyTeam(s){
+  const el=document.getElementById('my-team-body'), my=s.my_team, drv=s.current_driver;
+  const pct=s.stint_pct, barCls=pct>90?'crit':pct>75?'warn':'ok';
+  let html='<div class="mt-grid">';
+  if(my) html+=`<div class="mt-pos-box"><div class="mt-pos-num">${esc(my.pos)}</div><div class="mt-pos-label">POS</div></div>`;
+  const ksBadge = my&&my.score
+    ? `<span class="kbadge k-${my.score.band_cls}" style="font-size:10px;padding:1px 8px"><span class="dot"></span><span class="kn">${esc(my.score.kart)}</span><span class="lbl">${esc(my.score.band)}</span></span>`
+    : '';
+  html+=`<div class="mt-info">
+    <div class="mt-driver ${drv?'':'none'}">${drv?esc(drv.name):'No driver'}</div>
+    <div class="mt-kart">${my?`Kart ${esc(my.kart)} · ${esc(my.laps)} laps`:'Not in timing data'} ${ksBadge}</div>
+    <div class="mt-avg-row">
+      <div class="mt-stat"><div class="mt-stat-val" id="stint-display">${s.stint_fmt}</div><div class="mt-stat-lbl">Stint</div></div>
+      ${my?`<div class="mt-stat"><div class="mt-stat-val">${esc(my.avg5)}</div><div class="mt-stat-lbl">Avg 5</div></div>`:''}
+    </div></div></div>`;
+  html+=`<div class="stint-bar-wrap"><div class="stint-bar-track">
+      <div class="stint-bar-fill ${barCls}" id="stint-bar-fill" style="width:${pct}%"></div></div>
+      <div class="stint-bar-meta"><b id="stint-bar-left">${s.stint_fmt}</b><span>${s.stint_max_minutes} min max</span></div></div>`;
+  if(s.drivers.length){
+    html+=`<div class="drv-select-label">Current driver</div><div class="drv-select-grid">
+      ${s.drivers.map(d=>`<button class="drv-sel-btn ${d.active?'active':''}" onclick="setDriver(${d.id})">${esc(d.name)}</button>`).join('')}</div>`;
   }
-
-  el.innerHTML = html;
+  el.innerHTML=html;
 }
 
-// ── Strategy ────────────────────────────────────────────────────
-function renderStrategy(s) {
-  const st = s.strategy;
-  document.getElementById('dec-box').className   = 'dec-box dec-'+st.cls;
-  document.getElementById('dec-label').textContent = st.label;
-  document.getElementById('dec-detail').textContent = st.detail;
-  const pd = s.pits_done, pt = s.mandatory_pits;
-  document.getElementById('pits-val').innerHTML =
-    `${pd} <span>/ ${pt}</span>`;
+// ── Strategy ──
+function renderStrategy(s){
+  const st=s.strategy;
+  const b=document.getElementById('dec-box'); if(!b)return;
+  b.className='dec-box dec-'+st.cls;
+  document.getElementById('dec-label').textContent=st.label;
+  document.getElementById('dec-detail').textContent=st.detail;
+  document.getElementById('pits-val').innerHTML=`${s.pits_done} <span>/ ${s.mandatory_pits}</span>`;
 }
 
-// ── Pit ─────────────────────────────────────────────────────────
-function renderPit(s) {
-  const p = s.status === 'pitting';
-  document.getElementById('pit-racing').style.display  = p ? 'none' : 'block';
-  document.getElementById('pit-pitting').style.display = p ? 'block' : 'none';
-
-  if (p) {
-    // Show who is currently in the pit
-    const cur = s.current_driver ? s.current_driver.name : '—';
-    document.getElementById('pit-current-drv').textContent = cur;
-    // Next driver selector
-    const sel = document.getElementById('pit-drv-select');
-    sel.innerHTML = s.drivers.map(d => `
-      <button class="drv-sel-btn ${_nextDriverId === d.id ? 'active' : ''}"
-              onclick="pickNextDriver(${d.id},this)">
-        ${esc(d.name)}
-      </button>`).join('');
-  } else {
-    _nextDriverId = null;
-  }
+// ── Pit ──
+function renderPit(s){
+  const p=s.status==='pitting';
+  document.getElementById('pit-racing').style.display=p?'none':'block';
+  document.getElementById('pit-pitting').style.display=p?'block':'none';
+  if(p){
+    document.getElementById('pit-current-drv').textContent=s.current_driver?s.current_driver.name:'—';
+    const sel=document.getElementById('pit-drv-select');
+    sel.innerHTML=s.drivers.map(d=>`<button class="drv-sel-btn ${_nextDriverId===d.id?'active':''}" onclick="pickNextDriver(${d.id},this)">${esc(d.name)}</button>`).join('');
+  }else{ _nextDriverId=null; }
 }
 
-// ── Drivers ──────────────────────────────────────────────────────
-function renderDrivers(s) {
-  // Don't re-render while user is actively editing a driver name
-  if (document.querySelector('.drv-edit-inp:focus')) return;
-  const el = document.getElementById('drivers-list');
-  if (!s.drivers.length) {
-    el.innerHTML = '<div style="color:var(--tx3);font-size:11px;padding:4px 0">No drivers yet</div>';
-    return;
-  }
-  el.innerHTML = s.drivers.map(d => `
+// ── Drivers ──
+function renderDrivers(s){
+  if(document.querySelector('.drv-edit-inp:focus'))return;
+  const el=document.getElementById('drivers-list');
+  if(!s.drivers.length){ el.innerHTML='<div style="color:var(--tx3);font-size:11px;padding:4px 0">No drivers yet</div>'; return; }
+  el.innerHTML=s.drivers.map(d=>`
     <div class="drv-row" id="dr-${d.id}">
       <span class="drv-name ${d.active?'cur':''}">${esc(d.name)}</span>
       <span class="drv-time ${d.total_seconds>0?'':'zero'}">${d.total_fmt}</span>
@@ -820,155 +775,88 @@ function renderDrivers(s) {
     </div>`).join('');
 }
 
-// ── Pit log ──────────────────────────────────────────────────────
-function renderLog(history) {
-  const el = document.getElementById('pit-log');
-  if (!history || !history.length) {
-    el.innerHTML = '<div class="log-empty">No stops recorded yet</div>';
-    return;
-  }
-  el.innerHTML = [...history].reverse().map(p => `
-    <div class="log-row">
-      <span class="log-n">#${p.n}</span>
-      <span class="log-driver">${esc(p.driver)}</span>
-      <span class="log-dur">${esc(p.duration)}</span>
-      <span class="log-time">${pitTimestamp(p.end)}</span>
+// ── Pit log ──
+function renderLog(history){
+  const el=document.getElementById('pit-log');
+  if(!history||!history.length){ el.innerHTML='<div class="log-empty">No stops recorded yet</div>'; return; }
+  el.innerHTML=[...history].reverse().map(p=>`
+    <div class="log-row"><span class="log-n">#${p.n}</span><span class="log-driver">${esc(p.driver)}</span>
+    <span class="log-dur">${esc(p.duration)}</span><span class="log-time">${pitTimestamp(p.end)}</span></div>`).join('');
+}
+
+// ── Kart rankings (Analysis) ──
+function renderRanking(s){
+  const el=document.getElementById('kart-ranking'); if(!el)return;
+  const r=s.kart_ranking||[];
+  document.getElementById('krank-count').textContent=r.length?`${r.length} karts`:'';
+  if(!r.length){ el.innerHTML='<div style="color:var(--tx3);font-size:11px;padding:6px 0">Collecting laps… kart scores appear after a few clean laps.</div>'; return; }
+  el.innerHTML=r.map(k=>`
+    <div class="krank-row">
+      <span class="krank-rank">${k.rank}</span>
+      <span class="kbadge k-${k.band_cls}" onmousemove="showTip(event,'${esc(k.kart)}')" onmouseleave="hideTip()">
+        <span class="dot"></span><span class="kn">${esc(k.kart)}</span><span class="lbl">${esc(k.band)}</span></span>
+      <span class="krank-meta">${k.counted} laps</span>
+      <span class="krank-score">${esc(k.score_fmt)}</span>
     </div>`).join('');
 }
 
-// ── Race Plan ────────────────────────────────────────────────────
-function renderPlan(s) {
-  const el = document.getElementById('pit-plan-body');
-  if (!s.pit_plan || !s.pit_plan.length) {
-    el.innerHTML = '<div style="color:var(--tx3);font-size:11px">Loading…</div>';
-    return;
-  }
-  let html = '';
-  s.pit_plan.forEach((stop, i) => {
-    const isNext = !stop.done && (i === 0 || s.pit_plan[i - 1].done);
-    const dotCls = stop.done ? 'done' : isNext ? 'next' : '';
-    const drvCls = stop.done ? 'done-row' : stop.driver ? '' : 'empty';
-    const timeLabel = stop.done
-      ? (stop.actual_end ? pitTimestamp(stop.actual_end) : '✓')
-      : stop.planned_fmt;
-    html += `
-      <div class="plan-row">
-        <span class="plan-n">${stop.n}</span>
-        <button class="plan-drv-btn ${drvCls}" onclick="togglePlanEdit(${stop.n})">
-          ${esc(stop.driver || '— pick —')}
-        </button>
-        <span class="plan-time">${timeLabel}</span>
-        <div class="plan-dot ${dotCls}"></div>
-      </div>
-      <div class="plan-picker ${_planEdit === stop.n ? 'open' : ''}" id="pp-${stop.n}">
-        <button class="drv-sel-btn" style="font-size:10px;padding:3px 8px"
-                onclick="assignPlan(${stop.n},null)">—</button>
-        ${s.drivers.map(d => `
-          <button class="drv-sel-btn ${stop.driver_id === d.id ? 'active' : ''}"
-                  style="font-size:10px;padding:3px 8px"
-                  onclick="assignPlan(${stop.n},${d.id})">
-            ${esc(d.name)}
-          </button>`).join('')}
+// ── Race Plan ──
+function renderPlan(s){
+  const el=document.getElementById('pit-plan-body'); if(!el)return;
+  if(!s.pit_plan||!s.pit_plan.length){ el.innerHTML='<div style="color:var(--tx3);font-size:11px">Loading…</div>'; return; }
+  let html='';
+  s.pit_plan.forEach((stop,i)=>{
+    const isNext=!stop.done&&(i===0||s.pit_plan[i-1].done);
+    const dotCls=stop.done?'done':isNext?'next':'';
+    const drvCls=stop.done?'done-row':stop.driver?'':'empty';
+    const timeLabel=stop.done?(stop.actual_end?pitTimestamp(stop.actual_end):'✓'):stop.planned_fmt;
+    html+=`<div class="plan-row"><span class="plan-n">${stop.n}</span>
+      <button class="plan-drv-btn ${drvCls}" onclick="togglePlanEdit(${stop.n})">${esc(stop.driver||'— pick —')}</button>
+      <span class="plan-time">${timeLabel}</span><div class="plan-dot ${dotCls}"></div></div>
+      <div class="plan-picker ${_planEdit===stop.n?'open':''}" id="pp-${stop.n}">
+        <button class="drv-sel-btn" style="font-size:10px;padding:3px 8px" onclick="assignPlan(${stop.n},null)">—</button>
+        ${s.drivers.map(d=>`<button class="drv-sel-btn ${stop.driver_id===d.id?'active':''}" style="font-size:10px;padding:3px 8px" onclick="assignPlan(${stop.n},${d.id})">${esc(d.name)}</button>`).join('')}
       </div>`;
   });
-  el.innerHTML = html;
+  el.innerHTML=html;
 }
+function togglePlanEdit(n){ _planEdit=_planEdit===n?null:n; if(S)renderPlan(S); }
+async function assignPlan(n,driverId){ _planEdit=null; await api('plan/set',{stop:n,driver_id:driverId}); }
+async function clearPlan(){ await fetch('/api/plan/reset',{method:'POST'}); await fetchState(); }
 
-function togglePlanEdit(n) {
-  _planEdit = _planEdit === n ? null : n;
-  if (S) renderPlan(S);
+// ═══ Actions ═══
+function setDriver(id){ api('driver/set',{driver_id:id}); }
+function addDriver(){ const inp=document.getElementById('add-name'); const n=inp.value.trim(); if(!n)return; api('driver/add',{name:n}); inp.value=''; }
+function delDriver(id){ api('driver/delete',{driver_id:id}); }
+function startEdit(id){ document.getElementById('dr-'+id).style.display='none'; const e=document.getElementById('de-'+id); e.style.display='flex'; e.querySelector('input').focus(); }
+function cancelEdit(id){ document.getElementById('dr-'+id).style.display='flex'; document.getElementById('de-'+id).style.display='none'; }
+function saveEdit(id){ const v=document.getElementById('di-'+id).value.trim(); if(!v)return; api('driver/rename',{driver_id:id,name:v}); cancelEdit(id); }
+function boxNow(){
+  const raw=(document.getElementById('box-offset').value||'').trim(); let off=0;
+  if(raw){ const p=raw.split(':'); off=p.length===2?Math.max(0,parseInt(p[0]||0)*60+parseInt(p[1]||0)):Math.max(0,parseInt(raw)||0); }
+  document.getElementById('box-offset').value=''; _autoPitFired=false; api('pit/box',{offset_seconds:off});
 }
+function pickNextDriver(id,btn){ _nextDriverId=id;
+  document.querySelectorAll('#pit-drv-select .drv-sel-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+function confirmPit(){ const did=_nextDriverId||(S&&S.current_driver?S.current_driver.id:null); api('pit/done',{driver_id:did}); _nextDriverId=null; }
 
-async function assignPlan(n, driverId) {
-  _planEdit = null;
-  await api('plan/set', {stop: n, driver_id: driverId});
-}
-
-async function clearPlan() {
-  await fetch('/api/plan/reset', {method:'POST'});
-  await fetchState();
-}
-
-// ═══ Actions ════════════════════════════════════════════════════
-function setDriver(id)  { api('driver/set', {driver_id:id}) }
-function addDriver() {
-  const inp = document.getElementById('add-name');
-  const n = inp.value.trim(); if (!n) return;
-  api('driver/add', {name:n}); inp.value='';
-}
-function delDriver(id)  { api('driver/delete', {driver_id:id}) }
-
-function startEdit(id) {
-  document.getElementById('dr-'+id).style.display = 'none';
-  const e = document.getElementById('de-'+id);
-  e.style.display = 'flex'; e.querySelector('input').focus();
-}
-function cancelEdit(id) {
-  document.getElementById('dr-'+id).style.display = 'flex';
-  document.getElementById('de-'+id).style.display = 'none';
-}
-function saveEdit(id) {
-  const v = document.getElementById('di-'+id).value.trim(); if (!v) return;
-  api('driver/rename', {driver_id:id, name:v}); cancelEdit(id);
-}
-
-function boxNow() {
-  const raw = (document.getElementById('box-offset').value||'').trim();
-  let off = 0;
-  if (raw) {
-    const p = raw.split(':');
-    off = p.length===2 ? Math.max(0,parseInt(p[0]||0)*60+parseInt(p[1]||0)) : Math.max(0,parseInt(raw)||0);
-  }
-  document.getElementById('box-offset').value = '';
-  _autoPitFired = false;
-  api('pit/box', {offset_seconds:off});
-}
-function pickNextDriver(id, btn) {
-  _nextDriverId = id;
-  document.querySelectorAll('#pit-drv-select .drv-sel-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-function confirmPit() {
-  const did = _nextDriverId || (S && S.current_driver ? S.current_driver.id : null);
-  api('pit/done', {driver_id: did});
-  _nextDriverId = null;
-}
-
-// ═══ Settings ════════════════════════════════════════════════════
-function openCfg() {
-  if (S) {
-    document.getElementById('cfg-url').value  = S.apex_url  || '';
-    document.getElementById('cfg-team').value = S.team_name || '';
-  }
-  document.getElementById('cfg-dur').value='';
-  document.getElementById('cfg-pits').value='';
-  document.getElementById('cfg-stint').value='';
+// ═══ Settings ═══
+function openCfg(){
+  if(S){ document.getElementById('cfg-url').value=S.apex_url||''; document.getElementById('cfg-team').value=S.team_name||''; }
+  document.getElementById('cfg-dur').value=''; document.getElementById('cfg-pits').value=''; document.getElementById('cfg-stint').value='';
   document.getElementById('overlay').classList.add('open');
 }
-function closeCfg() { document.getElementById('overlay').classList.remove('open'); }
-async function saveCfg() {
-  const b={};
-  const url=document.getElementById('cfg-url').value.trim();
-  const team=document.getElementById('cfg-team').value.trim();
-  const dur=document.getElementById('cfg-dur').value.trim();
-  const pits=document.getElementById('cfg-pits').value.trim();
-  const stint=document.getElementById('cfg-stint').value.trim();
-  b.apex_url = url;
-  if (team)  b.team_name         = team;
-  if (dur)   b.duration_minutes  = parseInt(dur);
-  if (pits)  b.mandatory_pits    = parseInt(pits);
-  if (stint) b.stint_max_minutes = parseInt(stint);
-  await api('settings', b); closeCfg();
+function closeCfg(){ document.getElementById('overlay').classList.remove('open'); }
+async function saveCfg(){
+  const b={}, url=document.getElementById('cfg-url').value.trim(), team=document.getElementById('cfg-team').value.trim();
+  const dur=document.getElementById('cfg-dur').value.trim(), pits=document.getElementById('cfg-pits').value.trim(), stint=document.getElementById('cfg-stint').value.trim();
+  b.apex_url=url; if(team)b.team_name=team; if(dur)b.duration_minutes=parseInt(dur); if(pits)b.mandatory_pits=parseInt(pits); if(stint)b.stint_max_minutes=parseInt(stint);
+  await api('settings',b); closeCfg();
 }
-document.getElementById('overlay').addEventListener('click', e => {
-  if (e.target===e.currentTarget) closeCfg();
-});
+document.getElementById('overlay').addEventListener('click',e=>{ if(e.target===e.currentTarget)closeCfg(); });
 
-// ═══ Utils ══════════════════════════════════════════════════════
-function esc(s) {
-  if (s==null) return '-';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+// ═══ Utils ═══
+function esc(s){ if(s==null)return '-'; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 </script>
 </body>
 </html>

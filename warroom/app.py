@@ -102,7 +102,8 @@ def kv_set(key: str, val: str):
 _CELL_MAP = {
     "rk": "pos", "pos": "pos",
     "no": "kart", "kart": "kart",
-    "dr": "team", "name": "team", "team": "team",
+    "dr": "driver", "drv": "driver",
+    "name": "team", "team": "team",
     "llp": "last_lap", "blp": "best_lap", "tlp": "total_laps",
     "pit": "pits", "gap": "gap", "int": "interval",
     # Apex timing state classes (only appear on lap-time cells)
@@ -269,6 +270,8 @@ def _enrich(t: dict) -> dict:
     if ll and (not hist or hist[-1] != ll):
         hist.append(ll)
         del hist[:-30]
+        # Feed the per-kart pace history that powers kart scoring
+        _kart_record_lap(t.get("kart", ""), ll, t.get("team") or t.get("driver") or "")
     t["last_lap_s"]  = ll
     t["best_lap_s"]  = parse_laptime(t.get("best_lap", ""))
     t["avg5_s"]  = sum(hist[-5:])  / len(hist[-5:])  if hist else None
@@ -628,6 +631,97 @@ def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
 
     return {"label": "HOLD", "cls": "hold", "detail": "On plan — hold position"}
 
+# ── Kart scoring engine ──────────────────────────────────────────────────────────
+# Signature Delta feature: every physical kart is graded by pace, independent of the
+# team currently driving it — endurance karts are randomly assigned and some are
+# simply faster. Score = best clean lap × 0.8 + average clean lap × 0.2, then ranked
+# across the field into bands (Godlike / Very Good / Good / Average / Bad).
+_KART_BEST_W = 0.8
+_KART_AVG_W  = 0.2
+
+# kart_no -> list of {"lap": float, "team": str, "n": int}  (rolling, clean laps only)
+_kart_laps: dict = {}
+_kart_lap_seq: dict = {}          # kart_no -> running lap counter (for L### labels)
+# kart_no -> [{"lap": float, "team": str}]  best clean lap per stint, newest first
+_kart_stints: dict = {}
+_kart_last_team: dict = {}        # kart_no -> team name seen on the previous lap
+
+def _kart_record_lap(kart_no: str, lap: Optional[float], team: str):
+    """Feed a fresh lap into the per-kart pace history. Pit in/out laps and gross
+    outliers are dropped so they never pollute a kart's score."""
+    if not kart_no or lap is None or lap <= 0:
+        return
+    hist = _kart_laps.setdefault(kart_no, [])
+    if hist and hist[-1]["lap"] == lap and hist[-1]["team"] == team:
+        return  # same lap already recorded (snapshot repeat)
+
+    # New stint when the team on this kart changes (pit stop / driver swap)
+    prev_team = _kart_last_team.get(kart_no)
+    if prev_team is not None and prev_team != team:
+        _kart_stints.setdefault(kart_no, [])
+    _kart_last_team[kart_no] = team
+
+    seq = _kart_lap_seq.get(kart_no, 0) + 1
+    _kart_lap_seq[kart_no] = seq
+    hist.append({"lap": lap, "team": team, "n": seq})
+    del hist[:-40]   # keep last 40 laps per kart
+
+def _kart_clean(laps: list) -> list:
+    """Drop pit laps / outliers: anything more than 20% slower than the kart's best."""
+    times = [l["lap"] for l in laps]
+    if not times:
+        return []
+    best = min(times)
+    return [l for l in laps if l["lap"] <= best * 1.20]
+
+def _rate_band(frac: float) -> tuple:
+    """Map a 0 (fastest) .. 1 (slowest) rank fraction to a rating band + css class."""
+    if frac <= 0.10: return ("Godlike",   "godlike")
+    if frac <= 0.35: return ("Very Good", "vgood")
+    if frac <= 0.60: return ("Good",      "good")
+    if frac <= 0.82: return ("Average",   "avg")
+    return ("Bad", "bad")
+
+def compute_kart_scores() -> dict:
+    """Return {kart_no: {...}} for every kart with enough clean laps, ranked into bands."""
+    raw = {}
+    for kart_no, laps in _kart_laps.items():
+        clean = _kart_clean(laps)
+        if not clean:
+            continue
+        times = [l["lap"] for l in clean]
+        best = min(times)
+        avg  = sum(times) / len(times)
+        score = best * _KART_BEST_W + avg * _KART_AVG_W
+        raw[kart_no] = {
+            "kart":    kart_no,
+            "best":    best,
+            "avg":     avg,
+            "score":   score,
+            "counted": len(clean),
+            "best_fmt":  fmt_laptime(best),
+            "avg_fmt":   fmt_laptime(avg),
+            "score_fmt": fmt_laptime(score),
+            "recent":  [
+                {"n": l["n"], "lap_fmt": fmt_laptime(l["lap"]), "team": l["team"]}
+                for l in clean[-10:]
+            ],
+        }
+
+    if not raw:
+        return {}
+
+    ordered = sorted(raw.values(), key=lambda k: k["score"])
+    n = len(ordered)
+    for i, k in enumerate(ordered):
+        frac = i / (n - 1) if n > 1 else 0.0
+        label, cls = _rate_band(frac)
+        k["rank"]      = i + 1
+        k["field"]     = n
+        k["band"]      = label
+        k["band_cls"]  = cls
+    return raw
+
 # ── Snapshot ───────────────────────────────────────────────────────────────────
 _prev_avg5: Optional[float] = None
 
@@ -699,9 +793,11 @@ def make_snapshot() -> dict:
                 "dur_s":    row["duration_seconds"] or 0,
             })
 
-    # My team
+    # My team (match on team name, falling back to driver name)
     my_name = CFG.get("team_name", "")
-    my_team = next((t for t in teams_raw if t.get("team", "") == my_name), None)
+    def _is_mine(t):
+        return my_name and my_name in (t.get("team", ""), t.get("driver", ""))
+    my_team = next((t for t in teams_raw if _is_mine(t)), None)
     my_avg5 = my_team["avg5_s"] if my_team else None
 
     strat = compute_strategy(stint_s, race_elapsed, pits_done, my_avg5, _prev_avg5)
@@ -711,21 +807,45 @@ def make_snapshot() -> dict:
     all_avgs  = [t["avg5_s"] for t in teams_raw if t.get("avg5_s")]
     track_avg = fmt_laptime(sum(all_avgs) / len(all_avgs)) if all_avgs else "-"
 
+    # Kart scores (signature Delta feature) + session-best lap for LAST colouring
+    kart_scores  = compute_kart_scores()
+    best_laps    = [t["best_lap_s"] for t in teams_raw if t.get("best_lap_s")]
+    session_best = min(best_laps) if best_laps else None
+
+    def _last_cls(t):
+        """Colour the LAST-lap cell: purple = matches session best, green = at/under
+        own best, amber = well off the pace, else neutral."""
+        ll, bl = t.get("last_lap_s"), t.get("best_lap_s")
+        if ll is None:
+            return ""
+        if session_best is not None and ll <= session_best + 0.03:
+            return "lap-best"        # overall session best (purple)
+        if bl is not None and ll <= bl + 0.05:
+            return "lap-pb"          # at / near own best (green)
+        if bl is not None and ll >= bl + 0.60:
+            return "lap-slow"        # well off pace (amber)
+        return ""
+
     # Serialize teams (drop raw floats the frontend doesn't need)
     teams_out = []
     for t in teams_raw:
+        ks = kart_scores.get(t.get("kart", ""))
         teams_out.append({
             "pos":        t.get("pos", ""),
             "kart":       t.get("kart", ""),
-            "team":       t.get("team", ""),
+            "team":       t.get("team", "") or t.get("driver", ""),
+            "driver":     t.get("driver", ""),
             "last_lap":   t.get("last_lap", "-"),
+            "last_cls":   _last_cls(t),
             "avg5":       t.get("avg5", "-"),
             "avg10":      t.get("avg10", "-"),
             "best_lap":   t.get("best_lap", "-"),
             "total_laps": t.get("total_laps", "-"),
             "pits":       t.get("pits", "-"),
             "gap":        t.get("gap", "-"),
-            "is_my_team": t.get("team", "") == my_name,
+            "interval":   t.get("interval", "-"),
+            "kart_score": ks,
+            "is_my_team": bool(_is_mine(t)),
         })
 
     stint_pct = min(100, (stint_s / (CFG["race"]["stint_max_minutes"] * 60)) * 100) if stint_s else 0
@@ -775,17 +895,20 @@ def make_snapshot() -> dict:
         "mandatory_pits":   CFG["race"]["mandatory_pits"],
         "stint_max_minutes": CFG["race"]["stint_max_minutes"],
         "track_avg":        track_avg,
+        "session_best":     fmt_laptime(session_best),
         "pit_history":      pit_history,
         "team_name":        my_name,
         "apex_url":         CFG.get("apex_url", ""),
         "teams":            teams_out,
         "session_mode":     session_mode,
         "pit_plan":         pit_plan_out,
+        "kart_ranking":     sorted(kart_scores.values(), key=lambda k: k["score"]),
         "my_team":          {
-            "pos":   my_team.get("pos", "?"),
-            "kart":  my_team.get("kart", "?"),
-            "avg5":  my_team.get("avg5", "-"),
-            "laps":  my_team.get("total_laps", "-"),
+            "pos":    my_team.get("pos", "?"),
+            "kart":   my_team.get("kart", "?"),
+            "avg5":   my_team.get("avg5", "-"),
+            "laps":   my_team.get("total_laps", "-"),
+            "score":  kart_scores.get(my_team.get("kart", "")),
         } if my_team else None,
     }
 
@@ -852,6 +975,10 @@ def race_reset():
     with get_db() as con:
         con.execute("DELETE FROM stints")
         con.execute("UPDATE drivers SET total_seconds=0")
+    # Wipe accumulated pace history so kart scores start fresh
+    _lap_hist.clear()
+    _kart_laps.clear(); _kart_lap_seq.clear()
+    _kart_stints.clear(); _kart_last_team.clear()
     log("RACE RESET")
     broadcast()
     return jsonify(ok=True)
