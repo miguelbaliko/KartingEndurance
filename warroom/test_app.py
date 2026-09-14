@@ -44,6 +44,10 @@ class AppCase(unittest.TestCase):
         self.addCleanup(self._tmp.cleanup)
         os.environ["WARROOM_DB"] = os.path.join(self._tmp.name, "race.db")
         self.addCleanup(os.environ.pop, "WARROOM_DB", None)
+        # Without this the suite reads whatever config.json the last real run
+        # saved, so the regulation defaults under test are silently overridden.
+        os.environ["WARROOM_CONFIG"] = os.path.join(self._tmp.name, "config.json")
+        self.addCleanup(os.environ.pop, "WARROOM_CONFIG", None)
 
         import app
         importlib.reload(app)
@@ -353,6 +357,50 @@ class TestSwitchingEvent(AppCase):
                          json={"apex_url": "https://live.apex-timing.com/kartalcanede/"})
         self.assertEqual(self.app._ajax_state["index"], "0")
         self.assertFalse(self.app._ws_blocked)
+
+
+class TestRegulation(AppCase):
+    """The 2026 KIP regulation, as numbers the strategy engine has to obey."""
+
+    def test_the_race_is_twenty_five_hours(self):
+        self.assertEqual(self.app.CFG["race"]["duration_minutes"], 25 * 60)
+
+    def test_category_sets_the_stops_and_the_stint_ceiling(self):
+        for cat, pits, stint in (("PRO", 28, 80), ("AM", 34, 60)):
+            race = {"category": cat, "mandatory_pits": 0, "stint_max_minutes": 0}
+            self.app.apply_category(race)
+            self.assertEqual((race["mandatory_pits"], race["stint_max_minutes"]),
+                             (pits, stint), cat)
+
+    def test_an_unknown_category_leaves_the_numbers_alone(self):
+        race = {"category": "", "mandatory_pits": 28, "stint_max_minutes": 80}
+        self.app.apply_category(race)
+        self.assertEqual(race["mandatory_pits"], 28)
+
+    def test_the_pit_lane_shuts_before_the_flag_not_at_it(self):
+        # §3.8: every stop must be done by 24:30 of a 25:00 race.
+        R = self.app.CFG["race"]
+        s = self.app.compute_strategy(60, (R["duration_minutes"] - 20) * 60, 28, None, None)
+        self.assertEqual(s["label"], "HOLD")
+        self.assertIn("30 min", s["detail"])
+
+    def test_the_stops_are_paced_into_the_window_that_allows_them(self):
+        # Pacing across the full 25h would call a team on plan when it is a
+        # stop down, because the last 30 min cannot absorb one.
+        R = self.app.CFG["race"]
+        R["mandatory_pits"] = 28
+        # One minute before the lane shuts, a team four stops down must be told.
+        just_before = (R["duration_minutes"] - R["no_pit_last_minutes"] - 1) * 60
+        self.assertEqual(
+            self.app.compute_strategy(60, just_before, 28, None, None)["label"], "HOLD")
+        self.assertEqual(
+            self.app.compute_strategy(60, just_before, 24, None, None)["label"], "PREPARE")
+
+    def test_a_driver_short_of_the_minimum_is_shown_what_is_owed(self):
+        self.client.post("/api/driver/add", json={"name": "Dinis"})
+        d = self.snap()["drivers"][0]
+        self.assertEqual(d["owed_seconds"], 120 * 60)
+        self.assertIn("owed_fmt", d)
 
 
 class TestPages(AppCase):

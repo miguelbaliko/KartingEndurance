@@ -20,19 +20,27 @@ except ImportError:
 app = Flask(__name__)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-_CFG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
+# WARROOM_CONFIG mirrors WARROOM_DB: it lets a second instance, or a test, run
+# against its own settings instead of whatever the last run happened to save.
+_CFG_PATH = os.environ.get("WARROOM_CONFIG") or os.path.join(
+    os.path.dirname(__file__), "config.json")
 
 def load_cfg() -> dict:
     base = {
         "team_name": "MY TEAM",
         "apex_url": "",
         "refresh_interval": 5,
+        # Defaults are the 24 Horas de Portugal 2026 regulation (KIP Palmela,
+        # 19-20 September).  Section numbers below refer to that document.
         "race": {
-            "duration_minutes": 780,
-            "mandatory_pits": 23,
-            "stint_max_minutes": 45,
-            "pit_duration_seconds": 180,
-            "no_pit_last_minutes": 5,
+            "category": "PRO",            # PRO or AM — §2.5, sets the two below
+            "duration_minutes": 1500,     # §3.2  the race is 25 hours, not 24
+            "mandatory_pits": 28,         # §3.8  PRO 28, AM 34
+            "stint_max_minutes": 80,      # §3.10 PRO 80, AM 60
+            "stint_min_minutes": 10,      # §3.10 a turn under this is penalised
+            "pit_duration_seconds": 180,  # §3.9  3 minutes, timed electronically
+            "no_pit_last_minutes": 30,    # §3.8  pit lane shuts at 24:30
+            "driver_min_minutes": 120,    # §3.14 every driver, over the event
             "pace_drop_warn": 0.30,
             "pace_drop_box": 0.50,
         },
@@ -46,7 +54,24 @@ def load_cfg() -> dict:
             base["race"].update(saved["race"])
         if "karts" in saved:
             base["karts"].update(saved["karts"])
+    apply_category(base["race"])
     return base
+
+# §3.8 and §3.10: the only two numbers that differ between the categories.
+CATEGORY_RULES = {
+    "PRO": {"mandatory_pits": 28, "stint_max_minutes": 80},
+    "AM":  {"mandatory_pits": 34, "stint_max_minutes": 60},
+}
+
+def apply_category(race: dict):
+    """Set the category's stops and stint ceiling, unless they were overridden.
+
+    A saved config that names a category but keeps the other category's numbers
+    is the more likely mistake, so the category wins over stale saved values.
+    """
+    rules = CATEGORY_RULES.get(str(race.get("category", "")).upper())
+    if rules:
+        race.update(rules)
 
 CFG = load_cfg()
 
@@ -725,7 +750,8 @@ def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
     remaining = total_s - race_elapsed_s
 
     if remaining <= no_pit_s:
-        return {"label": "HOLD", "cls": "hold", "detail": "No pits allowed in final 5 min"}
+        return {"label": "HOLD", "cls": "hold",
+                "detail": f"Pit lane shut for the last {R['no_pit_last_minutes']} min"}
 
     if stint_s >= max_s - 60:
         return {"label": "BOX NOW", "cls": "box", "detail": "STINT LIMIT — BOX IMMEDIATELY"}
@@ -744,9 +770,11 @@ def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
         if drop > R.get("pace_drop_warn", 0.30):
             return {"label": "PREPARE", "cls": "prepare", "detail": f"Pace dropping +{drop:.2f}s — prepare"}
 
-    # Behind pit plan
+    # Behind pit plan.  The stops have to fit before the pit lane shuts (§3.8),
+    # not across the whole race, so they are paced against that shorter window.
+    pit_window_s = max(1.0, total_s - no_pit_s)
     if total_s > 0:
-        expected = (race_elapsed_s / total_s) * R["mandatory_pits"]
+        expected = (min(race_elapsed_s, pit_window_s) / pit_window_s) * R["mandatory_pits"]
         if pits_done < expected - 1.5:
             return {"label": "PREPARE", "cls": "prepare",
                     "detail": f"Behind pit plan ({pits_done}/{R['mandatory_pits']})"}
@@ -812,7 +840,12 @@ def make_snapshot() -> dict:
         for row in con.execute("SELECT * FROM drivers ORDER BY sort_order, id"):
             d = dict(row)
             d["total_fmt"] = fmt_duration(d["total_seconds"])
-            d["active"]    = str(row["id"]) == str(driver_id)
+            # §3.14: a driver short of the minimum costs the team 20s per 10s
+            # missing, and it is only fixable while there is still race left.
+            owed = CFG["race"].get("driver_min_minutes", 0) * 60 - d["total_seconds"]
+            d["owed_seconds"] = max(0.0, owed)
+            d["owed_fmt"]     = fmt_duration(max(0.0, owed))
+            d["active"]       = str(row["id"]) == str(driver_id)
             if d["active"]:
                 current_driver = d
             drivers.append(d)
