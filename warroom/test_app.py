@@ -178,6 +178,21 @@ class TestMyTeamAutoPit(AppCase):
         self.assertEqual(state["stints_done"], 1, "the stint was closed and logged")
         self.assertEqual(state["pits_done"], 1, "counted from the Apex pit column")
 
+    def test_entering_the_lane_is_enough_to_start_the_box_clock(self):
+        """No button, no pit counter — the feed showing us in the lane does it."""
+        self.feed(head=True)
+        self.client.post("/api/race/start")
+        self.lap(n=2)
+        self.state["1"]["cls"] = "pit"
+        self.feed()
+        state = self.snap()
+        self.assertEqual(state["status"], "pitting")
+        self.assertGreater(state["pit_remaining"], 0)
+
+        self.state["1"]["cls"] = ""
+        self.feed()
+        self.assertEqual(self.snap()["status"], "racing")
+
     def test_a_rival_stop_leaves_our_clock_alone(self):
         self.feed(head=True)
         self.client.post("/api/race/start")

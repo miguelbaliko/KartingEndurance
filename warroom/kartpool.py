@@ -126,6 +126,7 @@ class KartPool:
         self._pending_teams = set()
         self._skip = defaultdict(int)
         self._in_box_since = {}
+        self._category = {}
         self._pace = defaultdict(lambda: deque(maxlen=12))
         self._log = deque(maxlen=250)
         self._rating = {"karts": {}, "pilots": {}, "n_laps": 0, "linked_karts": 0}
@@ -430,6 +431,7 @@ class KartPool:
                     asks = "order"         # two karts in the lane at once
                 out.append({
                     "id": r["id"], "team": r["team"], "team_no": r["team_no"],
+                    "category": self._category.get(str(r["team_no"]), ""),
                     "kart_in": r["kart_in"], "state": r["state"], "asks": asks,
                     "at": _hhmmss(r["ts"]),
                     "in_box_s": int(now - since) if since else None,
@@ -448,6 +450,7 @@ class KartPool:
             return
         now = now or time.time()
         new_stops, released = [], []
+        entered_box, left_box = [], []
 
         with self._lock, self._con() as con:
             # Who is in the pit lane has to be known for the whole field before
@@ -457,9 +460,16 @@ class KartPool:
                 team_no = str(row.get("kart") or row.get("team_no") or "").strip()
                 if not team_no:
                     continue
+                if row.get("category"):
+                    self._category[team_no] = row["category"]
+                was_in = team_no in self._in_box_since
                 if row.get("in_pit"):
+                    if not was_in:
+                        entered_box.append((team_no, (row.get("team") or "").strip()))
                     self._in_box_since.setdefault(team_no, now)
                 else:
+                    if was_in:
+                        left_box.append((team_no, (row.get("team") or "").strip()))
                     self._in_box_since.pop(team_no, None)
 
             for row in rows:
@@ -509,12 +519,19 @@ class KartPool:
                 if laps is not None:
                     self._last_laps[team_no] = laps
 
-        for team_no, team in new_stops:
-            if my_team and team == my_team and self.cfg["auto_pit"] and self._on_my_stop:
-                self._on_my_stop(team_no)
-        for team_no, team in released:
-            if my_team and team == my_team and self.cfg["auto_pit"] and self._on_my_release:
-                self._on_my_release(team_no)
+        # Our own box clock runs off the earliest signal there is: the feed
+        # showing our kart in the lane, which lands before the pit counter
+        # ticks.  Both paths are idempotent, so whichever arrives first wins
+        # and the other is a no-op — an event without the in-pit flag still
+        # boxes us on the counter.
+        if my_team and self.cfg["auto_pit"]:
+            for events, handler in ((entered_box + new_stops, self._on_my_stop),
+                                    (left_box + released, self._on_my_release)):
+                fired = set()
+                for team_no, team in events:
+                    if team == my_team and handler and team_no not in fired:
+                        fired.add(team_no)
+                        handler(team_no)
 
     def _new_lap(self, team_no: str, laps, lap_s: float) -> bool:
         """Has this team completed a lap we have not already counted?
@@ -635,6 +652,7 @@ class KartPool:
         self._pending_teams.clear()
         self._skip.clear()
         self._in_box_since.clear()
+        self._category.clear()
         self._pace.clear()
         self._log.clear()
         self._rating_dirty = True

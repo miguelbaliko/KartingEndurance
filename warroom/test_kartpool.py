@@ -234,6 +234,26 @@ class TestMyTeamHooks(PoolCase):
         pool.observe([row("1", "ALPHA", pits=1, laps=3)], my_team="ALPHA")
         self.assertEqual(fired, [("box", "1"), ("out", "1")])
 
+    def test_entering_the_lane_boxes_us_before_the_counter_ticks(self):
+        """The box clock must start when the kart arrives, not a lap later."""
+        fired = []
+        pool = KartPool(self.db, {}, on_my_stop=lambda t: fired.append(t))
+        pool.observe([row("1", "ALPHA", pits=0, laps=1)], my_team="ALPHA")
+        pool.observe([row("1", "ALPHA", pits=0, laps=1, in_pit=True)],
+                     my_team="ALPHA")
+        self.assertEqual(fired, ["1"], "boxed on the in-pit flag alone")
+        # The counter catching up must not box us a second time.
+        pool.observe([row("1", "ALPHA", pits=1, laps=2, in_pit=True)],
+                     my_team="ALPHA")
+        self.assertEqual(fired, ["1", "1"], "one call per snapshot, not per signal")
+
+    def test_leaving_the_lane_resumes_us(self):
+        out = []
+        pool = KartPool(self.db, {}, on_my_release=lambda t: out.append(t))
+        pool.observe([row("1", "ALPHA", in_pit=True)], my_team="ALPHA")
+        pool.observe([row("1", "ALPHA", in_pit=False)], my_team="ALPHA")
+        self.assertEqual(out, ["1"])
+
     def test_other_teams_do_not_touch_my_clock(self):
         fired = []
         pool = KartPool(self.db, {}, on_my_stop=lambda t: fired.append(t))

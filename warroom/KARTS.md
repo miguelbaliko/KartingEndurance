@@ -24,9 +24,10 @@ out, the way the marshals work.
   when two karts are in the pit lane at the same moment, when the war room asks
   who went out first rather than guessing.
 
-Three answers are always available on any stop: the lane, `Type the kart` when
-someone reads the number off the nose cone, and `No kart change` for a
-driver-only swap. Any mis-tap is one `undo` away.
+Two answers are available on any stop: the lane, and `Type the kart` when
+someone reads the number off the nose cone. Any mis-tap is one `undo` away.
+Where an event does *not* swap karts at every stop, turn off "Karts are swapped
+at every stop" in Settings and a third answer appears for driver-only stops.
 
 ### Before the start
 
@@ -63,19 +64,41 @@ quickest kart shows `0.00`:
 | Bad | ≥ 1.00 | a second a lap, every lap |
 | Unknown | — | not enough to say yet |
 
+**PRO and AM** are read from the feed's category column and filter the timing
+table; a stop on the phone shows the category next to the team. The rating does
+not need them — each team's own pace is already subtracted, which is a finer
+correction than a class average.
+
 **Unknown is a real answer, not a gap in the data.** A kart needs clean laps
 from more than one team before its pace can be told apart from the driver's.
 Before the first swaps, every kart is Unknown, and it should be: at that point
 nothing in the timing screen can separate a good kart from a good driver.
 Thresholds are tunable per track under `karts.rating` in `config.json`.
 
+## The phone in the pit lane
+
+`/pit` is where the race is actually run, so it is built for one hand and a
+glance:
+
+* **Our own stop is at the top**, with the minimum pit time counting down in
+  the largest type on the page. Nobody presses BOX.
+* **A new question buzzes the phone** and keeps the screen awake, because a
+  question nobody notices is a kart nobody counted.
+* Lane buttons are thumb-sized and say which kart is next out of each lane.
+* Everything is two taps from the top of the page: the lane, or `undo`.
+
+The war room screen shows the same questions for whoever is on the pit wall,
+but the phone is the one that has to work.
+
 ## What the feed drives on its own
 
 * The **race clock** comes from the timing tower's header when it is there, and
   falls back to our own clock when the feed goes quiet. The topbar says which.
-* **Our own pit stop** starts and ends itself: the stint closes when the feed
-  sees our kart enter the lane, and the next stint starts when it comes back
-  out. Turn it off in Settings if you would rather press the button.
+* **Our own pit stop** starts and ends itself, with no button. The box clock
+  starts the moment the feed shows our kart in the lane — earlier than the pit
+  counter, which only ticks once the stop is registered — and the next stint
+  starts when the kart is back out. Turn it off in Settings if you would rather
+  press the button.
 * **Pit stop counts** come from the timekeepers' column, since that is the
   number that settles a protest.
 

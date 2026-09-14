@@ -435,6 +435,13 @@ td{padding:7px 8px;white-space:nowrap}
 .fleet-laps{font-size:10px;color:var(--tx3);font-family:var(--mono);min-width:34px;
   text-align:right}
 .kart-note{font-size:10px;color:var(--tx3);margin-top:7px;line-height:1.5}
+.cat-chips{display:flex;gap:4px;margin-left:14px}
+.cat-chip{padding:2px 9px;border-radius:20px;border:1px solid var(--line2);
+  background:transparent;color:var(--tx3);font-size:10px;font-weight:700;
+  letter-spacing:.08em;cursor:pointer}
+.cat-chip:hover{color:var(--tx2)}
+.cat-chip.on{background:var(--bg4);color:var(--tx);border-color:var(--tx3)}
+.td-cat{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--tx3)}
 .tb-link{color:var(--tx3);font-size:11px;text-decoration:none;letter-spacing:.08em;
   margin-left:14px}
 .tb-link:hover{color:var(--cyan)}
@@ -473,6 +480,7 @@ td{padding:7px 8px;white-space:nowrap}
     <div id="left">
       <div class="panel-hd">
         <h2 id="timing-heading">Live Timing</h2>
+        <div class="cat-chips" id="cat-chips"></div>
         <div class="avg-chip">Track avg <b id="track-avg">–</b></div>
       </div>
       <table class="t-table" id="timing-table">
@@ -480,6 +488,7 @@ td{padding:7px 8px;white-space:nowrap}
           <tr id="race-cols">
             <th style="width:32px"></th>
             <th>#</th>
+            <th>Cat</th>
             <th>Team</th>
             <th>Driver</th>
             <th>Kart</th>
@@ -493,7 +502,7 @@ td{padding:7px 8px;white-space:nowrap}
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="12" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
+          <tr><td colspan="13" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
             Waiting for Apex Timing data — set URL in ⚙ Settings
           </td></tr>
         </tbody>
@@ -790,10 +799,30 @@ function render(s) {
 }
 
 // ── Timing table ────────────────────────────────────────────────
-function renderTable(teams) {
+let _catFilter = '';
+
+/** PRO and AM run their own races; the chips only appear if the feed says so. */
+function renderCatChips(teams) {
+  const cats = [...new Set((teams||[]).map(t => t.category).filter(Boolean))];
+  const el = document.getElementById('cat-chips');
+  if (cats.length < 2) { el.innerHTML = ''; _catFilter = ''; return; }
+  el.innerHTML = ['', ...cats].map(c => `
+    <button class="cat-chip ${_catFilter===c?'on':''}" onclick="setCat('${esc(c)}')">
+      ${c ? esc(c) : 'ALL'}</button>`).join('');
+}
+
+function setCat(c) {
+  _catFilter = c;
+  if (S) { renderCatChips(S.teams); renderTable(S.teams); }
+}
+
+function renderTable(allTeams) {
   const tb = document.getElementById('tbody');
+  renderCatChips(allTeams);
+  const teams = _catFilter
+    ? (allTeams||[]).filter(t => t.category === _catFilter) : allTeams;
   if (!teams || !teams.length) {
-    tb.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
+    tb.innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
     return;
   }
   tb.innerHTML = teams.map(t => {
@@ -802,6 +831,7 @@ function renderTable(teams) {
     return `<tr class="${t.is_my_team?'mine':''}">
       <td class="${posCls}${t.is_my_team?' td-mine':''}">${esc(t.pos)}</td>
       <td>${esc(t.kart)}</td>
+      <td class="td-cat">${esc(t.category||'')}</td>
       <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
       <td class="td-muted" title="${esc(t.driver)}">${esc(t.driver||'')}</td>
       <td style="cursor:pointer" title="Click to set the kart this team is in"
@@ -895,8 +925,9 @@ function renderAsks(pool) {
       <div class="ask-btns">${lanes}
         <button class="ask-alt" style="flex:1 1 0" onclick="askKartNumber(${p.id})">
           Type the kart</button>
+        ${pool.swap_every_stop === false ? `
         <button class="ask-alt" style="flex:1 1 0" onclick="setLane(${p.id},null,true)">
-          No kart change</button>
+          No kart change</button>` : ''}
       </div></div>`;
   }).join('');
 }

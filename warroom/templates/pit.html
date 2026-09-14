@@ -32,6 +32,20 @@ header{position:sticky;top:0;z-index:5;background:var(--bg);
 .dot.ok{background:var(--grn)}
 .clock{font-variant-numeric:tabular-nums;color:var(--tx)}
 
+/* Our own stop. The pit clock is the one thing read at arm's length. */
+.mine{background:linear-gradient(180deg,#0d2233,#0a1622);border:1px solid #1d4a6b;
+      border-radius:var(--r);padding:14px;margin-bottom:12px}
+.mine.box{background:linear-gradient(180deg,#2a0f0f,#1a0a0a);border-color:#7c2020}
+.mine-hd{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--blue);
+         margin-bottom:8px}
+.mine.box .mine-hd{color:var(--red)}
+.mine-clock{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;
+            line-height:1;letter-spacing:-.02em}
+.mine-clock.ok{color:var(--grn)}
+.mine-row{display:flex;align-items:flex-end;gap:12px}
+.mine-meta{font-size:12px;color:var(--tx2);padding-bottom:4px}
+.mine-tag{font-size:11px;font-weight:700;color:var(--grn);margin-top:6px}
+
 .ask{background:linear-gradient(180deg,#2a1f0a,#1a1508);
      border:1px solid #7c5e12;border-radius:var(--r);padding:13px;margin-bottom:12px}
 .ask-hd{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--ylw);
@@ -114,6 +128,7 @@ dialog button{flex:1;padding:11px;border-radius:8px;border:none;font-size:13px;
   </div>
 </header>
 
+<div id="mine"></div>
 <div id="asks"></div>
 <div id="lanes"></div>
 
@@ -180,8 +195,10 @@ function render(){
     ' · ' + (STATE.clock_source === 'apex' ? 'race clock from Apex' : 'local clock');
   document.getElementById('clock').textContent = '· ' + STATE.race_remaining_fmt + ' left';
 
+  renderMine();
   renderAsks();
   renderLanes();
+  buzzOnNewQuestion();
   document.getElementById('log').innerHTML = (POOL.log||[]).slice(0,8)
     .map(l => `<div><b>${esc(l.ts)}</b> ${esc(l.team ? l.team+' — ' : '')}${esc(l.text)}</div>`)
     .join('');
@@ -195,6 +212,52 @@ function withThem(p) {
   return ` · in the lane with ${shown}` +
          (them.length > 3 ? ` and ${them.length - 3} more` : '');
 }
+
+/** Our own pit stop: the feed starts and ends it, this just shows the clock. */
+function renderMine(){
+  const el = document.getElementById('mine');
+  const pitting = STATE.status === 'pitting';
+  const my = STATE.my_team;
+  if (!pitting && !my){ el.innerHTML = ''; return; }
+  if (!pitting){
+    el.innerHTML = `<div class="mine">
+      <div class="mine-hd">OUR KART</div>
+      <div class="mine-row">
+        <span class="mine-clock" style="font-size:30px">${esc(my.phys_kart||'—')}</span>
+        <span class="mine-meta">P${esc(my.pos)} · stint ${esc(STATE.stint_fmt)}</span>
+      </div></div>`;
+    return;
+  }
+  const met = STATE.pit_min_met;
+  el.innerHTML = `<div class="mine box">
+    <div class="mine-hd">IN THE BOX${STATE.auto_pit ? ' · STARTED BY THE FEED' : ''}</div>
+    <div class="mine-row">
+      <span class="mine-clock ${met?'ok':''}">${esc(STATE.pit_remaining_fmt)}</span>
+      <span class="mine-meta">minimum pit time</span>
+    </div>
+    ${met ? '<div class="mine-tag">✓ MINIMUM MET — GO WHEN READY</div>' : ''}
+  </div>`;
+}
+
+/** A new question is easy to miss on a phone in a pit lane. */
+let _lastAsk = 0;
+function buzzOnNewQuestion(){
+  const ids = (POOL.pending||[]).map(p => p.id);
+  const newest = ids.length ? Math.max(...ids) : 0;
+  if (newest > _lastAsk && _lastAsk !== 0 && navigator.vibrate) {
+    navigator.vibrate([90, 60, 90]);
+  }
+  _lastAsk = Math.max(_lastAsk, newest);
+}
+
+/** Phones sleep. A pit lane phone must not. */
+async function keepAwake(){
+  try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); }
+  catch (e) { /* denied or unsupported — the page still works */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') { keepAwake(); refresh(); }
+});
 
 function renderAsks(){
   const el = document.getElementById('asks');
@@ -229,12 +292,14 @@ function renderAsks(){
     return `<div class="ask">
       ${i === 0 ? `<div class="ask-hd">${order ? 'WHO WENT OUT FIRST?' : 'WHICH LANE?'}</div>` : ''}
       <div class="ask-team">${esc(p.team || ('#'+p.team_no))}${
-        p.kart_in ? ` · kart ${esc(p.kart_in)}` : ''}</div>
+        p.kart_in ? ` · kart ${esc(p.kart_in)}` : ''}${
+        p.category ? ` <span style="font-size:11px;color:var(--tx3)">${esc(p.category)}</span>` : ''}</div>
       <div class="ask-meta">${waiting}${also}</div>
       <div class="ask-btns">${lanes}
         <button class="ask-alt" onclick="askKart(${p.id})">Type the kart<br>number</button>
+        ${POOL.swap_every_stop === false ? `
         <button class="ask-alt" onclick="post('kart/lane',{stop_id:${p.id},no_change:true})">
-          No kart change<br>driver only</button>
+          No kart change<br>driver only</button>` : ''}
       </div></div>`;
   }).join('');
 }
@@ -311,6 +376,7 @@ function pickTeam(teamNo){
 }
 
 refresh();
+keepAwake();
 setInterval(refresh, 2000);
 </script>
 </body>
