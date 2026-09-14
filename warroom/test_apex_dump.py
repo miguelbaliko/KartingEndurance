@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import apex_dump
 
-COLS = [("rk", "1"), ("no", "7"), ("name", "APX GP"), ("dr", "Ana"),
+COLS = [("rk", "1"), ("no", "7"), ("name", "TPC"), ("dr", "Ana"),
         ("llp", "1:02.478"), ("blp", "1:01.900"), ("tlp", "42"), ("pit", "8")]
 
 

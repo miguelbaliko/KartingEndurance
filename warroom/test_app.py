@@ -365,6 +365,11 @@ class TestRegulation(AppCase):
     def test_the_race_is_twenty_five_hours(self):
         self.assertEqual(self.app.CFG["race"]["duration_minutes"], 25 * 60)
 
+    def test_we_are_entered_as_am(self):
+        R = self.app.CFG["race"]
+        self.assertEqual((R["category"], R["mandatory_pits"], R["stint_max_minutes"]),
+                         ("AM", 34, 60))
+
     def test_category_sets_the_stops_and_the_stint_ceiling(self):
         for cat, pits, stint in (("PRO", 28, 80), ("AM", 34, 60)):
             race = {"category": cat, "mandatory_pits": 0, "stint_max_minutes": 0}
@@ -388,13 +393,13 @@ class TestRegulation(AppCase):
         # Pacing across the full 25h would call a team on plan when it is a
         # stop down, because the last 30 min cannot absorb one.
         R = self.app.CFG["race"]
-        R["mandatory_pits"] = 28
+        R["mandatory_pits"] = 34
         # One minute before the lane shuts, a team four stops down must be told.
         just_before = (R["duration_minutes"] - R["no_pit_last_minutes"] - 1) * 60
         self.assertEqual(
-            self.app.compute_strategy(60, just_before, 28, None, None)["label"], "HOLD")
+            self.app.compute_strategy(60, just_before, 34, None, None)["label"], "HOLD")
         self.assertEqual(
-            self.app.compute_strategy(60, just_before, 24, None, None)["label"], "PREPARE")
+            self.app.compute_strategy(60, just_before, 30, None, None)["label"], "PREPARE")
 
     def test_a_driver_short_of_the_minimum_is_shown_what_is_owed(self):
         self.client.post("/api/driver/add", json={"name": "Dinis"})

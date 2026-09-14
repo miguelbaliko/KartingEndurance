@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""APX GP War Room — Karting Endurance Strategy Tool"""
+"""TPC War Room — Karting Endurance Strategy Tool"""
 
 from flask import Flask, render_template, jsonify, request, Response
 import threading, time, json, sqlite3, urllib.request, urllib.error, urllib.parse
@@ -27,16 +27,16 @@ _CFG_PATH = os.environ.get("WARROOM_CONFIG") or os.path.join(
 
 def load_cfg() -> dict:
     base = {
-        "team_name": "MY TEAM",
+        "team_name": "TPC",
         "apex_url": "",
         "refresh_interval": 5,
         # Defaults are the 24 Horas de Portugal 2026 regulation (KIP Palmela,
         # 19-20 September).  Section numbers below refer to that document.
         "race": {
-            "category": "PRO",            # PRO or AM — §2.5, sets the two below
+            "category": "AM",             # PRO or AM — §2.5, sets the two below
             "duration_minutes": 1500,     # §3.2  the race is 25 hours, not 24
-            "mandatory_pits": 28,         # §3.8  PRO 28, AM 34
-            "stint_max_minutes": 80,      # §3.10 PRO 80, AM 60
+            "mandatory_pits": 34,         # §3.8  PRO 28, AM 34
+            "stint_max_minutes": 60,      # §3.10 PRO 80, AM 60
             "stint_min_minutes": 10,      # §3.10 a turn under this is penalised
             "pit_duration_seconds": 180,  # §3.9  3 minutes, timed electronically
             "no_pit_last_minutes": 30,    # §3.8  pit lane shuts at 24:30
@@ -1344,5 +1344,5 @@ if not os.environ.get("WARROOM_NO_WORKER"):
 # ── Main ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    print(f"\n  APX GP WAR ROOM  ->  http://localhost:{port}\n")
+    print(f"\n  {CFG['team_name']} WAR ROOM  ->  http://localhost:{port}\n")
     app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)

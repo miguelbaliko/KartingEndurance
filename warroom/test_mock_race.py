@@ -60,7 +60,7 @@ class Rehearsal:
         steps = int(self.hours * 3600 / self.dt)
         for _ in range(steps):
             self.race.step(self.dt)
-            self.pool.observe(self.race.rows(), my_team="APX GP")
+            self.pool.observe(self.race.rows(), my_team="TPC")
             self.answer()
         return self
 

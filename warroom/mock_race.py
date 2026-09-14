@@ -31,7 +31,7 @@ TEAM_NAMES = [
     "JB#17 FOREVER", "APEX VAROISE", "BGB", "MTF RACING 2", "GAMIT RACING SPORT",
     "ITSB1", "JYN-PORC", "SYNERGIE 8", "ITSB2", "JYN-EnPeuPlus",
     "PORTOS", "KART ATTACK", "TEAM DELTA", "ROUGE VIF", "LES BLEUS",
-    "NIGHT OWLS", "PALMELA RACING", "ALMADA KART", "SETUBAL SPEED", "APX GP",
+    "NIGHT OWLS", "PALMELA RACING", "ALMADA KART", "SETUBAL SPEED", "TPC",
 ]
 FIRST = ["Pierre", "Remi", "Fabian", "Sylvain", "Mathieu", "Natale", "Giovanni",
          "Christophe", "Hervé", "Stéphane", "Kantin", "Martin", "Alex", "Kevin",
@@ -200,7 +200,7 @@ def main():
     race = MockRace(seed=args.seed, n_karts=args.karts, lanes=args.lanes)
     total_s = args.hours * 3600
 
-    app.CFG["team_name"] = "APX GP"
+    app.CFG["team_name"] = "TPC"
     app.CFG["karts"]["lanes"] = args.lanes
     app.CFG["race"]["duration_minutes"] = int(args.hours * 60)
     app.POOL.configure(app.CFG["karts"])
