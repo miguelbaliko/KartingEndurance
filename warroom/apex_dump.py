@@ -33,6 +33,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import threading
 import time
 import urllib.parse
@@ -43,6 +44,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # We drive the feed ourselves below; the app's own poller would race us for the
 # AJAX cursor.  --replay starts the server afterwards, which does not need it.
 os.environ.setdefault("WARROOM_NO_WORKER", "1")
+# Looking for a session is read-only work, but importing the app opens a race
+# database.  Point it at a scratch file so probing never writes to the real one.
+os.environ.setdefault("WARROOM_DB", os.path.join(
+    tempfile.gettempdir(), "apex-dump-probe.db"))
 
 import app as warroom
 
