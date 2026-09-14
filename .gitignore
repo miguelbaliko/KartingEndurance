@@ -30,8 +30,9 @@ db.sqlite3
 config.json
 data/state.json
 
-# Ignore AI tool settings
-.claude/
+# Ignore AI tool settings, but share the vendored skills
+.claude/*
+!.claude/skills/
 
 # Ignore SQLite databases and temp files
 warroom/data/*.db

@@ -371,6 +371,76 @@ td{padding:7px 8px;white-space:nowrap}
 .cfg-actions{display:flex;gap:8px;justify-content:flex-end}
 .cfg-save{padding:8px 18px;background:var(--blue);border:none;border-radius:var(--r);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
 .cfg-cancel{padding:8px 18px;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);color:var(--tx);font-size:12px;cursor:pointer}
+
+/* ═══════════════════════════════════ KARTS ══ */
+/* One chip vocabulary everywhere — the table, the lanes, the phone. */
+.kchip{display:inline-flex;align-items:center;gap:5px;padding:1px 7px;border-radius:20px;
+  border:1px solid;font-size:11px;font-weight:700;white-space:nowrap;line-height:1.5}
+.kchip b{font-weight:800}
+.kchip .kd{font-family:var(--mono);font-weight:600;opacity:.85}
+.kchip.godlike{color:#c084fc;border-color:#4c2a6b;background:#19112a}
+.kchip.verygood{color:var(--grn);border-color:#125537;background:#07231a}
+.kchip.good{color:#a3e635;border-color:#3f5518;background:#131d09}
+.kchip.ok{color:var(--tx2);border-color:var(--line2);background:var(--bg2)}
+.kchip.bad{color:var(--red);border-color:#5e2222;background:#200d0d}
+.kchip.unknown{color:var(--tx3);border-color:var(--line);background:transparent}
+.kchip.none{color:var(--tx3);border-color:transparent;background:transparent;
+  font-weight:400;font-style:italic}
+
+/* Which lane? — the one question the feed cannot answer for us. */
+#ask-card{border-color:#6b5410;background:linear-gradient(180deg,#1d1808,var(--bg2))}
+.ask-row{padding:9px 0;border-bottom:1px solid var(--line)}
+.ask-row:last-child{border-bottom:none}
+.ask-team{font-size:13px;font-weight:700}
+.ask-when{display:block;font-size:10px;color:var(--tx3);font-weight:400;margin-top:2px}
+.ask-btns{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.ask-btn{flex:1 1 74px;padding:8px 6px;border:none;border-left:3px solid var(--line2);
+  border-radius:var(--r);background:var(--bg3);color:var(--tx);font-size:12px;
+  font-weight:700;cursor:pointer;text-align:left}
+.ask-btn:hover{background:var(--bg4)}
+.ask-btn small{display:block;font-size:9px;font-weight:400;color:var(--tx3);margin-top:2px}
+.ask-alt{flex:1 1 100%;padding:6px;background:transparent;border:1px solid var(--line2);
+  border-radius:var(--r);color:var(--tx3);font-size:11px;cursor:pointer}
+.ask-alt:hover{color:var(--tx2)}
+
+/* Pit lanes */
+.lane{margin-bottom:9px}
+.lane-hd{display:flex;align-items:center;gap:7px;font-size:11px;margin-bottom:5px}
+.lane-pip{width:8px;height:8px;border-radius:2px;flex:none}
+.lane-nm{font-weight:700;color:var(--tx2)}
+.lane-n{margin-left:auto;color:var(--tx3);font-size:10px}
+.lane-q{display:flex;flex-direction:column;gap:3px}
+.lane-k{display:flex;align-items:center;gap:7px;padding:4px 7px;background:var(--bg1);
+  border:1px solid var(--line);border-radius:var(--r);font-size:12px}
+.lane-k.next{border-color:var(--blue);background:#0c1729}
+.lane-k .num{font-weight:800;font-size:14px;min-width:24px;font-variant-numeric:tabular-nums}
+.lane-k .nx{font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--blue)}
+.lane-k .rm{margin-left:auto;background:none;border:none;color:var(--tx3);cursor:pointer;
+  font-size:13px;padding:0 2px}
+.lane-k .rm:hover{color:var(--red)}
+.lane-add{width:100%;padding:5px;background:transparent;border:1px dashed var(--line2);
+  border-radius:var(--r);color:var(--tx3);font-size:11px;cursor:pointer;margin-top:3px}
+.lane-add:hover{color:var(--tx2);border-color:var(--tx3)}
+.lane-empty{color:var(--tx3);font-size:11px;font-style:italic;padding:2px 0}
+
+/* Fleet ranking */
+.fleet{display:flex;flex-direction:column;gap:2px;max-height:270px;overflow-y:auto}
+.fleet-row{display:flex;align-items:center;gap:8px;padding:3px 4px;border-radius:var(--r);
+  font-size:12px}
+.fleet-row:hover{background:var(--bg3)}
+.fleet-row.mine{background:#0c1428}
+.fleet-num{font-weight:800;min-width:26px;font-variant-numeric:tabular-nums}
+.fleet-where{margin-left:auto;font-size:10px;color:var(--tx3);max-width:112px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fleet-laps{font-size:10px;color:var(--tx3);font-family:var(--mono);min-width:34px;
+  text-align:right}
+.kart-note{font-size:10px;color:var(--tx3);margin-top:7px;line-height:1.5}
+.tb-link{color:var(--tx3);font-size:11px;text-decoration:none;letter-spacing:.08em;
+  margin-left:14px}
+.tb-link:hover{color:var(--cyan)}
+.clock-src{font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--tx3);
+  align-self:flex-start;margin-top:4px}
+.clock-src.apex{color:var(--grn)}
 </style>
 </head>
 <body>
@@ -380,12 +450,14 @@ td{padding:7px 8px;white-space:nowrap}
   <div id="topbar">
     <div class="tb-brand">⚑ <span>War Room</span></div>
     <span id="race-remaining" class="tb-clock">--:--:--</span>
+    <span class="clock-src" id="clock-src" title="Where the race clock comes from">LOCAL</span>
     <div class="tb-sep"></div>
     <span id="status-badge" class="s-idle">IDLE</span>
     <div class="tb-apex">
       <div id="apex-dot" class="apex-dot apex-err"></div>
       <span id="apex-label">NO SIGNAL</span>
       <span id="apex-session" style="margin-left:8px;font-size:11px;color:var(--tx2);letter-spacing:.06em"></span>
+      <a class="tb-link" href="/pit" target="_blank">PIT PHONE ↗</a>
     </div>
     <div class="tb-space"></div>
     <button class="tb-btn go"  onclick="api('race/start')">START RACE</button>
@@ -407,8 +479,10 @@ td{padding:7px 8px;white-space:nowrap}
         <thead id="timing-thead">
           <tr id="race-cols">
             <th style="width:32px"></th>
-            <th>Kart</th>
+            <th>#</th>
             <th>Team</th>
+            <th>Driver</th>
+            <th>Kart</th>
             <th class="r">Last Lap</th>
             <th class="r">Avg 5</th>
             <th class="r">Avg 10</th>
@@ -419,7 +493,7 @@ td{padding:7px 8px;white-space:nowrap}
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
+          <tr><td colspan="12" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
             Waiting for Apex Timing data — set URL in ⚙ Settings
           </td></tr>
         </tbody>
@@ -428,6 +502,15 @@ td{padding:7px 8px;white-space:nowrap}
 
     <!-- Right panel -->
     <div id="right">
+
+      <!-- WHICH LANE? -->
+      <div class="card" id="ask-card" style="display:none">
+        <div class="card-hd">
+          Which lane?
+          <button class="card-hd-action" onclick="undoKart()">undo</button>
+        </div>
+        <div id="ask-body"></div>
+      </div>
 
       <!-- MY TEAM -->
       <div class="card">
@@ -492,6 +575,24 @@ td{padding:7px 8px;white-space:nowrap}
         </div>
       </div>
 
+      <!-- PIT LANES -->
+      <div class="card" id="lanes-card">
+        <div class="card-hd">
+          Pit Lanes
+          <button class="card-hd-action" onclick="undoKart()">undo</button>
+        </div>
+        <div id="lanes-body"></div>
+      </div>
+
+      <!-- KART RANKING -->
+      <div class="card" id="fleet-card">
+        <div class="card-hd">
+          Karts <span id="fleet-count" style="color:var(--tx3);font-weight:400"></span>
+        </div>
+        <div class="fleet" id="fleet-body"></div>
+        <div class="kart-note" id="fleet-note"></div>
+      </div>
+
       <!-- PIT LOG -->
       <div class="card">
         <div class="card-hd">Pit Stop Log</div>
@@ -532,7 +633,19 @@ td{padding:7px 8px;white-space:nowrap}
         <div class="cfg-lbl">Max stint (min)</div>
         <input id="cfg-stint" class="cfg-inp" type="number" placeholder="45">
       </div>
+      <div>
+        <div class="cfg-lbl">Pit lanes</div>
+        <input id="cfg-lanes" class="cfg-inp" type="number" min="1" max="6" placeholder="2">
+      </div>
     </div>
+    <label class="cfg-lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input id="cfg-autopit" type="checkbox" style="width:auto">
+      Let the feed start and end our own pit stop
+    </label>
+    <label class="cfg-lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input id="cfg-swap" type="checkbox" style="width:auto">
+      Karts are swapped at every stop
+    </label>
     <div class="cfg-actions">
       <button class="cfg-cancel" onclick="closeCfg()">Cancel</button>
       <button class="cfg-save"   onclick="saveCfg()">Save</button>
@@ -662,7 +775,12 @@ function render(s) {
   document.getElementById('apex-session').textContent = sname;
   document.getElementById('track-avg').textContent = s.track_avg;
 
+  const csrc = document.getElementById('clock-src');
+  csrc.textContent = s.clock_source === 'apex' ? 'APEX' : 'LOCAL';
+  csrc.className   = 'clock-src' + (s.clock_source === 'apex' ? ' apex' : '');
+
   renderTable(s.teams);
+  renderKarts(s);
   renderMyTeam(s);
   renderStrategy(s);
   renderPit(s);
@@ -675,7 +793,7 @@ function render(s) {
 function renderTable(teams) {
   const tb = document.getElementById('tbody');
   if (!teams || !teams.length) {
-    tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
+    tb.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
     return;
   }
   tb.innerHTML = teams.map(t => {
@@ -685,6 +803,10 @@ function renderTable(teams) {
       <td class="${posCls}${t.is_my_team?' td-mine':''}">${esc(t.pos)}</td>
       <td>${esc(t.kart)}</td>
       <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
+      <td class="td-muted" title="${esc(t.driver)}">${esc(t.driver||'')}</td>
+      <td style="cursor:pointer" title="Click to set the kart this team is in"
+          onclick="setTeamKart('${esc(t.kart)}','${esc(t.team)}','${esc(t.my_kart)}')"
+        >${kartChip(t.my_kart, t.kart_label, t.kart_delta, t.in_pit)}</td>
       <td class="td-lap td-r">${esc(t.last_lap)}</td>
       <td class="td-avg td-r">${esc(t.avg5)}</td>
       <td class="td-dim td-r">${esc(t.avg10)}</td>
@@ -694,6 +816,163 @@ function renderTable(teams) {
       <td class="td-muted td-r">${esc(t.gap)}</td>
     </tr>`;
   }).join('');
+}
+
+// ── Karts ────────────────────────────────────────────────────────────
+const CHIP_CLS = {
+  'Godlike':'godlike', 'Very Good':'verygood', 'Good':'good',
+  'OK':'ok', 'Bad':'bad', 'Unknown':'unknown'
+};
+
+function fmtDelta(d) {
+  return d == null ? '' : (d > 0 ? '+' : '') + d.toFixed(2);
+}
+
+/** The kart a team is holding, with how good we think it is. */
+function kartChip(num, label, delta, inPit) {
+  if (!num) return '<span class="kchip none">—</span>';
+  const cls = CHIP_CLS[label] || 'unknown';
+  const d = fmtDelta(delta);
+  return `<span class="kchip ${cls}"><b>${esc(num)}</b> ${esc(label||'Unknown')}` +
+         `${d ? ` <span class="kd">${d}</span>` : ''}</span>` +
+         (inPit ? ' <span class="kd" style="color:var(--ylw);font-size:10px">PIT</span>' : '');
+}
+
+function renderKarts(s) {
+  const pool = s.kartpool;
+  if (!pool) return;
+  renderAsks(pool);
+  renderLanes(pool);
+  renderFleet(pool, s);
+}
+
+/** "in the lane with #4, #9 and 3 more" — never the whole field. */
+function withThem(p) {
+  const them = p.with_them || [];
+  if (!them.length) return '';
+  const shown = them.slice(0, 3).map(n => '#' + esc(n)).join(', ');
+  return ` · in the lane with ${shown}` +
+         (them.length > 3 ? ` and ${them.length - 3} more` : '');
+}
+
+function renderAsks(pool) {
+  const card = document.getElementById('ask-card');
+  const pending = pool.pending || [];
+  card.style.display = pending.length ? 'block' : 'none';
+  if (!pending.length) return;
+  const asks = new Set(pending.map(p => p.asks));
+  card.querySelector('.card-hd').childNodes[0].nodeValue =
+    asks.has('lane') ? 'Which lane? '
+    : asks.has('order') ? 'Who went out first? '
+    : 'Which kart? ';
+
+  document.getElementById('ask-body').innerHTML = pending.map(p => {
+    const who = esc(p.team || ('#' + p.team_no));
+    const when = p.in_box_s != null
+      ? `in the box ${Math.floor(p.in_box_s/60)}:${String(p.in_box_s%60).padStart(2,'0')}`
+      : esc(p.at);
+    if (p.state === 'await_kart') {
+      return `<div class="ask-row">
+        <div class="ask-team">${who}<span class="ask-when">${when}</span></div>
+        <div class="ask-btns">
+          <button class="ask-btn" onclick="askKartNumber(${p.id})">
+            Which kart did they get?<small>the lane was empty</small></button>
+        </div></div>`;
+    }
+    const lanes = (pool.lanes||[]).map(l => `
+      <button class="ask-btn" style="border-left-color:${esc(l.color)}"
+              onclick="setLane(${p.id},${l.lane})">${
+        p.asks === 'order' ? 'They took kart ' +
+          (l.karts.length ? esc(l.karts[0].num) : '?') : esc(l.name)}
+        <small>${p.asks === 'order'
+          ? 'confirm they were first out'
+          : (l.karts.length ? 'kart ' + esc(l.karts[0].num) + ' next' : 'empty')}</small>
+      </button>`).join('');
+    const also = withThem(p);
+    return `<div class="ask-row">
+      <div class="ask-team">${who}${p.kart_in ? ` · kart ${esc(p.kart_in)}` : ''}</div>
+      <span class="ask-when">${when}${also}</span>
+      <div class="ask-btns">${lanes}
+        <button class="ask-alt" style="flex:1 1 0" onclick="askKartNumber(${p.id})">
+          Type the kart</button>
+        <button class="ask-alt" style="flex:1 1 0" onclick="setLane(${p.id},null,true)">
+          No kart change</button>
+      </div></div>`;
+  }).join('');
+}
+
+function renderLanes(pool) {
+  document.getElementById('lanes-body').innerHTML = (pool.lanes||[]).map(l => `
+    <div class="lane">
+      <div class="lane-hd">
+        <span class="lane-pip" style="background:${esc(l.color)}"></span>
+        <span class="lane-nm">${esc(l.name)}</span>
+        <span class="lane-n">${l.karts.length} kart${l.karts.length===1?'':'s'}</span>
+      </div>
+      <div class="lane-q">
+        ${l.karts.map((k,i) => `
+          <div class="lane-k ${i===0?'next':''}">
+            <span class="num">${esc(k.num)}</span>
+            <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
+              ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
+            ${i===0 ? '<span class="nx">NEXT</span>' : ''}
+            <button class="rm" title="Remove"
+                    onclick="removeKart(${l.lane},'${esc(k.num)}')">✕</button>
+          </div>`).join('') ||
+          '<div class="lane-empty">Empty — add the karts waiting here, in order.</div>'}
+        <button class="lane-add" onclick="addKart(${l.lane})">+ kart</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderFleet(pool, s) {
+  const fleet = pool.fleet || [];
+  const myKart = s.my_team ? s.my_team.phys_kart : '';
+  document.getElementById('fleet-count').textContent =
+    fleet.length ? `· ${fleet.length - pool.unrated} rated of ${fleet.length}` : '';
+  document.getElementById('fleet-body').innerHTML = fleet.length ? fleet.map(k => `
+    <div class="fleet-row ${k.num===myKart?'mine':''}">
+      <span class="fleet-num">${esc(k.num)}</span>
+      <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
+        ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
+      <span class="fleet-where" title="${esc([k.holder||k.reason,
+            k.weak && k.laps ? 'only one team has driven it' : ''].filter(Boolean).join(' · '))
+        }">${esc(k.holder||'')}</span>
+      <span class="fleet-laps">${k.laps||0}L</span>
+    </div>`).join('')
+    : '<div class="lane-empty">No karts tracked yet — assign one per team, or fill the lanes.</div>';
+
+  const note = document.getElementById('fleet-note');
+  if (!fleet.length) { note.textContent = ''; return; }
+  note.textContent = pool.unrated
+    ? `${pool.unrated} kart${pool.unrated===1?'':'s'} not rated yet — a kart needs clean ` +
+      `laps from more than one team before its pace can be told apart from the driver's.`
+    : `Scored against the field, with each team's own pace taken out. ` +
+      `${pool.stops_seen} stop${pool.stops_seen===1?'':'s'} counted.`;
+}
+
+async function setLane(stopId, lane, noChange) {
+  await api('kart/lane', {stop_id: stopId, lane: lane, no_change: !!noChange});
+}
+async function addKart(lane) {
+  const v = prompt('Kart number joining lane ' + lane);
+  if (v && v.trim()) await api('kart/add', {lane: lane, kart: v.trim()});
+}
+async function removeKart(lane, kart) {
+  await api('kart/remove', {lane: lane, kart: kart});
+}
+async function askKartNumber(stopId) {
+  const v = prompt('Which kart were they given?');
+  if (v && v.trim()) await api('kart/lane', {stop_id: stopId, kart: v.trim()});
+}
+async function undoKart() { await api('kart/undo'); }
+
+/** Type in the kart a team is sitting in — the start-of-race allocation, or a
+ *  correction when someone reads the real number off the nose cone. */
+async function setTeamKart(teamNo, team, current) {
+  const v = prompt(`Kart number for ${team || '#' + teamNo}`, current || '');
+  if (v === null) return;
+  await api('kart/assign', {team_no: teamNo, kart: v.trim()});
 }
 
 function parseLapS(s) {
@@ -725,7 +1004,10 @@ function renderMyTeam(s) {
 
   html += `<div class="mt-info">
     <div class="mt-driver ${drv?'':'none'}">${drv ? esc(drv.name) : 'No driver'}</div>
-    <div class="mt-kart">${my ? `Kart ${esc(my.kart)} · ${esc(my.laps)} laps` : 'Not in timing data'}</div>
+    <div class="mt-kart">${my
+      ? `#${esc(my.kart)} · ${esc(my.laps)} laps · ${
+          kartChip(my.phys_kart, my.kart_label, my.kart_delta, false)}`
+      : 'Not in timing data'}</div>
     <div class="mt-avg-row">
       <div class="mt-stat">
         <div class="mt-stat-val" id="stint-display">${s.stint_fmt}</div>
@@ -939,6 +1221,10 @@ function openCfg() {
   if (S) {
     document.getElementById('cfg-url').value  = S.apex_url  || '';
     document.getElementById('cfg-team').value = S.team_name || '';
+    const pool = S.kartpool || {};
+    document.getElementById('cfg-lanes').value   = (pool.lanes||[]).length || 2;
+    document.getElementById('cfg-autopit').checked = !!S.auto_pit;
+    document.getElementById('cfg-swap').checked    = pool.swap_every_stop !== false;
   }
   document.getElementById('cfg-dur').value='';
   document.getElementById('cfg-pits').value='';
@@ -958,6 +1244,10 @@ async function saveCfg() {
   if (dur)   b.duration_minutes  = parseInt(dur);
   if (pits)  b.mandatory_pits    = parseInt(pits);
   if (stint) b.stint_max_minutes = parseInt(stint);
+  const lanes = document.getElementById('cfg-lanes').value.trim();
+  if (lanes) b.lanes = parseInt(lanes);
+  b.auto_pit        = document.getElementById('cfg-autopit').checked;
+  b.swap_every_stop = document.getElementById('cfg-swap').checked;
   await api('settings', b); closeCfg();
 }
 document.getElementById('overlay').addEventListener('click', e => {

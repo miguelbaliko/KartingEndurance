@@ -7,6 +7,9 @@ import html.parser, re, os, queue
 from datetime import datetime, timedelta
 from typing import Optional
 
+import kartpool
+from raceclock import ApexClock
+
 try:
     import websocket as _ws_mod
     import ssl as _ssl
@@ -33,6 +36,7 @@ def load_cfg() -> dict:
             "pace_drop_warn": 0.30,
             "pace_drop_box": 0.50,
         },
+        "karts": dict(kartpool.DEFAULTS),
     }
     if os.path.exists(_CFG_PATH):
         with open(_CFG_PATH) as f:
@@ -40,6 +44,8 @@ def load_cfg() -> dict:
         base.update(saved)
         if "race" in saved:
             base["race"].update(saved["race"])
+        if "karts" in saved:
+            base["karts"].update(saved["karts"])
     return base
 
 CFG = load_cfg()
@@ -49,7 +55,10 @@ def save_cfg():
         json.dump(CFG, f, indent=2)
 
 # ── Database ───────────────────────────────────────────────────────────────────
-DB = os.path.join(os.path.dirname(__file__), "data", "race.db")
+# WARROOM_DB lets a second instance (or a test) run against its own race,
+# which is how the mock race and the real one stay out of each other's way.
+DB = os.environ.get("WARROOM_DB") or os.path.join(
+    os.path.dirname(__file__), "data", "race.db")
 
 def init_db():
     os.makedirs(os.path.dirname(DB), exist_ok=True)
@@ -81,6 +90,7 @@ def init_db():
             INSERT OR IGNORE INTO kv VALUES ('driver_id',    '');
             INSERT OR IGNORE INTO kv VALUES ('pit_plan',     '');
             INSERT OR IGNORE INTO kv VALUES ('session_mode', 'race');
+            INSERT OR IGNORE INTO kv VALUES ('next_driver_id', '');
                 """)
 
 def get_db():
@@ -101,8 +111,12 @@ def kv_set(key: str, val: str):
 # ── Timing parser ──────────────────────────────────────────────────────────────
 _CELL_MAP = {
     "rk": "pos", "pos": "pos",
+    # Apex "no" is the team's race number: it stays put all race, while the
+    # physical kart under the team changes at every stop (see kartpool.py).
     "no": "kart", "kart": "kart",
-    "dr": "team", "name": "team", "team": "team",
+    "dr": "driver", "driver": "driver",
+    "name": "team", "team": "team",
+    "cat": "category", "class": "category", "grp": "category",
     "llp": "last_lap", "blp": "best_lap", "tlp": "total_laps",
     "pit": "pits", "gap": "gap", "int": "interval",
     # Apex timing state classes (only appear on lap-time cells)
@@ -135,7 +149,7 @@ class ApexParser(html.parser.HTMLParser):
             tr_cls = a.get("class", "").split()
             self._is_head = "head" in tr_cls
             self._row_did = did
-            self._cur = None if self._is_head else {}
+            self._cur = None if self._is_head else {"row_cls": " ".join(tr_cls)}
             self._meta_id = None
         elif tag in ("td", "th"):
             self._col = None
@@ -171,7 +185,7 @@ class ApexParser(html.parser.HTMLParser):
         if tag in ("td", "th", "div", "span"):
             self._meta_id = None
         if tag == "tr":
-            if self._cur and len(self._cur) >= 2:
+            if self._cur and len(self._cur) >= 3:
                 self.rows.append(self._cur)
                 if self._row_did and self._cur.get("kart"):
                     self.row_kart_map[self._row_did] = self._cur["kart"]
@@ -247,6 +261,29 @@ def _process_meta(meta: dict):
             _apex_session.update(updated)
         log("APEX SESSION", "  ".join(f"{k}={v}" for k, v in updated.items() if v))
 
+    # The organisers' clock lives in the dyn header fields. Prefer it to ours:
+    # it knows about red flags and it does not depend on anyone pressing START.
+    for field in ("dyn1", "dyn2"):
+        if field in meta and _apex_clock.update(_val(meta[field])):
+            _apex_clock.set_total(CFG["race"]["duration_minutes"] * 60)
+
+# ── Kart pool ─────────────────────────────────────────────────────────────────
+_apex_clock = ApexClock()
+
+def _feed_boxed_me(_team_no: str):
+    """The feed saw our kart enter the pit lane — start the box clock for real."""
+    if kv_get("status") == "racing":
+        _do_box(0.0, source="feed")
+
+def _feed_released_me(_team_no: str):
+    """Our kart is running again — close the stop without anyone pressing a key."""
+    if kv_get("status") == "pitting":
+        _do_pit_done(kv_get("next_driver_id") or kv_get("driver_id"), source="feed")
+
+POOL = kartpool.KartPool(DB, CFG.get("karts", {}),
+                         on_my_stop=_feed_boxed_me,
+                         on_my_release=_feed_released_me)
+
 def broadcast():
     data = "data: " + json.dumps(make_snapshot()) + "\n\n"
     dead = []
@@ -262,7 +299,17 @@ def broadcast():
             pass
 
 # ── Apex Timing data ingestion ─────────────────────────────────────────────────
+_PIT_MARK = re.compile(r'\bpit\b|\bbox\b|\bin_?pit\b', re.I)
+
 def _enrich(t: dict) -> dict:
+    # Events without a separate team column name the competitor in the driver
+    # cell; the rest of the app keys off "team", so make sure it is filled.
+    if not t.get("team") and t.get("driver"):
+        t["team"] = t["driver"]
+    # Apex marks a kart in the pit lane on the row itself and, on some events,
+    # by writing PIT over the last-lap cell.
+    t["in_pit"] = bool(_PIT_MARK.search(t.get("row_cls", "") or "")) or \
+        _PIT_MARK.fullmatch((t.get("last_lap") or "").strip()) is not None
     key = t.get("kart") or t.get("team") or str(t.get("pos", ""))
     ll = parse_laptime(t.get("last_lap", ""))
     hist = _lap_hist.setdefault(key, [])
@@ -287,7 +334,17 @@ def _process_rows(rows: list) -> bool:
         if built:
             _teams = built
             _apex_ok = True
+    # Outside the lock: the pool's callbacks broadcast, and broadcasting needs it.
+    _feed_pool(built)
     return True
+
+def _feed_pool(rows: list):
+    if not rows:
+        return
+    try:
+        POOL.observe(rows, my_team=CFG.get("team_name", ""))
+    except Exception as e:
+        log("KARTPOOL ERR", str(e))
 
 def _apply_cell_updates(cell_updates: dict) -> bool:
     """Apply incremental C-command cell updates to existing _teams in-place."""
@@ -299,6 +356,8 @@ def _apply_cell_updates(cell_updates: dict) -> bool:
             if kart in cell_updates:
                 t.update(cell_updates[kart])
                 _enrich(t)
+        snapshot = list(_teams)
+    _feed_pool(snapshot)
     return True
 
 _ws_url_cache: Optional[str] = None   # "" means checked and not found
@@ -642,12 +701,23 @@ def make_snapshot() -> dict:
     now = datetime.utcnow()
     status = kv_get("status")
 
-    # Race elapsed
+    # Race clock — the tower's if it is live, ours if the feed has gone quiet.
     race_start = kv_get("race_start")
     race_elapsed = 0.0
     if race_start and status in ("racing", "pitting"):
         race_elapsed = (now - datetime.fromisoformat(race_start)).total_seconds()
     race_remaining = max(0.0, CFG["race"]["duration_minutes"] * 60 - race_elapsed)
+
+    clock = _apex_clock.state()
+    clock_source = "local"
+    if clock["ok"]:
+        clock_source = "apex"
+        if clock["elapsed"] is not None:
+            race_elapsed = clock["elapsed"]
+        if clock["remaining"] is not None:
+            race_remaining = clock["remaining"]
+        elif clock["total"]:
+            race_remaining = max(0.0, clock["total"] - race_elapsed)
 
     # Stint elapsed
     stint_start   = kv_get("stint_start")
@@ -681,7 +751,7 @@ def make_snapshot() -> dict:
                 current_driver = d
             drivers.append(d)
 
-        pits_done = con.execute("SELECT COUNT(*) FROM stints").fetchone()[0]
+        stints_done = con.execute("SELECT COUNT(*) FROM stints").fetchone()[0]
 
         for i, row in enumerate(con.execute("""
             SELECT s.id, s.driver_id, s.start_ts, s.end_ts, s.duration_seconds,
@@ -704,6 +774,15 @@ def make_snapshot() -> dict:
     my_team = next((t for t in teams_raw if t.get("team", "") == my_name), None)
     my_avg5 = my_team["avg5_s"] if my_team else None
 
+    # The timekeepers' pit count is the one that settles a protest, so use it
+    # when the feed carries it and fall back to our own stint log when it does not.
+    pits_done = stints_done
+    if my_team:
+        try:
+            pits_done = int(str(my_team.get("pits", "")).strip())
+        except (TypeError, ValueError):
+            pass
+
     strat = compute_strategy(stint_s, race_elapsed, pits_done, my_avg5, _prev_avg5)
     _prev_avg5 = my_avg5
 
@@ -712,12 +791,23 @@ def make_snapshot() -> dict:
     track_avg = fmt_laptime(sum(all_avgs) / len(all_avgs)) if all_avgs else "-"
 
     # Serialize teams (drop raw floats the frontend doesn't need)
+    pool = POOL.snapshot()
+    kart_of = pool["kart_of"]
+    kart_card = {c["num"]: c for c in pool["fleet"]}
     teams_out = []
     for t in teams_raw:
+        held = kart_of.get(str(t.get("kart", "")))
+        card = kart_card.get(held) if held else None
         teams_out.append({
             "pos":        t.get("pos", ""),
             "kart":       t.get("kart", ""),
             "team":       t.get("team", ""),
+            "driver":     t.get("driver", ""),
+            "category":   t.get("category", ""),
+            "in_pit":     t.get("in_pit", False),
+            "my_kart":    held or "",
+            "kart_label": card["label"] if card else "",
+            "kart_delta": card["delta"] if card else None,
             "last_lap":   t.get("last_lap", "-"),
             "avg5":       t.get("avg5", "-"),
             "avg10":      t.get("avg10", "-"),
@@ -772,6 +862,7 @@ def make_snapshot() -> dict:
         "current_driver":   current_driver,
         "drivers":          drivers,
         "pits_done":        pits_done,
+        "stints_done":      stints_done,
         "mandatory_pits":   CFG["race"]["mandatory_pits"],
         "stint_max_minutes": CFG["race"]["stint_max_minutes"],
         "track_avg":        track_avg,
@@ -781,11 +872,21 @@ def make_snapshot() -> dict:
         "teams":            teams_out,
         "session_mode":     session_mode,
         "pit_plan":         pit_plan_out,
+        "clock_source":     clock_source,
+        "race_elapsed_fmt": fmt_duration(race_elapsed),
+        "kartpool":         pool,
+        "next_driver_id":   kv_get("next_driver_id"),
+        "auto_pit":         CFG["karts"].get("auto_pit", True),
         "my_team":          {
             "pos":   my_team.get("pos", "?"),
             "kart":  my_team.get("kart", "?"),
             "avg5":  my_team.get("avg5", "-"),
             "laps":  my_team.get("total_laps", "-"),
+            "phys_kart":  kart_of.get(str(my_team.get("kart", "")), ""),
+            "kart_label": (kart_card.get(kart_of.get(str(my_team.get("kart", "")), ""))
+                           or {}).get("label", ""),
+            "kart_delta": (kart_card.get(kart_of.get(str(my_team.get("kart", "")), ""))
+                           or {}).get("delta"),
         } if my_team else None,
     }
 
@@ -847,11 +948,13 @@ def race_stop():
 @app.post("/api/race/reset")
 def race_reset():
     for k, v in [("status","idle"),("race_start",""),("stint_start",""),
-                  ("pit_start",""),("driver_id","")]:
+                  ("pit_start",""),("driver_id",""),("next_driver_id","")]:
         kv_set(k, v)
     with get_db() as con:
         con.execute("DELETE FROM stints")
         con.execute("UPDATE drivers SET total_seconds=0")
+    POOL.reset()
+    _apex_clock.reset()
     log("RACE RESET")
     broadcast()
     return jsonify(ok=True)
@@ -915,9 +1018,13 @@ def driver_clear_time():
 def pit_box():
     """Kart entered pit lane — end current stint, start minimum-time timer.
     Accepts optional offset_seconds so the box time can be entered retroactively."""
-    data        = request.json or {}
-    offset_s    = float(data.get("offset_seconds", 0))
-    now         = datetime.utcnow()
+    data = request.json or {}
+    _do_box(float(data.get("offset_seconds", 0)))
+    return jsonify(ok=True)
+
+def _do_box(offset_s: float = 0.0, source: str = "button"):
+    """Close the running stint and start the minimum-pit-time countdown."""
+    now = datetime.utcnow()
     box_time    = now - timedelta(seconds=offset_s)   # when the kart actually entered
 
     did         = kv_get("driver_id")
@@ -947,14 +1054,19 @@ def pit_box():
             row = con.execute("SELECT name FROM drivers WHERE id=?", (did,)).fetchone()
             driver_name = row["name"] if row else did
     offset_note = f"  (retroactive -{int(offset_s)}s)" if offset_s else ""
-    log("BOX NOW", f"driver={driver_name}  stint={fmt_duration(dur if did and stint_start else 0)}{offset_note}")
+    log("BOX NOW", f"driver={driver_name}  "
+                   f"stint={fmt_duration(dur if did and stint_start else 0)}"
+                   f"{offset_note}  [{source}]")
     broadcast()
-    return jsonify(ok=True)
 
 @app.post("/api/pit/done")
 def pit_done():
     """New driver seated — start fresh stint."""
-    new_did = str(request.json.get("driver_id") or kv_get("driver_id"))
+    _do_pit_done(request.json.get("driver_id") or kv_get("driver_id"))
+    return jsonify(ok=True)
+
+def _do_pit_done(new_did, source: str = "button"):
+    new_did = str(new_did or "")
     pit_s = kv_get("pit_start")
     pit_elapsed = 0.0
     if pit_s:
@@ -963,10 +1075,17 @@ def pit_done():
     kv_set("stint_start", datetime.utcnow().isoformat())
     kv_set("pit_start",   "")
     kv_set("status",      "racing")
+    kv_set("next_driver_id", "")
     with get_db() as con:
         row = con.execute("SELECT name FROM drivers WHERE id=?", (new_did,)).fetchone()
         new_name = row["name"] if row else new_did
-    log("PIT DONE", f"driver={new_name}  pit_time={fmt_mmss(pit_elapsed)}")
+    log("PIT DONE", f"driver={new_name}  pit_time={fmt_mmss(pit_elapsed)}  [{source}]")
+    broadcast()
+
+@app.post("/api/driver/next")
+def driver_next():
+    """Park the next driver server-side so a feed-driven stop can seat them."""
+    kv_set("next_driver_id", str(request.json.get("driver_id") or ""))
     broadcast()
     return jsonify(ok=True)
 
@@ -993,6 +1112,76 @@ def api_mode():
     broadcast()
     return jsonify(ok=True)
 
+# ── Karts ─────────────────────────────────────────────────────────────────────
+@app.get("/pit")
+def pit_phone():
+    """Phone-sized lane view for whoever is standing in the pit lane."""
+    return render_template("pit.html")
+
+@app.get("/api/karts")
+def api_karts():
+    return jsonify(POOL.snapshot())
+
+@app.post("/api/kart/lane")
+def api_kart_lane():
+    """Answer the one question the feed cannot: which lane did they use."""
+    d = request.json or {}
+    POOL.resolve(int(d["stop_id"]),
+                 lane=d.get("lane"),
+                 no_change=bool(d.get("no_change")),
+                 kart_out=d.get("kart"))
+    broadcast()
+    return jsonify(ok=True)
+
+@app.post("/api/kart/add")
+def api_kart_add():
+    d = request.json or {}
+    kart = str(d.get("kart", "")).strip()
+    if not kart:
+        return jsonify(ok=False, error="Kart number required"), 400
+    POOL.lane_add(int(d.get("lane", 1)), kart)
+    broadcast()
+    return jsonify(ok=True)
+
+@app.post("/api/kart/remove")
+def api_kart_remove():
+    d = request.json or {}
+    POOL.lane_remove(int(d.get("lane", 1)), str(d.get("kart", "")).strip())
+    broadcast()
+    return jsonify(ok=True)
+
+@app.post("/api/kart/assign")
+def api_kart_assign():
+    """The number read off the kart always wins over what we inferred."""
+    d = request.json or {}
+    team_no = str(d.get("team_no", "")).strip()
+    if not team_no:
+        return jsonify(ok=False, error="Team number required"), 400
+    with _lock:
+        team = next((t.get("team", "") for t in _teams
+                     if str(t.get("kart", "")) == team_no), "")
+    POOL.set_kart(team_no, team, str(d.get("kart", "")).strip())
+    broadcast()
+    return jsonify(ok=True)
+
+@app.post("/api/kart/stop")
+def api_kart_stop():
+    """A stop the feed never saw."""
+    d = request.json or {}
+    team_no = str(d.get("team_no", "")).strip()
+    with _lock:
+        team = next((t.get("team", "") for t in _teams
+                     if str(t.get("kart", "")) == team_no), "")
+    stop_id = POOL.manual_stop(team_no, team)
+    broadcast()
+    return jsonify(ok=True, stop_id=stop_id)
+
+@app.post("/api/kart/undo")
+def api_kart_undo():
+    ok = POOL.undo()
+    broadcast()
+    return jsonify(ok=ok)
+
 # ── Settings ───────────────────────────────────────────────────────────────────
 @app.post("/api/settings")
 def api_settings():
@@ -1009,6 +1198,11 @@ def api_settings():
         CFG["race"]["mandatory_pits"] = int(data["mandatory_pits"])
     if "stint_max_minutes" in data:
         CFG["race"]["stint_max_minutes"] = int(data["stint_max_minutes"])
+    for key, cast in (("lanes", int), ("auto_pit", bool),
+                      ("swap_every_stop", bool)):
+        if key in data:
+            CFG["karts"][key] = cast(data[key])
+    POOL.configure(CFG["karts"])
     save_cfg()
     broadcast()
     return jsonify(ok=True)
