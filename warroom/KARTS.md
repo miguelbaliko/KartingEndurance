@@ -124,13 +124,24 @@ From the simulated race in `test_mock_race.py`, six hours and ~250 stops:
   correlation above 0.75, with the fast teams' karts deliberately mis-allocated
   to try to fool them.
 
-## Teaching it a new event
+## Finding and recording a real session
 
-If the war room reads the wrong columns at a track, record the real feed from a
-machine that can reach Apex:
+From any machine that can reach `live.apex-timing.com`:
+
+    python3 apex_dump.py --find
+
+It probes the events in `KNOWN_EVENTS` (Palmela and Alcanede — add your own)
+and says which have karts on track, the session name, the flag, the race clock,
+and, importantly, **which columns that event uses that we currently ignore**:
+
+    kip-palmela    LIVE · 24 karts, 24 with lap times · 24H DU KIP · GREEN
+                   columns we ignore: sr
+
+Then record one:
 
     python3 apex_dump.py https://live.apex-timing.com/kip-palmela/ --seconds 120
 
-It writes a `.raw` of every frame and a `.json` saying which columns were
+That writes a `.raw` of every frame and a `.json` saying which columns were
 recognised, which were ignored, and whether the pit counter and race clock came
-through. Replay one later with `--replay <file>.raw`.
+through. Replay it into the war room later with `--replay <file>.raw` — which
+is also how a new event's layout gets taught to the parser without guessing.

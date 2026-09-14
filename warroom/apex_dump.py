@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Record a real Apex Timing feed, so the parser can be checked against it.
+"""Find and record real Apex Timing sessions, so the parser can be checked.
 
-Run this on a machine that can reach live.apex-timing.com during a session —
-practice, qualifying, anything with karts on track:
+Run this on a machine that can reach live.apex-timing.com.  To see which of the
+events we care about have cars on track right now:
+
+    python3 apex_dump.py --find
+    python3 apex_dump.py --find kip-palmela kartalcanede other-event
+
+To record one during a session — practice, qualifying, anything with karts on
+track:
 
     python3 apex_dump.py https://live.apex-timing.com/kip-palmela/ --seconds 120
 
@@ -27,6 +33,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 import urllib.parse
 from datetime import datetime
@@ -36,9 +43,45 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import app as warroom
 
 
+# The events this war room follows.  Add a slug and --find will watch it too.
+KNOWN_EVENTS = ["kip-palmela", "kartalcanede"]
+
+
 def event_name(url: str) -> str:
     m = re.search(r'apex-timing\.com/([^/#?]+)', url)
     return m.group(1) if m else "event"
+
+
+def event_url(slug: str) -> str:
+    """Accept either a slug or a full URL, so paste-what-you-have works."""
+    return slug if slug.startswith("http") else f"https://live.apex-timing.com/{slug}/"
+
+
+# Apex's light command: lr red, lg green, ly yellow, lsc safety car.
+LIGHTS = {"lg": "GREEN", "ly": "YELLOW", "lr": "RED", "lsc": "SAFETY CAR"}
+
+
+def summarise(frames: list) -> dict:
+    """Is this session actually running, and what is on track?
+
+    Kept apart from the network so it can be tested against recorded frames.
+    """
+    report = analyse(frames)
+    meta = {}
+    for frame in frames:
+        _rows, _cells, m = warroom._parse_apex_pipe(frame)
+        meta.update({k: v for k, v in m.items() if v})
+    return {
+        "session": meta.get("name", ""),
+        "light": LIGHTS.get(meta.get("light", ""), meta.get("light", "")),
+        "clock": meta.get("dyn1") or meta.get("dyn2") or "",
+        "karts": report["rows_parsed"],
+        "on_track": report["rows_on_track"],
+        "live": report["rows_parsed"] > 0,
+        "columns_ignored": report["columns_ignored"],
+        "has_pit_counter": report["has_pit_counter"],
+        "has_category": report["has_category"],
+    }
 
 
 def analyse(frames: list) -> dict:
@@ -57,6 +100,10 @@ def analyse(frames: list) -> dict:
     return {
         "frames": len(frames),
         "rows_parsed": len(rows),
+        # Lap times on the board mean karts actually circulating, as opposed to
+        # a grid sitting in parc fermé.
+        "rows_on_track": sum(1 for r in rows
+                             if r.get("last_lap") not in (None, "", "-", "--")),
         "fields_we_read": fields,
         "columns_recognised": sorted(seen_types & set(warroom._CELL_MAP)),
         "columns_ignored": sorted(unknown_types),
@@ -71,7 +118,8 @@ def analyse(frames: list) -> dict:
     }
 
 
-def record(url: str, seconds: float, out_dir: str):
+def listen(url: str, seconds: float) -> list:
+    """Collect whatever the event's WebSocket sends for a few seconds."""
     try:
         import websocket
         import ssl
@@ -79,22 +127,69 @@ def record(url: str, seconds: float, out_dir: str):
         sys.exit("pip install websocket-client first")
 
     warroom.CFG["apex_url"] = url
+    warroom._ws_url_cache, warroom._ws_url_checked_at = None, 0.0
     ws_url = warroom._find_ws_url(url)
     if not ws_url:
-        sys.exit(f"No WebSocket URL found behind {url} — is the event live?")
-    print(f"[apex] {ws_url}")
+        return []
 
     frames, stop_at = [], time.time() + seconds
 
     def on_message(_ws, msg):
         frames.append(msg)
-        if len(frames) % 25 == 0:
-            print(f"  {len(frames)} frames…", flush=True)
         if time.time() > stop_at:
             _ws.close()
 
     ws = websocket.WebSocketApp(ws_url, on_message=on_message)
+    # Nothing may ever arrive, so the socket needs its own deadline too.
+    threading.Timer(seconds + 5, ws.close).start()
     ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE}, ping_interval=30)
+    return frames
+
+
+def find(slugs: list, seconds: float):
+    """Probe each event and say which ones have karts on track."""
+    print(f"\nProbing {len(slugs)} event(s), {seconds:g}s each\n")
+    live = []
+    for slug in slugs:
+        url = event_url(slug)
+        print(f"  {event_name(url):<22}", end="", flush=True)
+        try:
+            frames = listen(url, seconds)
+        except Exception as e:
+            print(f"unreachable — {e}")
+            continue
+        if not frames:
+            print("no feed (event page up, nothing broadcasting)")
+            continue
+        s = summarise(frames)
+        if not s["live"]:
+            print("connected, empty grid")
+            continue
+        live.append((url, s))
+        print(f"LIVE · {s['karts']} karts, {s['on_track']} with lap times"
+              f"{' · ' + s['session'] if s['session'] else ''}"
+              f"{' · ' + s['light'] if s['light'] else ''}"
+              f"{' · ' + s['clock'] if s['clock'] else ''}")
+        if s["columns_ignored"]:
+            print(f"  {'':<22}columns we ignore: {', '.join(s['columns_ignored'])}")
+        if not s["has_pit_counter"]:
+            print(f"  {'':<22}no pit counter — stops fall back to lap-time spikes")
+
+    if live:
+        print("\n  Record one with:\n")
+        for url, _s in live:
+            print(f"    python3 apex_dump.py {url} --seconds 120")
+    else:
+        print("\n  Nothing running. Try again during a race, practice or qualifying.")
+    print()
+
+
+def record(url: str, seconds: float, out_dir: str):
+    print(f"recording {event_name(url)} for {seconds:g}s…")
+    frames = listen(url, seconds)
+    if not frames:
+        sys.exit(f"Nothing came back from {url} — is the event live?")
+    ws_url = warroom._ws_url_cache
 
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
     base = os.path.join(out_dir, f"apex-{event_name(url)}-{stamp}")
@@ -135,18 +230,24 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("url", nargs="?", help="the event's live timing page")
+    ap.add_argument("--find", nargs="*", metavar="EVENT",
+                    help="probe events for a live session; no names means "
+                         + ", ".join(KNOWN_EVENTS))
     ap.add_argument("--seconds", type=float, default=90.0)
     ap.add_argument("--out", default=os.path.dirname(os.path.abspath(__file__)))
     ap.add_argument("--replay", help="a .raw file recorded earlier")
     ap.add_argument("--speed", type=float, default=20.0, help="replay frames per second")
     args = ap.parse_args()
 
-    if args.replay:
+    if args.find is not None:
+        find(args.find or KNOWN_EVENTS, min(args.seconds, 15.0))
+    elif args.replay:
         replay(args.replay, args.speed)
     elif args.url:
         record(args.url, args.seconds, args.out)
     else:
-        ap.error("give an event URL to record, or --replay a recording")
+        ap.error("--find to look for a live session, an event URL to record it, "
+                 "or --replay a recording")
 
 
 if __name__ == "__main__":
