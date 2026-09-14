@@ -362,100 +362,139 @@ def _apply_cell_updates(cell_updates: dict) -> bool:
 
 _ws_url_cache: Optional[str] = None   # "" means checked and not found
 _ws_url_checked_at: float = 0.0
+_apex_endpoints: dict = {}            # {"ws": ..., "ajax": ..., "port": ...}
 
-def _find_ws_url(page_url: str) -> Optional[str]:
-    """Fetch the Apex Timing event page + config.js and extract WebSocket URL.
-    Result is cached for 5 minutes."""
-    global _ws_url_cache, _ws_url_checked_at
+_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"
+
+def _http_get(url: str, referer: str = "", timeout: int = 5) -> str:
+    headers = {"User-Agent": _UA}
+    if referer:
+        headers["Referer"] = referer
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode("utf-8", errors="ignore")
+
+def _find_apex_endpoints(page_url: str) -> dict:
+    """Read the event page + its config.js and work out where the data lives.
+
+    Apex serves the page from live.apex-timing.com but the timing feed from
+    whatever `configHost` names — live-data.apex-timing.com, in practice.  The
+    live timing JS derives both transports from `configPort`:
+
+        wss://<configHost>:<configPort + 3>/          the WebSocket
+        <configRequestUrl>live_ajax.php?port=<+4>     the polling fallback
+
+    Result is cached for 5 minutes.  Returns {} when nothing could be found.
+    """
+    global _ws_url_cache, _ws_url_checked_at, _apex_endpoints
     now_t = time.time()
     if _ws_url_checked_at and now_t - _ws_url_checked_at < 300:
-        return _ws_url_cache or None
+        return _apex_endpoints
     _ws_url_checked_at = now_t
+    _apex_endpoints, _ws_url_cache = {}, ""
 
     if not page_url:
-        _ws_url_cache = ""
-        return None
-
-    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"}
-
-    def _fetch(url):
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=5) as r:
-            return r.read().decode("utf-8", errors="ignore")
+        return _apex_endpoints
 
     try:
         base = page_url.split('#')[0].rstrip('/')
-        src = _fetch(base)
+        src = _http_get(base)
 
-        # 1. Apex Timing pattern: event-specific config.js holds configPort
-        for script_src in re.findall(r'''<script[^>]+src=['"]([^'"]+)['"]''', src):
-            if "config.js" in script_src:
-                config_url = urllib.parse.urljoin(base + "/", script_src)
-                try:
-                    cfg_src = _fetch(config_url)
-                    m = re.search(r'configPort\s*=\s*(\d+)', cfg_src)
-                    if m:
-                        ws_url = f"wss://www.apex-timing.com:{int(m.group(1)) + 3}/"
-                        _ws_url_cache = ws_url
-                        print(f"[apex] WS URL from configPort: {ws_url}", flush=True)
-                        return ws_url
-                except Exception:
-                    pass
+        # 1. Apex Timing pattern: the event's own config.js holds host and port.
+        for script_src in re.findall(r"""<script[^>]+src=['"]([^'"]+)['"]""", src):
+            if "config.js" not in script_src:
+                continue
+            config_url = urllib.parse.urljoin(base + "/", script_src)
+            try:
+                cfg_src = _http_get(config_url, referer=base)
+            except Exception:
+                continue
+            m = re.search(r'configPort\s*=\s*(\d+)', cfg_src)
+            if not m:
+                continue
+            port = int(m.group(1))
+            h = re.search(r"""configHost\s*=\s*['"]([^'"]+)['"]""", cfg_src)
+            host = h.group(1) if h else urllib.parse.urlparse(base).netloc
+            a = re.search(r"""configRequestUrl\s*=\s*['"](https?://[^'"]+)['"]""", cfg_src)
+            ajax = a.group(1) if a else f"https://{host}/live-timing/commonv2/functions/"
+            _apex_endpoints = {
+                "ws": f"wss://{host}:{port + 3}/",
+                "ajax": ajax.rstrip('/') + "/live_ajax.php",
+                "port": port,
+                "referer": base + "/",
+            }
+            _ws_url_cache = _apex_endpoints["ws"]
+            print(f"[apex] host={host} port={port} ws={_ws_url_cache}", flush=True)
+            return _apex_endpoints
 
-        # 2. Fallback: explicit WebSocket URL in page JS
-        m = re.search(r'''new\s+WebSocket\s*\(\s*['"]([^'"]+)['"]''', src)
+        # 2. Fallback: an explicit WebSocket URL written into the page JS.
+        m = re.search(r"""new\s+WebSocket\s*\(\s*['"]([^'"]+)['"]""", src)
         if m:
             _ws_url_cache = m.group(1)
+            _apex_endpoints = {"ws": _ws_url_cache, "referer": base + "/"}
             print(f"[apex] WS URL explicit: {_ws_url_cache}", flush=True)
-            return _ws_url_cache
+            return _apex_endpoints
 
-        # 3. Fallback: generic port variable
-        m = re.search(r'''(?:configPort|wsPort|ws_port)\s*=\s*(\d{3,5})''', src, re.I)
+        # 3. Fallback: a bare port variable inline in the page.
+        m = re.search(r"""(?:configPort|wsPort|ws_port)\s*=\s*(\d{3,5})""", src, re.I)
         if m:
-            _ws_url_cache = f"wss://www.apex-timing.com:{int(m.group(1)) + 3}/"
+            port = int(m.group(1))
+            host = urllib.parse.urlparse(base).netloc
+            _ws_url_cache = f"wss://{host}:{port + 3}/"
+            _apex_endpoints = {"ws": _ws_url_cache, "port": port, "referer": base + "/"}
             print(f"[apex] WS URL from inline port: {_ws_url_cache}", flush=True)
-            return _ws_url_cache
+            return _apex_endpoints
 
-        print("[apex] No WS URL found — using HTTP fallback", flush=True)
+        print("[apex] No feed endpoints found on the event page", flush=True)
     except Exception as e:
         print(f"[apex] Discovery error: {e}", flush=True)
-    _ws_url_cache = ""
-    return None
+    return _apex_endpoints
 
-def _fetch_http(page_url: str) -> list:
-    """Try AJAX endpoint to get timing data (HTTP fallback when WS not available)."""
-    if not page_url:
-        return []
-    m = re.search(r'apex-timing\.com/([^/#"\'? ]+)', page_url)
-    event = m.group(1) if m else ""
-    for endpoint, body in [
-        ("https://live.apex-timing.com/commonv2/functions/live_ajax.php",
-         urllib.parse.urlencode({"action": "getGrid", "event": event}).encode()),
-        (f"https://live.apex-timing.com/{event}/grid.json", None),
-    ]:
-        try:
-            headers = {"User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest",
-                       "Referer": page_url}
-            if body:
-                headers["Content-Type"] = "application/x-www-form-urlencoded"
-            req = urllib.request.Request(endpoint, data=body, headers=headers)
-            with urllib.request.urlopen(req, timeout=4) as r:
-                text = r.read().decode("utf-8", errors="ignore")
-            text = text.strip()
-            if not text:
-                continue
-            if text[0] in ('{', '['):
-                d = json.loads(text)
-                rows = d if isinstance(d, list) else d.get('rows', d.get('data', d.get('grid', [])))
-                if rows:
-                    return rows
-            p = ApexParser()
-            p.feed(text)
-            if p.rows:
-                return p.rows
-        except Exception:
-            continue
-    return []
+def _find_ws_url(page_url: str) -> Optional[str]:
+    """The WebSocket URL alone, for callers that only speak WS."""
+    return _find_apex_endpoints(page_url).get("ws") or None
+
+# live_ajax.php is a resumable cursor: it hands back the init flag and index to
+# send on the next call, so each poll returns only what changed since the last.
+_ajax_state: dict = {"init": "1", "index": "0", "counter": 0}
+
+def _fetch_http(page_url: str) -> str:
+    """Poll Apex's AJAX fallback and return one pipe-protocol payload.
+
+    The response is `init@index@payload`, where payload is byte-for-byte what
+    the WebSocket would have pushed — so the caller parses it the same way.
+    """
+    ep = _find_apex_endpoints(page_url)
+    if not ep.get("ajax") or not ep.get("port"):
+        return ""
+    _ajax_state["counter"] += 1
+    q = urllib.parse.urlencode({
+        "version": "1.0.0",
+        "init": _ajax_state["init"],
+        "index": _ajax_state["index"],
+        "port": ep["port"] + 4,
+        "counter": _ajax_state["counter"],
+        "duration": 0,
+        "id": 0,
+        "ignored": "",
+    })
+    try:
+        text = _http_get(f"{ep['ajax']}?{q}", referer=ep.get("referer", page_url), timeout=8)
+    except Exception as e:
+        print(f"[apex] AJAX poll failed: {e}", flush=True)
+        return ""
+    parts = text.split("@", 2)
+    if len(parts) < 3:
+        return ""
+    _ajax_state["init"], _ajax_state["index"] = parts[0], parts[1]
+    if parts[2] == "REFRESH_BROWSER":
+        # Apex wants a clean slate; drop the cursor so the next poll re-inits.
+        _ajax_state.update({"init": "1", "index": "0"})
+        return ""
+    return parts[2]
+
+def _reset_ajax_state():
+    _ajax_state.update({"init": "1", "index": "0", "counter": 0})
 
 def _parse_apex_pipe(msg: str) -> tuple:
     """Parse Apex Timing pipe-delimited WebSocket protocol.
@@ -619,8 +658,29 @@ def set_plan_stop(stop_idx: int, driver_id):
     kv_set("pit_plan", json.dumps(plan[:n]))
 
 # ── Background worker ──────────────────────────────────────────────────────────
+_ws_blocked = False   # set once the WS host proves unreachable from here
+
+def _consume_pipe(payload: str) -> bool:
+    """Feed one pipe-protocol payload through the same path as a WS frame."""
+    global _apex_ok
+    if not payload:
+        return False
+    try:
+        rows, cell_updates, meta = _parse_apex_pipe(payload)
+    except Exception as e:
+        log("APEX PIPE ERR", str(e))
+        return False
+    if meta:
+        _process_meta(meta)
+    if cell_updates:
+        _apply_cell_updates(cell_updates)
+        _apex_ok = True
+    if _process_rows(rows):
+        _apex_ok = True
+    return bool(rows or cell_updates or meta)
+
 def worker():
-    global _apex_ok, _apex_session
+    global _apex_ok, _apex_session, _ws_blocked, _ws_msg_count
     while True:
         url = CFG.get("apex_url", "")
 
@@ -628,25 +688,31 @@ def worker():
             time.sleep(5)
             continue
 
-        if _HAS_WS:
-            ws_url = _find_ws_url(url)
-            if ws_url:
-                done = threading.Event()
-                t = threading.Thread(target=_ws_run, args=(ws_url, done), daemon=True)
-                t.start()
-                done.wait(timeout=600)  # reconnect after 10 min max or on disconnect
-                t.join(timeout=5)
+        ws_url = _find_ws_url(url) if _HAS_WS else None
+        if ws_url and not _ws_blocked:
+            done = threading.Event()
+            _ws_msg_count = 0
+            t = threading.Thread(target=_ws_run, args=(ws_url, done), daemon=True)
+            t.start()
+            done.wait(timeout=600)  # reconnect after 10 min max or on disconnect
+            t.join(timeout=5)
+            # The timing ports are on a different host to the event page and are
+            # not always reachable (corporate egress, a firewall between us and
+            # live-data).  One silent attempt is enough to know — after that,
+            # poll the AJAX fallback on 443 instead of retrying forever.
+            if _ws_msg_count == 0:
+                _ws_blocked = True
+                log("APEX WS", "no frames — falling back to AJAX polling")
+            else:
                 time.sleep(3)  # brief pause before reconnect to avoid tight loop
                 continue
 
-        # HTTP/AJAX polling fallback (no WebSocket library or no WS URL found)
-        rows = _fetch_http(url)
-        if _process_rows(rows):
-            log("HTTP DATA", f"{len(rows)} teams")
+        # AJAX polling fallback: same pipe payload, over plain HTTPS.
+        if _consume_pipe(_fetch_http(url)):
+            log("HTTP DATA", "frame parsed")
         else:
             with _lock:
                 _apex_ok = False
-            log("HTTP POLL", "no data received")
         time.sleep(CFG.get("refresh_interval", 5))
 
 # ── Strategy engine ────────────────────────────────────────────────────────────
@@ -1232,7 +1298,11 @@ def debug_apex():
 
 # ── Startup (runs for both direct execution and gunicorn) ─────────────────────
 init_db()
-threading.Thread(target=worker, daemon=True).start()
+# apex_dump imports this module to reuse the parser, and does its own polling.
+# Two pollers would share one AJAX cursor and steal frames from each other, so
+# the tool sets this to keep the background worker out of the way.
+if not os.environ.get("WARROOM_NO_WORKER"):
+    threading.Thread(target=worker, daemon=True).start()
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":

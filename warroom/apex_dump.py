@@ -40,6 +40,10 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# We drive the feed ourselves below; the app's own poller would race us for the
+# AJAX cursor.  --replay starts the server afterwards, which does not need it.
+os.environ.setdefault("WARROOM_NO_WORKER", "1")
+
 import app as warroom
 
 
@@ -119,17 +123,31 @@ def analyse(frames: list) -> dict:
 
 
 def listen(url: str, seconds: float) -> list:
-    """Collect whatever the event's WebSocket sends for a few seconds."""
+    """Collect whatever the event sends for a few seconds.
+
+    Tries the WebSocket first, then falls back to Apex's AJAX feed.  The two
+    carry the same payload, and the timing ports sit on a different host to the
+    event page — so on a network that only lets 443 out, polling is the one
+    that works.  Same frames either way.
+    """
+    warroom.CFG["apex_url"] = url
+    warroom._ws_url_cache, warroom._ws_url_checked_at = None, 0.0
+    warroom._reset_ajax_state()
+    if not warroom._find_apex_endpoints(url):
+        return []
+
+    frames = listen_ws(url, seconds)
+    return frames if frames else listen_ajax(url, seconds)
+
+
+def listen_ws(url: str, seconds: float) -> list:
+    ws_url = warroom._find_ws_url(url)
+    if not ws_url:
+        return []
     try:
         import websocket
         import ssl
     except ImportError:
-        sys.exit("pip install websocket-client first")
-
-    warroom.CFG["apex_url"] = url
-    warroom._ws_url_cache, warroom._ws_url_checked_at = None, 0.0
-    ws_url = warroom._find_ws_url(url)
-    if not ws_url:
         return []
 
     frames, stop_at = [], time.time() + seconds
@@ -143,6 +161,17 @@ def listen(url: str, seconds: float) -> list:
     # Nothing may ever arrive, so the socket needs its own deadline too.
     threading.Timer(seconds + 5, ws.close).start()
     ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE}, ping_interval=30)
+    return frames
+
+
+def listen_ajax(url: str, seconds: float, interval: float = 2.0) -> list:
+    """Poll the AJAX feed and keep every non-empty payload as a frame."""
+    frames, stop_at = [], time.time() + seconds
+    while time.time() < stop_at:
+        payload = warroom._fetch_http(url)
+        if payload.strip():
+            frames.append(payload)
+        time.sleep(interval)
     return frames
 
 
@@ -189,13 +218,13 @@ def record(url: str, seconds: float, out_dir: str):
     frames = listen(url, seconds)
     if not frames:
         sys.exit(f"Nothing came back from {url} — is the event live?")
-    ws_url = warroom._ws_url_cache
+    ep = warroom._find_apex_endpoints(url)
 
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
     base = os.path.join(out_dir, f"apex-{event_name(url)}-{stamp}")
     with open(base + ".raw", "w") as f:
         f.write("\n\x00\n".join(frames))
-    report = {"url": url, "ws_url": ws_url, "recorded": stamp, **analyse(frames)}
+    report = {"url": url, "endpoints": ep, "recorded": stamp, **analyse(frames)}
     with open(base + ".json", "w") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
 

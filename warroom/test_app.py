@@ -222,6 +222,129 @@ class TestRaceClock(AppCase):
         self.assertEqual(self.snap()["clock_source"], "local")
 
 
+CONFIG_JS = """
+var configPort = 10110;
+var configHost = 'live-data.apex-timing.com';
+var configRequestUrl = 'https://live-data.apex-timing.com/live-timing/commonv2/functions/';
+"""
+
+EVENT_PAGE = """
+<html><head>
+<script type="text/javascript" src="../commonv2/javascript/javascript_live_timing.min.js"></script>
+<script type="text/javascript" src="javascript/config.js"></script>
+</head><body></body></html>
+"""
+
+
+class TestFeedDiscovery(AppCase):
+    """Where the timing data lives, worked out the way the site's own JS does."""
+
+    URL = "https://live.apex-timing.com/kip-palmela/"
+
+    def serve(self, pages):
+        """Stand in for the network: a URL -> body map, no sockets involved."""
+        def fake_get(url, referer="", timeout=5):
+            for frag, body in pages.items():
+                if frag in url:
+                    return body
+            raise OSError(f"unexpected fetch: {url}")
+        self.app._http_get = fake_get
+        self.app._ws_url_checked_at = 0.0
+        self.app._reset_ajax_state()
+
+    def test_the_feed_host_comes_from_config_not_the_page(self):
+        # The page is served from live.apex-timing.com but the feed is not:
+        # reading configHost is the whole point, so guessing the page host back
+        # would be the bug this test exists to catch.
+        self.serve({"config.js": CONFIG_JS, "kip-palmela": EVENT_PAGE})
+        ep = self.app._find_apex_endpoints(self.URL)
+        self.assertEqual(ep["ws"], "wss://live-data.apex-timing.com:10113/")
+        self.assertNotIn("www.apex-timing.com", ep["ws"])
+
+    def test_the_ajax_endpoint_is_the_one_the_site_uses(self):
+        self.serve({"config.js": CONFIG_JS, "kip-palmela": EVENT_PAGE})
+        ep = self.app._find_apex_endpoints(self.URL)
+        self.assertTrue(ep["ajax"].endswith("/live_ajax.php"))
+        self.assertEqual(ep["port"], 10110)
+
+    def test_discovery_is_cached_so_every_poll_is_not_two_fetches(self):
+        self.serve({"config.js": CONFIG_JS, "kip-palmela": EVENT_PAGE})
+        self.app._find_apex_endpoints(self.URL)
+        self.app._http_get = lambda *a, **k: self.fail("refetched inside the cache window")
+        self.assertEqual(self.app._find_apex_endpoints(self.URL)["port"], 10110)
+
+    def test_a_page_with_no_config_yields_no_endpoints(self):
+        self.serve({"kip-palmela": "<html><body>nothing here</body></html>"})
+        self.assertEqual(self.app._find_apex_endpoints(self.URL), {})
+        self.assertIsNone(self.app._find_ws_url(self.URL))
+
+
+class TestAjaxFallback(AppCase):
+    """The polling transport: same payload as the socket, over plain HTTPS."""
+
+    URL = "https://live.apex-timing.com/kip-palmela/"
+
+    def serve(self, replies):
+        self.replies, self.asked = list(replies), []
+
+        def fake_get(url, referer="", timeout=5):
+            if "config.js" in url:
+                return CONFIG_JS
+            if "live_ajax.php" not in url:
+                return EVENT_PAGE
+            self.asked.append(url)
+            return self.replies.pop(0) if self.replies else ""
+        self.app._http_get = fake_get
+        self.app._ws_url_checked_at = 0.0
+        self.app._reset_ajax_state()
+
+    def test_a_payload_becomes_karts(self):
+        self.serve(["0@57@" + "grid||" + grid_html(self.state, head=True)])
+        self.assertTrue(self.app._consume_pipe(self.app._fetch_http(self.URL)))
+        self.assertEqual(len(self.snap()["teams"]), len(TEAMS))
+
+    def test_the_cursor_advances_so_each_poll_asks_for_what_changed(self):
+        self.serve(["1@57@", "1@61@"])
+        self.app._fetch_http(self.URL)
+        self.assertIn("index=0", self.asked[0])      # first poll starts cold
+        self.app._fetch_http(self.URL)
+        self.assertIn("index=57", self.asked[1])     # then resumes where it left off
+        self.assertEqual(self.app._ajax_state["index"], "61")
+
+    def test_the_poll_port_is_four_above_the_config_port(self):
+        # +3 is the WebSocket, +4 is the AJAX feed. Mixing them up returns
+        # nothing at all, which is indistinguishable from an idle track.
+        self.serve(["0@0@"])
+        self.app._fetch_http(self.URL)
+        self.assertIn("port=10114", self.asked[-1])
+
+    def test_refresh_browser_resets_the_cursor(self):
+        self.serve(["0@57@REFRESH_BROWSER"])
+        self.assertEqual(self.app._fetch_http(self.URL), "")
+        self.assertEqual(self.app._ajax_state["init"], "1")
+        self.assertEqual(self.app._ajax_state["index"], "0")
+
+    def test_an_idle_track_is_quiet_not_broken(self):
+        # Between sessions Apex answers with an empty payload. That must not
+        # look like a parse failure, and must not wipe the grid.
+        self.serve(["0@57@"])
+        self.assertFalse(self.app._consume_pipe(self.app._fetch_http(self.URL)))
+
+    def test_a_truncated_reply_is_ignored(self):
+        self.serve(["garbage"])
+        self.assertEqual(self.app._fetch_http(self.URL), "")
+
+    def test_a_network_error_is_not_fatal(self):
+        def boom(url, referer="", timeout=5):
+            if "live_ajax.php" in url:
+                raise OSError("connection reset")
+            return CONFIG_JS if "config.js" in url else EVENT_PAGE
+        self.app._http_get = boom
+        self.app._ws_url_checked_at = 0.0
+        self.app._reset_ajax_state()
+        self.assertEqual(self.app._fetch_http(self.URL), "")
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)
