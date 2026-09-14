@@ -1254,8 +1254,12 @@ def api_settings():
     data = request.json or {}
     if "apex_url" in data:
         CFG["apex_url"] = data["apex_url"].strip()
-        global _ws_url_cache, _ws_url_checked_at
+        global _ws_url_cache, _ws_url_checked_at, _ws_blocked
         _ws_url_cache, _ws_url_checked_at = None, 0.0  # force re-scan on next cycle
+        # The new event has its own AJAX cursor and its own socket; carrying the
+        # old track's over would ask Apex to resume a stream that is not ours.
+        _reset_ajax_state()
+        _ws_blocked = False
     if "team_name" in data:
         CFG["team_name"] = data["team_name"].strip()
     if "duration_minutes" in data:

@@ -345,6 +345,16 @@ class TestAjaxFallback(AppCase):
         self.assertEqual(self.app._fetch_http(self.URL), "")
 
 
+class TestSwitchingEvent(AppCase):
+    def test_changing_the_url_drops_the_old_cursor(self):
+        self.app._ajax_state.update({"init": "0", "index": "57", "counter": 9})
+        self.app._ws_blocked = True
+        self.client.post("/api/settings",
+                         json={"apex_url": "https://live.apex-timing.com/kartalcanede/"})
+        self.assertEqual(self.app._ajax_state["index"], "0")
+        self.assertFalse(self.app._ws_blocked)
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)
