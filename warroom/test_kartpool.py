@@ -150,6 +150,81 @@ class TestLaneFlow(PoolCase):
         self.assertEqual([k["num"] for k in before], [k["num"] for k in after])
 
 
+class TestPendingStopsAgeOut(PoolCase):
+    """One unresolved stop must not disable counting for the rest of the race.
+
+    At a single lane the pool counts on its own, but only while nobody else is
+    in the box — order decides who takes the front kart.  An unresolved stop
+    used to count as "in the box" forever, so the first overlap switched
+    automatic counting off permanently, for every team.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self._real_time = kartpool.time.time
+        self.addCleanup(setattr, kartpool.time, "time", self._real_time)
+        self.now = [1_000_000.0]
+        kartpool.time.time = lambda: self.now[0]
+
+        self.db = os.path.join(self._tmp.name, "age.db")
+        self.pool = self.make(lanes=1)
+        for no, team, kart in (("1", "ALPHA", "10"), ("2", "BRAVO", "11")):
+            self.pool.set_kart(no, team, kart)
+        for k in ("21", "22", "23"):
+            self.pool.lane_add(1, k)
+
+    def stop(self, no, team, pits, laps, others=()):
+        """One stop for a team, with anyone else the feed shows in the box."""
+        base = [row(no, team, pits=pits - 1, laps=laps - 1)]
+        self.pool.observe(base + list(others))
+        self.pool.observe([row(no, team, pits=pits, laps=laps)] + list(others))
+
+    def test_a_stop_while_someone_is_in_the_box_waits_to_be_told(self):
+        # BRAVO is standing in the box, so who reached the front kart first is
+        # not something the feed can answer.
+        self.stop("1", "ALPHA", 1, 2, others=[row("2", "BRAVO", in_pit=True)])
+        self.assertEqual([p["team_no"] for p in self.pool.pending()], ["1"])
+
+    def test_an_old_unanswered_stop_stops_blocking(self):
+        self.stop("1", "ALPHA", 1, 2, others=[row("2", "BRAVO", in_pit=True)])
+        self.assertEqual(len(self.pool.pending()), 1)
+
+        # An hour on, nobody has answered it. ALPHA stops again, alone this
+        # time, and that stop must count itself rather than inherit the block.
+        self.now[0] += 3600
+        self.stop("1", "ALPHA", 2, 9)
+        self.assertEqual(len(self.pool.pending()), 1,
+                         "the later stop should have counted itself")
+
+    def test_a_stop_moments_old_still_blocks(self):
+        # The window is what keeps the fix honest: while someone really could
+        # still be in the box, the question has to be asked.
+        self.stop("1", "ALPHA", 1, 2, others=[row("2", "BRAVO", in_pit=True)])
+        self.now[0] += 30
+        self.stop("2", "BRAVO", 1, 2)
+        self.assertEqual(len(self.pool.pending()), 2)
+
+    def laps_recorded(self):
+        with self.pool._con() as con:
+            return con.execute("SELECT COUNT(*) FROM kart_lap").fetchone()[0]
+
+    def test_ageing_never_credits_laps_to_a_kart_it_cannot_name(self):
+        # Ageing relaxes "who is in the box", never "which kart is this".  A
+        # team whose stop is unanswered is in an unknown kart, so its laps must
+        # rate nothing — crediting them would poison the kart ratings, which is
+        # the whole reason for tracking karts at all.
+        self.stop("1", "ALPHA", 1, 2, others=[row("2", "BRAVO", in_pit=True)])
+        self.assertIn("1", self.pool._pending_teams)
+        before = self.laps_recorded()
+
+        self.now[0] += 3600                # long past the blocking window
+        for lap in range(3, 8):
+            self.pool.observe([row("1", "ALPHA", pits=1, laps=lap)])
+        self.assertIn("1", self.pool._pending_teams, "still unknown, just not blocking")
+        self.assertEqual(self.laps_recorded(), before,
+                         "laps were credited to a kart the pool cannot name")
+
+
 class TestFullPitCycle(PoolCase):
     """Three teams, two lanes, karts round-tripping the way they do in a race."""
 

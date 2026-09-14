@@ -53,6 +53,7 @@ class Team:
         self.driver = 0
         self.kart = None
         self.laps = 0
+        self.last_lane = None
         self.pits = 0
         self.best = None
         self.last = None
@@ -130,6 +131,8 @@ class MockRace:
         team.next_stop_at = self.t + self.rng.uniform(0.8, 1.05) * self.stint_s
         team.last = self.lap_time(team) + self.rng.uniform(25, 40)   # the in-lap
         lane = self.rng.randint(1, self.lanes)
+        # What the person in the pit lane would see and tap on the phone.
+        team.last_lane = lane
         queue = self.queues[lane]
         taken = queue.pop(0) if queue else team.kart
         if taken != team.kart:

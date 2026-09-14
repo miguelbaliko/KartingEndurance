@@ -123,7 +123,10 @@ class KartPool:
         self._last_pits = {}
         self._last_laps = {}
         self._last_lap_s = {}
-        self._pending_teams = set()
+        # {team_no: opened_at}.  Membership answers "is this team's kart
+        # unknown", which stays true until the stop is resolved; the timestamp
+        # answers "is this team in the box right now", which decays.
+        self._pending_teams = {}
         self._skip = defaultdict(int)
         self._in_box_since = {}
         self._category = {}
@@ -135,8 +138,10 @@ class KartPool:
 
         self._init_db()
         with self._con() as con:
+            # Opened at 0: a stop that survived a restart is still unresolved,
+            # but nobody has been standing in the box across the restart.
             self._pending_teams = {
-                str(r["team_no"]) for r in con.execute(
+                str(r["team_no"]): 0.0 for r in con.execute(
                     "SELECT team_no FROM kart_stop WHERE state IN (?,?)",
                     (PENDING, AWAIT_KART))}
 
@@ -228,7 +233,7 @@ class KartPool:
                              s["kart_out"], s["lane"], s["state"], s["source"]))
             con.execute("DELETE FROM kart_undo WHERE id=?", (row["id"],))
             self._pending_teams = {
-                str(s["team_no"]) for s in state["stops"]
+                str(s["team_no"]): 0.0 for s in state["stops"]
                 if s["state"] in (PENDING, AWAIT_KART)}
             self._note(f"undo — {row['what']}")
         self._rating_dirty = True
@@ -304,7 +309,7 @@ class KartPool:
             (ts or _now_iso(), str(team_no), team, kart_in, PENDING, source))
         stop_id = cur.lastrowid
         # Until the lane is known the team's laps belong to no kart at all.
-        self._pending_teams.add(str(team_no))
+        self._pending_teams[str(team_no)] = time.time()
         # With one lane there is no lane to ask about, so the only thing that
         # can still go wrong is the order: if another kart is in the pit lane
         # at the same moment, which of the two takes the kart at the front is
@@ -321,7 +326,12 @@ class KartPool:
         now = time.time()
         others = {t for t, since in self._in_box_since.items()
                   if t != team_no and now - since < window}
-        return sorted(others | (self._pending_teams - {team_no}))
+        # Only stops recent enough that someone could still be standing there.
+        # Without this the set never drains — one unresolved stop would block
+        # automatic counting for the rest of the race, for every team.
+        others |= {t for t, since in self._pending_teams.items()
+                   if t != team_no and now - since < window}
+        return sorted(others)
 
     def manual_stop(self, team_no: str, team: str = "") -> int:
         """A stop the feed never saw — the reason the pit phone has a button."""
@@ -348,7 +358,7 @@ class KartPool:
                     (lane, kart_out, state, stop_id))
         if kart_out:
             self._assign(con, stop["team_no"], stop["team"], kart_out, stop["ts"])
-            self._pending_teams.discard(str(stop["team_no"]))
+            self._pending_teams.pop(str(stop["team_no"]), None)
             self._skip[str(stop["team_no"])] = self.cfg["skip_laps_after_stop"]
             self._note(f"kart {stop['kart_in'] or '?'} → {kart_out} via lane {lane}",
                        stop["team"], tag="swap")
@@ -367,7 +377,7 @@ class KartPool:
                 if stop:
                     con.execute("UPDATE kart_stop SET state=?, kart_out=? WHERE id=?",
                                 (NO_CHANGE, stop["kart_in"], stop_id))
-                    self._pending_teams.discard(str(stop["team_no"]))
+                    self._pending_teams.pop(str(stop["team_no"]), None)
                     self._skip[str(stop["team_no"])] = self.cfg["skip_laps_after_stop"]
                     self._note("driver change only, same kart", stop["team"],
                                tag="swap")
@@ -409,7 +419,7 @@ class KartPool:
         con.execute("UPDATE kart_stop SET kart_out=?, state=? WHERE id=?",
                     (kart_out, RESOLVED, stop_id))
         self._assign(con, stop["team_no"], stop["team"], kart_out, stop["ts"])
-        self._pending_teams.discard(str(stop["team_no"]))
+        self._pending_teams.pop(str(stop["team_no"]), None)
         self._skip[str(stop["team_no"])] = self.cfg["skip_laps_after_stop"]
         self._note(f"kart {kart_in or '?'} → {kart_out} (read off the kart)",
                    stop["team"], tag="swap")
