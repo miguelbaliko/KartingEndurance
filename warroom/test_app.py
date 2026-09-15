@@ -385,21 +385,36 @@ class TestRegulation(AppCase):
     def test_the_pit_lane_shuts_before_the_flag_not_at_it(self):
         # §3.8: every stop must be done by 24:30 of a 25:00 race.
         R = self.app.CFG["race"]
-        s = self.app.compute_strategy(60, (R["duration_minutes"] - 20) * 60, 28, None, None)
+        after_shut = (R["duration_minutes"] - 20) * 60
+        s = self.app.compute_strategy(60, after_shut, R["mandatory_pits"], None, None)
         self.assertEqual(s["label"], "HOLD")
         self.assertIn("30 min", s["detail"])
+
+    def test_stops_still_owed_when_the_lane_shuts_are_called_out(self):
+        # §3.13.1 is five laps per missing stop, so this is not a quiet HOLD.
+        R = self.app.CFG["race"]
+        after_shut = (R["duration_minutes"] - 20) * 60
+        s = self.app.compute_strategy(60, after_shut, R["mandatory_pits"] - 6,
+                                      None, None)
+        self.assertEqual(s["label"], "STOPS MISSED")
+        self.assertIn("6", s["detail"])
 
     def test_the_stops_are_paced_into_the_window_that_allows_them(self):
         # Pacing across the full 25h would call a team on plan when it is a
         # stop down, because the last 30 min cannot absorb one.
         R = self.app.CFG["race"]
         R["mandatory_pits"] = 34
-        # One minute before the lane shuts, a team four stops down must be told.
-        just_before = (R["duration_minutes"] - R["no_pit_last_minutes"] - 1) * 60
+        close_s = (R["duration_minutes"] - R["no_pit_last_minutes"]) * 60
+        # Two hours of pit window left: on schedule is quiet, behind is a warning.
+        early = close_s - 2 * 3600
         self.assertEqual(
-            self.app.compute_strategy(60, just_before, 34, None, None)["label"], "HOLD")
+            self.app.compute_strategy(60, early, 30, None, None)["label"], "HOLD")
         self.assertEqual(
-            self.app.compute_strategy(60, just_before, 30, None, None)["label"], "PREPARE")
+            self.app.compute_strategy(60, early, 25, None, None)["label"], "PREPARE")
+        # One minute left and four stops owed is not a warning, it is now.
+        self.assertEqual(
+            self.app.compute_strategy(60, close_s - 60, 30, None, None)["label"],
+            "BOX NOW")
 
     def test_a_driver_short_of_the_minimum_is_shown_what_is_owed(self):
         self.client.post("/api/driver/add", json={"name": "Dinis"})
@@ -795,6 +810,103 @@ class TestPitPlanCheck(AppCase):
     def test_the_check_reaches_the_screen(self):
         self.client.post("/api/driver/add", json={"name": "Solo"})
         self.assertIn("plan_problems", self.snap())
+
+
+class TestStrategyCalls(AppCase):
+    """The call, and what overrules what."""
+
+    def call(self, **kw):
+        R = self.app.CFG["race"]
+        a = dict(stint_s=10 * 60, race_elapsed_s=3 * 3600,
+                 pits_done=4, my_avg5=None, prev_avg5=None)
+        a.update(kw)
+        return self.app.compute_strategy(**a)
+
+    def offer(self, verdict):
+        return {"verdict": verdict, "detail": "d"}
+
+    def test_a_neutralised_track_is_the_cheapest_stop_of_the_race(self):
+        for flag in ("ly", "lsc", "lr"):
+            s = self.call(light=flag)
+            self.assertEqual(s["label"], "BOX NOW", flag)
+            self.assertIn("cheap", s["detail"])
+
+    def test_a_flag_does_not_send_a_kart_in_that_just_came_out(self):
+        # §3.10: a turn under 10 minutes is itself a penalty.
+        self.assertNotEqual(self.call(light="lsc", stint_s=60)["label"], "BOX NOW")
+
+    def test_a_flag_is_ignored_once_every_stop_is_served(self):
+        s = self.call(light="lsc", pits_done=self.app.CFG["race"]["mandatory_pits"])
+        self.assertNotEqual(s["label"], "BOX NOW")
+
+    def test_the_stint_limit_outranks_a_good_kart_waiting(self):
+        R = self.app.CFG["race"]
+        s = self.call(stint_s=R["stint_max_minutes"] * 60 - 30,
+                      box_now=self.offer("worse"))
+        self.assertEqual(s["label"], "BOX NOW")
+        self.assertIn("STINT LIMIT", s["detail"])
+
+    def test_two_better_karts_waiting_pulls_a_due_stop_forward(self):
+        R = self.app.CFG["race"]
+        near = R["stint_max_minutes"] * 60 - 11 * 60
+        self.assertEqual(self.call(stint_s=near, box_now=self.offer("better"))["label"],
+                         "BOX NOW")
+
+    def test_two_worse_karts_waiting_holds_a_stop_that_can_wait(self):
+        R = self.app.CFG["race"]
+        near = R["stint_max_minutes"] * 60 - 11 * 60
+        self.assertEqual(self.call(stint_s=near, box_now=self.offer("worse"))["label"],
+                         "WAIT")
+
+    def test_the_kart_lottery_is_ignored_when_a_stop_is_not_due(self):
+        self.assertNotEqual(self.call(stint_s=60, box_now=self.offer("better"))["label"],
+                            "BOX NOW")
+
+    def test_collapsed_pace_boxes_it(self):
+        s = self.call(my_avg5=63.0, prev_avg5=62.0)
+        self.assertEqual(s["label"], "BOX NOW")
+
+    def test_every_call_says_why(self):
+        for kw in ({}, {"light": "lsc"}, {"my_avg5": 63.0, "prev_avg5": 62.0},
+                   {"stint_s": self.app.CFG["race"]["stint_max_minutes"] * 60}):
+            self.assertTrue(self.call(**kw)["why"], kw)
+
+    def test_every_call_carries_the_stops_still_owed(self):
+        self.assertEqual(self.call(pits_done=4)["stops_left"],
+                         self.app.CFG["race"]["mandatory_pits"] - 4)
+
+
+class TestKartLapHistory(AppCase):
+    """Clicking a kart shows the evidence behind its score."""
+
+    def record(self, kart, pilots):
+        import time as _t
+        with self.app.POOL._con() as con:
+            for i, (team, drv, t) in enumerate(pilots):
+                con.execute("INSERT INTO kart_lap(ts,team_no,pilot,kart,lap_s) "
+                            "VALUES(?,?,?,?,?)",
+                            (_t.time() + i, team, f"T{team}|{drv}", kart, t))
+
+    def test_it_reports_laps_best_and_average(self):
+        self.record("17", [("1", "Ana", 62.0), ("1", "Ana", 61.0)])
+        d = json.loads(self.client.get("/api/kart/17/laps").data)
+        self.assertEqual(d["count"], 2)
+        self.assertEqual(d["best"], "1:01.000")
+        self.assertEqual(d["avg"], "1:01.500")
+
+    def test_it_breaks_the_laps_down_by_driver(self):
+        # A score resting on one driver is weaker than one several agree on.
+        self.record("17", [("1", "Ana", 62.0), ("1", "Ana", 62.4),
+                           ("2", "Lobo", 61.0)])
+        d = json.loads(self.client.get("/api/kart/17/laps").data)
+        by = {x["pilot"]: x for x in d["drivers"]}
+        self.assertEqual(by["Ana"]["laps"], 2)
+        self.assertEqual(by["Lobo"]["best"], "1:01.000")
+
+    def test_a_kart_nobody_has_driven_is_empty_not_an_error(self):
+        d = json.loads(self.client.get("/api/kart/99/laps").data)
+        self.assertEqual((d["count"], d["best"], d["drivers"]), (0, "-", []))
+        self.assertEqual(d["label"], "Unknown")
 
 
 class TestPages(AppCase):

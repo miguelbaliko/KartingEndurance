@@ -399,6 +399,26 @@ tr.clickable{cursor:pointer}
 .rc-at{color:var(--tx3);font-variant-numeric:tabular-nums;min-width:38px}
 .rc-flag{width:9px;height:9px;border-radius:2px;flex:none;align-self:center}
 .rc-txt{color:var(--tx2)}
+.dec-why{font-size:10px;color:var(--tx3);text-align:center;padding:6px 8px 2px;
+  line-height:1.4}
+.matrix-hd{font-size:10px;color:var(--tx3);margin:10px 0 6px}
+.matrix{display:flex;gap:8px}
+.mx-col{flex:1;min-width:0}
+.mx-top{height:3px;border-radius:2px;margin-bottom:5px}
+.mx-nm{font-size:10px;color:var(--tx3);margin-bottom:4px;display:flex;
+  justify-content:space-between}
+.mx-k{display:flex;align-items:center;gap:5px;padding:4px 6px;margin-bottom:3px;
+  border-radius:6px;background:var(--bg2);border:1px solid var(--line);
+  cursor:pointer;font-size:11px}
+.mx-k:hover{border-color:var(--line2)}
+.mx-k.next{border-color:var(--blue);background:#0d1725}
+.mx-n{font-weight:700;font-variant-numeric:tabular-nums;min-width:20px}
+.mx-d{margin-left:auto;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums}
+.mx-empty{font-size:10px;color:var(--tx3);font-style:italic;padding:4px 2px}
+.kd-hd{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.kd-drv{display:flex;gap:10px;padding:4px 8px;font-size:11px;
+  border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.kd-drv .who{min-width:90px;color:var(--tx2)}
 .cls-p{margin-left:5px;font-size:10px;color:var(--tx3);font-weight:700}
 .cls-gap{font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums}
 /* A plan that cannot be driven, said out loud before the race finds out. */
@@ -429,7 +449,7 @@ tr.clickable{cursor:pointer}
   border:1px solid;font-size:11px;font-weight:700;white-space:nowrap;line-height:1.5}
 .kchip b{font-weight:800}
 .kchip .kd{font-family:var(--mono);font-weight:600;opacity:.85}
-.kchip.godlike{color:#c084fc;border-color:#4c2a6b;background:#19112a}
+.kchip.rocket{color:#c084fc;border-color:#4c2a6b;background:#19112a}
 .kchip.verygood{color:var(--grn);border-color:#125537;background:#07231a}
 .kchip.good{color:#a3e635;border-color:#3f5518;background:#131d09}
 .kchip.ok{color:var(--tx2);border-color:var(--line2);background:var(--bg2)}
@@ -589,10 +609,13 @@ tr.clickable{cursor:pointer}
           <div id="dec-label" class="dec-label">HOLD</div>
           <div id="dec-detail" class="dec-detail">–</div>
         </div>
+        <div id="dec-why" class="dec-why"></div>
         <div class="pits-row">
           <span class="lbl">Pit stops</span>
           <span class="pits-val" id="pits-val">0 <span>/ 34</span></span>
         </div>
+        <div class="matrix-hd">Pit lane — front of each queue goes out next</div>
+        <div id="kart-matrix" class="matrix"></div>
       </div>
 
       <!-- PIT STOP -->
@@ -879,6 +902,7 @@ function render(s) {
   renderBoxNow(s);
   renderControl(s);
   renderPlanCheck(s);
+  renderMatrix(s);
   renderMyTeam(s);
   renderStrategy(s);
   renderPit(s);
@@ -1066,7 +1090,7 @@ function virtTitle(t) {
 
 // ── Karts ────────────────────────────────────────────────────────────
 const CHIP_CLS = {
-  'Godlike':'godlike', 'Very Good':'verygood', 'Good':'good',
+  'Rocket':'rocket', 'Very Good':'verygood', 'Good':'good',
   'OK':'ok', 'Bad':'bad', 'Unknown':'unknown'
 };
 
@@ -1178,7 +1202,8 @@ function renderFleet(pool, s) {
   document.getElementById('fleet-count').textContent =
     fleet.length ? `· ${fleet.length - pool.unrated} rated of ${fleet.length}` : '';
   document.getElementById('fleet-body').innerHTML = fleet.length ? fleet.map(k => `
-    <div class="fleet-row ${k.num===myKart?'mine':''}">
+    <div class="fleet-row ${k.num===myKart?'mine':''}" style="cursor:pointer"
+         onclick="showKart('${esc(k.num)}')" title="Click for this kart's laps">
       <span class="fleet-num">${esc(k.num)}</span>
       <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
         ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
@@ -1298,9 +1323,74 @@ function renderStrategy(s) {
   document.getElementById('dec-box').className   = 'dec-box dec-'+st.cls;
   document.getElementById('dec-label').textContent = st.label;
   document.getElementById('dec-detail').textContent = st.detail;
+  document.getElementById('dec-why').textContent = st.why || '';
   const pd = s.pits_done, pt = s.mandatory_pits;
   document.getElementById('pits-val').innerHTML =
     `${pd} <span>/ ${pt}</span>`;
+}
+
+/** Every kart waiting in the lanes, both queues side by side, in the order
+ *  they go out. Clicking one opens what it has actually done. */
+function renderMatrix(s) {
+  const el = document.getElementById('kart-matrix');
+  if (!el) return;
+  const lanes = (s.kartpool || {}).lanes || [];
+  el.innerHTML = lanes.length ? lanes.map(l => `
+    <div class="mx-col">
+      <div class="mx-top" style="background:${esc(l.color||'#888')}"></div>
+      <div class="mx-nm"><span>${esc(l.name||('Lane '+l.lane))}</span>
+        <span>${l.karts.length}</span></div>
+      ${l.karts.length ? l.karts.map((k, i) => `
+        <div class="mx-k ${i===0?'next':''}" onclick="showKart('${esc(k.num)}')"
+             title="${esc(k.label)}${k.delta!=null?' '+fmtDelta(k.delta):''} — click for its laps">
+          <span class="mx-n">${esc(k.num)}</span>
+          <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}</span>
+          <span class="mx-d">${k.delta!=null?fmtDelta(k.delta):''}</span>
+        </div>`).join('')
+        : '<div class="mx-empty">empty</div>'}
+    </div>`).join('') : '<div class="mx-empty">No karts entered yet.</div>';
+}
+
+/** One kart's whole history: every lap, its best, and who has driven it. */
+async function showKart(num) {
+  const box = document.getElementById('laps-overlay');
+  document.getElementById('laps-title').textContent = 'Kart ' + num;
+  document.getElementById('laps-sub').textContent = '';
+  document.getElementById('laps-body').innerHTML = '<div class="bn-note">Loading…</div>';
+  box.style.display = 'flex';
+  let d;
+  try { d = await (await fetch('/api/kart/' + encodeURIComponent(num) + '/laps')).json(); }
+  catch (e) {
+    document.getElementById('laps-body').innerHTML =
+      '<div class="bn-note">Could not load this kart.</div>';
+    return;
+  }
+  document.getElementById('laps-sub').textContent =
+    d.count ? `${d.count} laps · best ${d.best} · avg ${d.avg}` : '';
+  const head = `
+    <div class="kd-hd">
+      <span class="kchip ${CHIP_CLS[d.label]||'unknown'}">${esc(d.label)}
+        ${d.delta!=null?`<span class="kd">${fmtDelta(d.delta)}</span>`:''}</span>
+      ${d.holder?`<span class="bn-note">with ${esc(d.holder)}</span>`:''}
+      ${d.reason?`<span class="bn-note">${esc(d.reason)}</span>`:''}
+    </div>`;
+  const drv = d.drivers.length ? `
+    <div class="bn-hd">Who has driven it</div>
+    ${d.drivers.map(x => `
+      <div class="kd-drv"><span class="who">${esc(x.pilot)}</span>
+        <span>${x.laps} laps</span><span>best ${esc(x.best)}</span>
+        <span>avg ${esc(x.avg)}</span></div>`).join('')}
+    <div class="bn-hd" style="margin-top:10px">Every lap</div>` : '';
+  const laps = d.count
+    ? d.laps.map((l, i) => `
+        <div class="lap-row">
+          <span class="lap-n">${d.count - i}</span>
+          <span class="lap-t ${l.lap===d.best?'best':''}">${esc(l.lap)}</span>
+          <span class="lap-p">${esc(l.pilot||'')}</span>
+        </div>`).join('')
+    : `<div class="bn-note">No laps recorded in this kart yet, so it has no
+       score. A kart nobody has driven is not a middling kart.</div>`;
+  document.getElementById('laps-body').innerHTML = head + drv + laps;
 }
 
 // ── Pit ─────────────────────────────────────────────────────────

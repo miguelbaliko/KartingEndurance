@@ -119,7 +119,7 @@ class TestRate(unittest.TestCase):
     def test_best_kart_reads_zero_and_labels_are_ordered(self):
         res = rate(simulate(self.KARTS, self.PILOTS, self._rotating()))
         self.assertAlmostEqual(res["karts"]["K1"]["delta"], 0.0, delta=0.01)
-        self.assertEqual(res["karts"]["K1"]["label"], "Godlike")
+        self.assertEqual(res["karts"]["K1"]["label"], "Rocket")
         self.assertEqual(res["karts"]["K8"]["label"], "Bad")
         for k in res["karts"].values():
             self.assertGreaterEqual(k["delta"], -0.001)
@@ -161,7 +161,7 @@ class TestRate(unittest.TestCase):
                            "raw lap time should be fooled — otherwise the test is void")
 
         res = rate(samples)["karts"]
-        self.assertIn(res["K1"]["label"], ("Godlike", "Very Good"))
+        self.assertIn(res["K1"]["label"], ("Rocket", "Very Good"))
         self.assertLess(res["K1"]["effect"], res["K7"]["effect"])
         self.assertLess(res["K2"]["effect"], res["K8"]["effect"])
         self.assertEqual(res["K8"]["label"], "Bad")

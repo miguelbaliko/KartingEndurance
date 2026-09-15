@@ -44,7 +44,7 @@ DEFAULTS = {
     "min_pilot_laps": 30,     # laps before a driver is scored apart from their team
     "min_pilots": 2,          # distinct drivers before a rating is called solid
     "thresholds": [0.15, 0.40, 0.65, 1.00],
-    "labels": ["Godlike", "Very Good", "Good", "OK", "Bad"],
+    "labels": ["Rocket", "Very Good", "Good", "OK", "Bad"],
     "unknown_label": "Unknown",
 }
 

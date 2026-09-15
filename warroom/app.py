@@ -1059,44 +1059,101 @@ def check_pit_plan(plan: list, race: dict, drivers: list) -> list:
 
 # ── Strategy engine ────────────────────────────────────────────────────────────
 def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
-                     my_avg5: Optional[float], prev_avg5: Optional[float]) -> dict:
+                     my_avg5: Optional[float], prev_avg5: Optional[float],
+                     light: str = "", box_now: dict = None,
+                     my_delta: Optional[float] = None) -> dict:
+    """What to do about the pit lane, right now.
+
+    Ordered by what actually overrules what.  A hard limit beats an
+    opportunity; an opportunity beats a schedule; a schedule beats habit.
+    Every branch says why, because a call nobody understands gets ignored.
+    """
     R = CFG["race"]
     total_s   = R["duration_minutes"] * 60
     max_s     = R["stint_max_minutes"] * 60
+    min_s     = R.get("stint_min_minutes", 0) * 60
     no_pit_s  = R["no_pit_last_minutes"] * 60
     remaining = total_s - race_elapsed_s
+    stops_left = max(0, R["mandatory_pits"] - pits_done)
 
+    def out(label, cls, detail, why=""):
+        return {"label": label, "cls": cls, "detail": detail, "why": why,
+                "stops_left": stops_left}
+
+    # 1. The lane is shut. Nothing else matters.
     if remaining <= no_pit_s:
-        return {"label": "HOLD", "cls": "hold",
-                "detail": f"Pit lane shut for the last {R['no_pit_last_minutes']} min"}
+        if stops_left:
+            return out("STOPS MISSED", "box",
+                       f"{stops_left} stop(s) never taken",
+                       f"Pit lane shut with {stops_left} outstanding — "
+                       f"5 laps each at the flag (§3.13.1)")
+        return out("HOLD", "hold",
+                   f"Pit lane shut for the last {R['no_pit_last_minutes']} min",
+                   "All mandatory stops served")
 
+    # 2. A stint we cannot legally extend.
     if stint_s >= max_s - 60:
-        return {"label": "BOX NOW", "cls": "box", "detail": "STINT LIMIT — BOX IMMEDIATELY"}
+        return out("BOX NOW", "box", "STINT LIMIT — BOX IMMEDIATELY",
+                   f"Over {R['stint_max_minutes']} min is 20s per 10s (§15.4)")
 
-    if stint_s >= max_s - 4 * 60:
-        return {"label": "PREPARE", "cls": "prepare", "detail": f"Box in 1-3 laps · stint {fmt_duration(stint_s)}"}
+    # 3. Too few stops left for the time left: the schedule is now the limit.
+    #    Each remaining stop still needs a stint under the ceiling to sit in.
+    if stops_left:
+        room = remaining - no_pit_s
+        need = stops_left * R["pit_duration_seconds"]
+        if room - need < stops_left * 60:       # under a minute of slack a stop
+            return out("BOX NOW", "box",
+                       f"{stops_left} stops left, {fmt_duration(room)} to take them",
+                       "Running out of pit window — stops stack up from here")
 
-    if stint_s >= max_s - 10 * 60:
-        return {"label": "PREPARE", "cls": "prepare", "detail": "Approaching limit — stay alert"}
+    # 4. The track is neutralised. This is the cheapest stop of the race and it
+    #    will not last, so it outranks anything that is merely on schedule.
+    if light in ("ly", "lsc", "lr") and stint_s >= min_s and stops_left:
+        flag = {"ly": "yellow", "lsc": "safety kart", "lr": "red flag"}[light]
+        return out("BOX NOW", "box", f"Track under {flag} — stop is cheap",
+                   "Everyone is slow, so the stop costs a fraction of green")
 
-    # Pace drop
+    # 5. Pace gone. A kart that has fallen off is losing more than a stop costs.
     if my_avg5 and prev_avg5 and prev_avg5 > 0:
         drop = my_avg5 - prev_avg5
-        if drop > R.get("pace_drop_box", 0.50):
-            return {"label": "BOX NOW", "cls": "box", "detail": f"Pace collapsed +{drop:.2f}s — box now"}
+        if drop > R.get("pace_drop_box", 0.50) and stint_s >= min_s:
+            return out("BOX NOW", "box", f"Pace collapsed +{drop:.2f}s",
+                       "Losing more every lap than the stop would cost")
         if drop > R.get("pace_drop_warn", 0.30):
-            return {"label": "PREPARE", "cls": "prepare", "detail": f"Pace dropping +{drop:.2f}s — prepare"}
+            return out("PREPARE", "prepare", f"Pace dropping +{drop:.2f}s",
+                       "Watch the next two laps before committing")
 
-    # Behind pit plan.  The stops have to fit before the pit lane shuts (§3.8),
-    # not across the whole race, so they are paced against that shorter window.
+    # 6. The kart lottery. Only worth acting on when a stop is due anyway.
+    bn = box_now or {}
+    near_due = stint_s >= max_s - 12 * 60
+    if stops_left and near_due and bn.get("verdict") == "better":
+        return out("BOX NOW", "box", "Both karts waiting are better than ours",
+                   bn.get("detail", ""))
+    if stops_left and near_due and bn.get("verdict") == "worse" \
+            and stint_s < max_s - 4 * 60:
+        return out("WAIT", "hold", "Both karts waiting are worse — hold if you can",
+                   bn.get("detail", ""))
+
+    # 7. The ordinary approach to the limit.
+    if stint_s >= max_s - 4 * 60:
+        return out("PREPARE", "prepare",
+                   f"Box in 1-3 laps · stint {fmt_duration(stint_s)}",
+                   f"{fmt_duration(max_s - stint_s)} left of the stint")
+    if stint_s >= max_s - 10 * 60:
+        return out("PREPARE", "prepare", "Approaching limit — stay alert",
+                   f"{fmt_duration(max_s - stint_s)} left of the stint")
+
+    # 8. Behind the schedule. The stops must fit before the lane shuts (§3.8),
+    #    so they are paced against that window, not the whole race.
     pit_window_s = max(1.0, total_s - no_pit_s)
-    if total_s > 0:
-        expected = (min(race_elapsed_s, pit_window_s) / pit_window_s) * R["mandatory_pits"]
-        if pits_done < expected - 1.5:
-            return {"label": "PREPARE", "cls": "prepare",
-                    "detail": f"Behind pit plan ({pits_done}/{R['mandatory_pits']})"}
+    expected = (min(race_elapsed_s, pit_window_s) / pit_window_s) * R["mandatory_pits"]
+    if pits_done < expected - 1.5:
+        return out("PREPARE", "prepare",
+                   f"Behind pit plan ({pits_done}/{R['mandatory_pits']})",
+                   f"Should be near {expected:.0f} by now")
 
-    return {"label": "HOLD", "cls": "hold", "detail": "On plan — hold position"}
+    return out("HOLD", "hold", "On plan — hold position",
+               f"{stops_left} stops left, {fmt_duration(remaining)} to run")
 
 # ── Snapshot ───────────────────────────────────────────────────────────────────
 _prev_avg5: Optional[float] = None
@@ -1208,7 +1265,7 @@ def make_snapshot() -> dict:
         except (TypeError, ValueError):
             pass
 
-    strat = compute_strategy(stint_s, race_elapsed, pits_done, my_avg5, _prev_avg5)
+    strat = None      # filled in below, once the kart pool has been read
     _prev_avg5 = my_avg5
 
     # Track-wide average of all avg5 values
@@ -1228,6 +1285,11 @@ def make_snapshot() -> dict:
     box_now = box_now_verdict(candidates, my_card["delta"] if my_card else None)
     # We are classified against our own category, not the overall leader.
     klass = class_positions(teams_raw, track_avg_s)
+    # The call depends on the flag and on what is waiting in the lanes, so it
+    # is made after both are known.
+    strat = compute_strategy(stint_s, race_elapsed, pits_done, my_avg5, _prev_avg5,
+                             light=apex_session.get("light", ""), box_now=box_now,
+                             my_delta=my_card["delta"] if my_card else None)
     R = CFG["race"]
     virt = virtual_positions(teams_raw, R["mandatory_pits"],
                              R.get("pit_loss_seconds") or R["pit_duration_seconds"],
@@ -1589,6 +1651,40 @@ def api_laps(team_no):
     best = min((r["lap_s"] for r in rows), default=None)
     return jsonify(team_no=str(team_no), laps=rows, count=len(rows),
                    best=fmt_laptime(best) if best else "-", best_s=best)
+
+@app.get("/api/kart/<num>/laps")
+def api_kart_laps(num):
+    """Every lap turned in one kart, whoever was driving it.
+
+    This is the evidence behind the kart's rating: which teams have had it,
+    how it went for each of them, and whether the score rests on one driver's
+    opinion or several.
+    """
+    num = str(num)
+    with POOL._con() as con:
+        rows = [dict(r) for r in con.execute(
+            "SELECT ts, pilot, team_no, lap_s FROM kart_lap WHERE kart=? "
+            "ORDER BY id DESC LIMIT 600", (num,))]
+    by_pilot = defaultdict(list)
+    for r in rows:
+        r["pilot"] = (r["pilot"] or "").rsplit("|", 1)[-1]
+        r["lap"] = fmt_laptime(r["lap_s"])
+        by_pilot[r["pilot"]].append(r["lap_s"])
+
+    times = [r["lap_s"] for r in rows]
+    card = next((c for c in POOL.snapshot()["fleet"] if c["num"] == num), None)
+    return jsonify(
+        kart=num, laps=rows, count=len(rows),
+        best=fmt_laptime(min(times)) if times else "-",
+        avg=fmt_laptime(sum(times) / len(times)) if times else "-",
+        label=(card or {}).get("label", "Unknown"),
+        delta=(card or {}).get("delta"),
+        reason=(card or {}).get("reason", ""),
+        holder=(card or {}).get("holder", ""),
+        drivers=sorted(
+            ({"pilot": p, "laps": len(v), "best": fmt_laptime(min(v)),
+              "avg": fmt_laptime(sum(v) / len(v))} for p, v in by_pilot.items()),
+            key=lambda d: -d["laps"]))
 
 @app.get("/api/karts")
 def api_karts():
