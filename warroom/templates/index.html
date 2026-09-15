@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>War Room</title>
+<title>Pit Wall</title>
 <style>
 /* ── Tokens ───────────────────────────────────────────────── */
 :root{
@@ -365,6 +365,33 @@ td{padding:7px 8px;white-space:nowrap}
 .drv-owed{font-size:10px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
 .drv-owed.short{color:var(--amb,#eab308)}
 .drv-owed.done{color:#22c55e}
+/* What we would be handed if we boxed now: the two fronts of the queues. */
+.bn-hd{font-size:11px;color:var(--tx3);margin-bottom:7px}
+.bn-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;
+  background:var(--bg2);border:1px solid var(--line);margin-bottom:6px}
+.bn-pip{width:8px;height:8px;border-radius:2px;flex:none}
+.bn-num{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;min-width:26px}
+.bn-lane{font-size:10px;color:var(--tx3);margin-left:auto}
+.bn-verdict{font-size:12px;font-weight:700;text-align:center;padding:8px;border-radius:8px;
+  margin-bottom:8px}
+.bn-better{background:rgba(34,197,94,.15);color:#22c55e}
+.bn-worse{background:rgba(239,68,68,.15);color:#ef4444}
+.bn-mixed{background:rgba(234,179,8,.15);color:#eab308}
+.bn-unknown{background:var(--bg2);color:var(--tx3)}
+.bn-note{font-size:10px;color:var(--tx3);text-align:center}
+.pit-manual{background:none;border:1px solid var(--line);color:var(--tx3);
+  border-radius:6px;padding:4px 9px;font-size:10px;cursor:pointer}
+.pit-manual:hover{color:var(--tx2)}
+/* Lap history */
+.laps-wrap{max-height:60vh;overflow:auto}
+.lap-row{display:flex;gap:10px;padding:4px 8px;font-size:12px;
+  font-variant-numeric:tabular-nums;border-bottom:1px solid var(--line)}
+.lap-n{color:var(--tx3);min-width:34px}
+.lap-t{font-weight:700;min-width:64px}
+.lap-t.best{color:#eab308}
+.lap-k{color:var(--tx3)}
+.lap-p{color:var(--tx2);margin-left:auto}
+tr.clickable{cursor:pointer}
 .td-virt{font-weight:700;font-size:12px}
 .virt-up{color:#22c55e}
 .virt-down{color:#ef4444}
@@ -462,7 +489,7 @@ td{padding:7px 8px;white-space:nowrap}
 
   <!-- ═══ TOPBAR ═════════════════════════════════════════════ -->
   <div id="topbar">
-    <div class="tb-brand">⚑ <span>War Room</span></div>
+    <div class="tb-brand">⚑ <span>Pit Wall</span></div>
     <span id="race-remaining" class="tb-clock">--:--:--</span>
     <span class="clock-src" id="clock-src" title="Where the race clock comes from">LOCAL</span>
     <div class="tb-sep"></div>
@@ -546,7 +573,7 @@ td{padding:7px 8px;white-space:nowrap}
         </div>
         <div class="pits-row">
           <span class="lbl">Pit stops</span>
-          <span class="pits-val" id="pits-val">0 <span>/ 23</span></span>
+          <span class="pits-val" id="pits-val">0 <span>/ 34</span></span>
         </div>
       </div>
 
@@ -554,13 +581,13 @@ td{padding:7px 8px;white-space:nowrap}
       <div class="card" id="pit-card">
         <div class="card-hd">Pit Stop</div>
 
-        <!-- Racing mode -->
+        <!-- Racing mode: what boxing this lap would actually get us -->
         <div id="pit-racing">
-          <button class="pit-box-btn" onclick="boxNow()">▼ BOX NOW</button>
+          <div id="box-now-body"></div>
           <div class="pit-offset-row">
-            <span class="pit-offset-lbl">Entered pit</span>
+            <span class="pit-offset-lbl">Feed missed it?</span>
             <input id="box-offset" class="pit-offset-inp" placeholder="0:00" maxlength="5">
-            <span class="pit-offset-lbl">ago (mm:ss)</span>
+            <button class="pit-manual" onclick="boxNow()">start clock</button>
           </div>
         </div>
 
@@ -630,6 +657,21 @@ td{padding:7px 8px;white-space:nowrap}
 </div><!-- /app -->
 
 <!-- Settings overlay -->
+<div id="laps-overlay" style="display:none;position:fixed;inset:0;z-index:60;
+  background:rgba(0,0,0,.72);align-items:center;justify-content:center"
+  onclick="if(event.target===this)closeLaps()">
+  <div class="cfg-card" style="max-width:420px;width:92%">
+    <h3 style="display:flex;align-items:baseline;gap:10px">
+      <span id="laps-title"></span>
+      <span id="laps-sub" style="font-size:11px;color:var(--tx3);font-weight:400"></span>
+    </h3>
+    <div class="laps-wrap" id="laps-body"></div>
+    <div class="cfg-actions">
+      <button class="cfg-cancel" onclick="closeLaps()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="overlay">
   <div class="cfg-card">
     <h3>⚙ Settings</h3>
@@ -803,6 +845,7 @@ function render(s) {
 
   renderTable(s.teams);
   renderKarts(s);
+  renderBoxNow(s);
   renderMyTeam(s);
   renderStrategy(s);
   renderPit(s);
@@ -844,7 +887,9 @@ function renderTable(allTeams) {
     // repeating the position beside it is noise on a wall screen.
     const pos   = parseInt(t.pos)||99;
     const posCls = pos===1 ? 'td-pos top1' : pos<=3 ? 'td-pos top3' : 'td-pos';
-    return `<tr class="${t.is_my_team?'mine':''}">
+    return `<tr class="clickable ${t.is_my_team?'mine':''}"
+      onclick="showLaps('${esc(t.kart)}','${esc(t.team)}')"
+      title="Click for every lap this team has done">
       <td class="${posCls}${t.is_my_team?' td-mine':''}">${esc(t.pos)}</td>
       <td class="td-virt td-r" title="${virtTitle(t)}">${virtCell(t, pos)}</td>
       <td>${esc(t.kart)}</td>
@@ -852,7 +897,7 @@ function renderTable(allTeams) {
       <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
       <td class="td-muted" title="${esc(t.driver)}">${esc(t.driver||'')}</td>
       <td style="cursor:pointer" title="Click to set the kart this team is in"
-          onclick="setTeamKart('${esc(t.kart)}','${esc(t.team)}','${esc(t.my_kart)}')"
+          onclick="event.stopPropagation();setTeamKart('${esc(t.kart)}','${esc(t.team)}','${esc(t.my_kart)}')"
         >${kartChip(t.my_kart, t.kart_label, t.kart_delta, t.in_pit)}</td>
       <td class="td-lap td-r">${esc(t.last_lap)}</td>
       <td class="td-avg td-r">${esc(t.avg5)}</td>
@@ -864,6 +909,67 @@ function renderTable(allTeams) {
     </tr>`;
   }).join('');
 }
+
+const BN_TEXT = {better: 'BOTH BETTER THAN OURS', worse: 'BOTH WORSE THAN OURS',
+                 mixed: 'A GAMBLE — ONE BETTER, ONE WORSE',
+                 unknown: 'NOT RATED YET'};
+
+/** §3.13: the draw picks the lane, so the two karts on offer are the two
+ *  queue fronts. Which one we get is luck; what they are is not. */
+function renderBoxNow(s) {
+  const el = document.getElementById('box-now-body');
+  if (!el) return;
+  const karts = s.next_karts || [];
+  const bn = s.box_now || {verdict: 'unknown', detail: ''};
+  if (!karts.length) {
+    el.innerHTML = '<div class="bn-note">No karts entered in the lanes yet — ' +
+                   'add them below and this shows what boxing would get us.</div>';
+    return;
+  }
+  el.innerHTML =
+    `<div class="bn-verdict bn-${esc(bn.verdict)}">${BN_TEXT[bn.verdict]||''}</div>` +
+    `<div class="bn-hd">Box now and we get one of these:</div>` +
+    karts.map(k => `
+      <div class="bn-row">
+        <span class="bn-pip" style="background:${esc(k.lane_color||'#888')}"></span>
+        <span class="bn-num">${esc(k.num)}</span>
+        <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
+          ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
+        <span class="bn-lane">${esc(k.lane_name||('Lane '+k.lane))}</span>
+      </div>`).join('') +
+    (bn.detail ? `<div class="bn-note">${esc(bn.detail)}</div>` : '');
+}
+
+/** Every lap we have for one team. */
+async function showLaps(kart, team) {
+  const box = document.getElementById('laps-overlay');
+  document.getElementById('laps-title').textContent = team || ('#' + kart);
+  document.getElementById('laps-body').innerHTML =
+    '<div class="bn-note">Loading…</div>';
+  box.style.display = 'flex';
+  let d;
+  try {
+    d = await (await fetch('/api/laps/' + encodeURIComponent(kart))).json();
+  } catch (e) {
+    document.getElementById('laps-body').innerHTML =
+      '<div class="bn-note">Could not load laps.</div>';
+    return;
+  }
+  document.getElementById('laps-sub').textContent =
+    d.count ? `${d.count} laps · best ${d.best}` : '';
+  document.getElementById('laps-body').innerHTML = d.count
+    ? d.laps.map((l, i) => `
+        <div class="lap-row">
+          <span class="lap-n">${d.count - i}</span>
+          <span class="lap-t ${l.lap_s===d.best_s?'best':''}">${esc(l.lap)}</span>
+          <span class="lap-k">kart ${esc(l.kart)}</span>
+          <span class="lap-p">${esc(l.pilot||'')}</span>
+        </div>`).join('')
+    : `<div class="bn-note">No laps recorded yet. Laps are only stored once we
+       know which kart a team is in — an unanswered stop leaves a gap.</div>`;
+}
+
+function closeLaps() { document.getElementById('laps-overlay').style.display = 'none'; }
 
 /** Virtual position, and the arrow showing which way it moves them. */
 function virtCell(t, pos) {

@@ -225,6 +225,24 @@ class TestPendingStopsAgeOut(PoolCase):
                          "laps were credited to a kart the pool cannot name")
 
 
+class TestRatingNeverTakesTheScreenDown(PoolCase):
+    def test_a_rater_that_trips_keeps_the_pool_usable(self):
+        import rating
+        real, calls = rating.rate, []
+
+        def boom(*a, **k):
+            calls.append(1)
+            raise TypeError("unsupported operand type(s) for //: 'str' and 'float'")
+        rating.rate = boom
+        self.addCleanup(setattr, rating, "rate", real)
+
+        self.pool._rating_dirty = True
+        snap = self.pool.snapshot()          # must not raise
+        self.assertTrue(calls, "the rater was not even reached")
+        self.assertIn("lanes", snap)
+        self.assertIn("fleet", snap)
+
+
 class TestFullPitCycle(PoolCase):
     """Three teams, two lanes, karts round-tripping the way they do in a race."""
 

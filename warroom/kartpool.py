@@ -590,7 +590,19 @@ class KartPool:
             samples = [(r["ts"], r["pilot"], r["kart"], r["lap_s"])
                        for r in con.execute(
                            "SELECT ts,pilot,kart,lap_s FROM kart_lap")]
-        self._rating = rating.rate(samples, self.cfg.get("rating"))
+        try:
+            self._rating = rating.rate(samples, self.cfg.get("rating"))
+        except Exception as e:
+            # Kart scores are an opinion; the timing screen is not.  A rater
+            # that trips over one odd row must not take the whole wall down in
+            # the middle of a 25-hour race — keep the last scores and say so.
+            self._note(f"kart rating failed, keeping the last scores: {e}",
+                       tag="warn")
+            self._rating.setdefault("karts", {})
+            self._rating.setdefault("pilots", {})
+            self._rating["error"] = str(e)
+        else:
+            self._rating.pop("error", None)
         self._rating_at = time.time()
         self._rating_dirty = False
         return self._rating

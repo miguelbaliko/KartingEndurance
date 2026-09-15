@@ -546,6 +546,81 @@ class TestVirtualPosition(AppCase):
         self.assertEqual(self.app.virtual_positions([], 34, 200.0, 60.0), {})
 
 
+class TestLapHistory(AppCase):
+    """Clicking a team opens every lap we have for it."""
+
+    def laps_for(self, team_no):
+        return json.loads(self.client.get(f"/api/laps/{team_no}").data)
+
+    def record(self, team_no, kart, driver, times):
+        import time as _t
+        with self.app.POOL._con() as con:
+            for i, t in enumerate(times):
+                con.execute("INSERT INTO kart_lap(ts,team_no,pilot,kart,lap_s) "
+                            "VALUES(?,?,?,?,?)",
+                            (_t.time() + i, team_no, f"ALPHA|{driver}", kart, t))
+
+    def test_laps_come_back_newest_first_with_the_best_marked(self):
+        self.record("1", "17", "Dinis", [63.5, 62.1, 64.0])
+        d = self.laps_for("1")
+        self.assertEqual(d["count"], 3)
+        self.assertEqual(d["best"], "1:02.100")
+        self.assertEqual(d["laps"][0]["lap"], "1:04.000")   # newest first
+
+    def test_the_driver_is_shown_not_the_storage_key(self):
+        self.record("1", "17", "Dinis", [62.0])
+        self.assertEqual(self.laps_for("1")["laps"][0]["pilot"], "Dinis")
+
+    def test_the_kart_each_lap_was_driven_in_is_kept(self):
+        self.record("1", "17", "Dinis", [62.0])
+        self.record("1", "31", "Lobo", [61.5])
+        self.assertEqual({l["kart"] for l in self.laps_for("1")["laps"]}, {"17", "31"})
+
+    def test_a_team_with_no_laps_is_empty_not_an_error(self):
+        d = self.laps_for("99")
+        self.assertEqual((d["count"], d["laps"], d["best"]), (0, [], "-"))
+
+
+class TestBoxNowVerdict(AppCase):
+    """§3.13: the draw picks the lane, so the two queue fronts are the offer."""
+
+    def lanes(self, *fronts):
+        return [{"lane": i, "name": f"Lane {i}", "color": "#f00",
+                 "karts": [{"num": n, "label": lbl, "delta": d}]}
+                for i, (n, lbl, d) in enumerate(fronts, start=1)]
+
+    def test_the_offer_is_the_front_of_each_queue(self):
+        out = self.app.next_karts_out(self.lanes(("12", "Good", 0.1),
+                                                 ("31", "Poor", 0.9)))
+        self.assertEqual([k["num"] for k in out], ["12", "31"])
+        self.assertEqual(out[0]["lane_name"], "Lane 1")
+
+    def test_an_empty_lane_offers_nothing(self):
+        self.assertEqual(self.app.next_karts_out([{"lane": 1, "karts": []}]), [])
+
+    def test_both_better_is_a_clear_upgrade(self):
+        out = self.app.next_karts_out(self.lanes(("12", "Good", 0.1), ("31", "Good", 0.2)))
+        self.assertEqual(self.app.box_now_verdict(out, 0.5)["verdict"], "better")
+
+    def test_both_worse_is_a_clear_downgrade(self):
+        out = self.app.next_karts_out(self.lanes(("12", "Poor", 0.8), ("31", "Poor", 0.9)))
+        self.assertEqual(self.app.box_now_verdict(out, 0.5)["verdict"], "worse")
+
+    def test_one_each_way_is_a_gamble(self):
+        # We cannot pick the lane, so this is the honest answer, not an average.
+        out = self.app.next_karts_out(self.lanes(("12", "Good", 0.1), ("31", "Poor", 0.9)))
+        self.assertEqual(self.app.box_now_verdict(out, 0.5)["verdict"], "mixed")
+
+    def test_unrated_karts_say_so_rather_than_pretending(self):
+        out = self.app.next_karts_out(self.lanes(("12", "Unknown", None),
+                                                 ("31", "Unknown", None)))
+        self.assertEqual(self.app.box_now_verdict(out, 0.5)["verdict"], "unknown")
+
+    def test_not_knowing_our_own_kart_is_not_a_verdict(self):
+        out = self.app.next_karts_out(self.lanes(("12", "Good", 0.1), ("31", "Poor", 0.9)))
+        self.assertEqual(self.app.box_now_verdict(out, None)["verdict"], "unknown")
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)

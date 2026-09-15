@@ -842,6 +842,57 @@ def virtual_positions(teams: list, mandatory_pits: int, pit_loss_s: float,
         }
     return out
 
+def next_karts_out(lanes: list) -> list:
+    """The karts a team would be handed if it boxed right now.
+
+    §3.13: the kart is "um de dois, definido por sorteio aleatório" — one of
+    two, drawn at random.  The draw picks the *lane*; the kart is then whatever
+    has been waiting longest in it.  So the two candidates are simply the front
+    of each queue, and they are knowable before boxing even though which of the
+    two you get is not.
+    """
+    out = []
+    for lane in lanes:
+        karts = lane.get("karts") or []
+        if karts:
+            out.append({**karts[0], "lane": lane.get("lane"),
+                        "lane_name": lane.get("name", ""),
+                        "lane_color": lane.get("color", "")})
+    return out
+
+
+def box_now_verdict(candidates: list, current_delta: Optional[float]) -> dict:
+    """Is boxing now a trade up or down, given we cannot choose the lane?
+
+    Both candidates matter because either could be the one drawn, so the honest
+    summary is the worst case as well as the best.
+    """
+    rated = [c for c in candidates if c.get("delta") is not None]
+    if not rated:
+        return {"verdict": "unknown",
+                "detail": "no rating on the karts waiting yet"}
+    deltas = [c["delta"] for c in rated]
+    best, worst = min(deltas), max(deltas)
+    if current_delta is None:
+        return {"verdict": "unknown", "best": best, "worst": worst,
+                "detail": f"waiting: {fmt_delta(best)} to {fmt_delta(worst)}"}
+    # Lower delta is a quicker kart, so an improvement is a fall in delta.
+    if worst < current_delta:
+        v = "better"            # even the unlucky draw is an upgrade
+    elif best > current_delta:
+        v = "worse"             # even the lucky draw is a downgrade
+    else:
+        v = "mixed"
+    return {"verdict": v, "best": best, "worst": worst,
+            "detail": f"ours {fmt_delta(current_delta)} · "
+                      f"waiting {fmt_delta(best)} to {fmt_delta(worst)}"}
+
+
+def fmt_delta(d: Optional[float]) -> str:
+    if d is None:
+        return "?"
+    return f"{d:+.2f}s"
+
 # ── Strategy engine ────────────────────────────────────────────────────────────
 def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
                      my_avg5: Optional[float], prev_avg5: Optional[float]) -> dict:
@@ -999,6 +1050,12 @@ def make_snapshot() -> dict:
     pool = POOL.snapshot()
     kart_of = pool["kart_of"]
     kart_card = {c["num"]: c for c in pool["fleet"]}
+    # What we would be handed if we boxed this lap, and whether that is a trade
+    # up — the whole point of rating the karts at all.
+    candidates = next_karts_out(pool["lanes"])
+    my_held = kart_of.get(str(my_team.get("kart", ""))) if my_team else None
+    my_card = kart_card.get(my_held) if my_held else None
+    box_now = box_now_verdict(candidates, my_card["delta"] if my_card else None)
     R = CFG["race"]
     virt = virtual_positions(teams_raw, R["mandatory_pits"],
                              R.get("pit_loss_seconds") or R["pit_duration_seconds"],
@@ -1078,6 +1135,8 @@ def make_snapshot() -> dict:
         "stints_done":      stints_done,
         "mandatory_pits":   CFG["race"]["mandatory_pits"],
         "stint_max_minutes": CFG["race"]["stint_max_minutes"],
+        "next_karts":       candidates,
+        "box_now":          box_now,
         "track_avg":        track_avg,
         "pit_history":      pit_history,
         "team_name":        my_name,
@@ -1334,6 +1393,26 @@ def api_mode():
 def pit_phone():
     """Phone-sized lane view for whoever is standing in the pit lane."""
     return render_template("pit.html")
+
+@app.get("/api/laps/<team_no>")
+def api_laps(team_no):
+    """Every lap we have recorded for one team, newest first.
+
+    Only laps taken in a kart we could name are stored, so a team whose stops
+    went unanswered will have gaps — which is itself worth seeing.
+    """
+    with POOL._con() as con:
+        rows = [dict(r) for r in con.execute(
+            "SELECT ts, pilot, kart, lap_s FROM kart_lap WHERE team_no=? "
+            "ORDER BY id DESC LIMIT 400", (str(team_no),))]
+    for r in rows:
+        r["lap"] = fmt_laptime(r["lap_s"])
+        # Stored as "TEAM|Driver" so the rater can tell pilots apart; only the
+        # driver is worth showing next to a lap time.
+        r["pilot"] = (r["pilot"] or "").rsplit("|", 1)[-1]
+    best = min((r["lap_s"] for r in rows), default=None)
+    return jsonify(team_no=str(team_no), laps=rows, count=len(rows),
+                   best=fmt_laptime(best) if best else "-", best_s=best)
 
 @app.get("/api/karts")
 def api_karts():
