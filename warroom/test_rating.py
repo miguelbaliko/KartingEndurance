@@ -13,6 +13,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import rating
 from rating import rate, Baseline, fit_effects
 
 
@@ -219,6 +220,108 @@ class TestRate(unittest.TestCase):
         res = rate([])
         self.assertEqual(res["karts"], {})
         self.assertEqual(res["n_laps"], 0)
+
+
+
+def noisy_race(seed, n_laps=160):
+    """A race whose kart truth is known, driven by steady and erratic teams.
+
+    The erratic teams are no slower on average, only less repeatable, so pace
+    alone cannot tell them apart — only the spread of their laps can.
+    """
+    import random
+    rng = random.Random(seed)
+    karts = {f"K{i}": round(rng.uniform(-0.8, 0.8), 3) for i in range(1, 11)}
+    teams = [("STEADY1", -0.3, 0.08), ("STEADY2", 0.0, 0.09), ("STEADY3", 0.2, 0.07),
+             ("WILD1", -0.1, 0.75), ("WILD2", 0.1, 0.85), ("WILD3", 0.3, 0.80)]
+    samples, t = [], 0.0
+    for lap in range(n_laps):
+        for name, pace, noise in teams:
+            kart = f"K{(lap // 8 + hash(name) % 10) % 10 + 1}"
+            t += 3
+            samples.append((t, name, kart, 62.0 + karts[kart] + pace
+                            + rng.gauss(0, noise)))
+    return karts, samples
+
+
+def mean_error(truth, res):
+    import statistics
+    got = {k: res["karts"][k]["effect"] for k in truth if k in res["karts"]}
+    if not got:
+        return 99.0
+    level = statistics.mean(got[k] - truth[k] for k in got)
+    return statistics.mean(abs((got[k] - truth[k]) - level) for k in got)
+
+
+class TestWhoseLapsCount(unittest.TestCase):
+    """A kart's score is only as good as the driving that measured it."""
+
+    def test_steady_drivers_sharpen_the_scores(self):
+        import statistics
+        off, on = [], []
+        for seed in range(6):
+            truth, samples = noisy_race(seed)
+            off.append(mean_error(truth, rating.rate(
+                samples, {"weight_by_consistency": False, "min_laps": 5})))
+            on.append(mean_error(truth, rating.rate(
+                samples, {"weight_by_consistency": True, "min_laps": 5})))
+        self.assertLess(statistics.mean(on), statistics.mean(off),
+                        f"weighted {statistics.mean(on):.3f} vs "
+                        f"unweighted {statistics.mean(off):.3f}")
+
+    def test_excluding_the_erratic_teams_costs_more_than_it_saves(self):
+        """Documented on purpose: the exclude list is a foot-gun.
+
+        Dropping a team removes its laps *and* the kart-to-driver links that
+        let the model separate a slow kart from a slow driver.  Measured, that
+        is worse than leaving the noisy laps in and down-weighting them.
+        """
+        import statistics
+        keep, drop = [], []
+        for seed in range(6):
+            truth, samples = noisy_race(seed)
+            keep.append(mean_error(truth, rating.rate(
+                samples, {"weight_by_consistency": True, "min_laps": 5})))
+            drop.append(mean_error(truth, rating.rate(
+                samples, {"exclude_teams": ["WILD1", "WILD2", "WILD3"],
+                          "weight_by_consistency": True, "min_laps": 5})))
+        self.assertLess(statistics.mean(keep), statistics.mean(drop))
+
+    def test_an_excluded_team_contributes_nothing(self):
+        _truth, samples = noisy_race(1)
+        res = rating.rate(samples, {"exclude_teams": ["WILD1"], "min_laps": 5})
+        self.assertNotIn("WILD1", res["pilots"])
+
+    def test_exclusion_is_case_and_space_insensitive(self):
+        _truth, samples = noisy_race(1)
+        res = rating.rate(samples, {"exclude_teams": ["  wild1 "], "min_laps": 5})
+        self.assertNotIn("WILD1", res["pilots"])
+
+    def test_the_team_is_read_out_of_the_pilot_key(self):
+        self.assertEqual(rating.team_of("TPC|Dinis"), "TPC")
+        self.assertEqual(rating.team_of("TPC"), "TPC")
+        self.assertEqual(rating.team_of(""), "")
+
+    def test_nobody_is_silenced_and_nobody_decides_alone(self):
+        _truth, samples = noisy_race(2)
+        cfg = rating.cfg_with_defaults({})
+        base = rating.Baseline(samples, cfg["bucket_minutes"] * 60.0,
+                               cfg["min_bucket_laps"])
+        seg = {}
+        for ts, pilot, kart, lap_s in samples:
+            seg.setdefault((pilot, kart), []).append(lap_s - base.at(ts))
+        w = rating.consistency_weights(seg, cfg)
+        self.assertTrue(w)
+        self.assertTrue(all(cfg["weight_floor"] <= v <= cfg["weight_ceiling"]
+                            for v in w.values()), w)
+        # The steady teams must outweigh the wild ones, which is the point.
+        self.assertGreater(min(w[p] for p in w if p.startswith("STEADY")),
+                           max(w[p] for p in w if p.startswith("WILD")))
+
+    def test_turning_the_weighting_off_leaves_it_alone(self):
+        _truth, samples = noisy_race(3)
+        cfg = rating.cfg_with_defaults({"weight_by_consistency": False})
+        self.assertEqual(rating.consistency_weights({}, cfg), {})
 
 
 if __name__ == "__main__":

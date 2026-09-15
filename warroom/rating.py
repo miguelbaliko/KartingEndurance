@@ -43,6 +43,13 @@ DEFAULTS = {
     "min_laps": 8,            # laps before a kart is rated at all
     "min_pilot_laps": 30,     # laps before a driver is scored apart from their team
     "min_pilots": 2,          # distinct drivers before a rating is called solid
+    # Whose laps are worth listening to.  A kart's score is only as good as
+    # the driving that measured it: a steady driver's lap times describe the
+    # kart, an erratic one's describe their mistakes.
+    "exclude_teams": [],      # teams whose laps are ignored entirely
+    "weight_by_consistency": True,
+    "weight_floor": 0.35,     # the least an inconsistent driver can count
+    "weight_ceiling": 2.0,    # the most a metronome can count
     "thresholds": [0.15, 0.40, 0.65, 1.00],
     "labels": ["Rocket", "Very Good", "Good", "OK", "Bad"],
     "unknown_label": "Unknown",
@@ -184,6 +191,50 @@ def label_for(delta: float, cfg: dict) -> str:
     return cfg["labels"][-1]
 
 
+def team_of(pilot: str) -> str:
+    """Pilot keys are "TEAM|Driver", or just "TEAM" before drivers are named."""
+    return (pilot or "").rsplit("|", 1)[0] if "|" in (pilot or "") else (pilot or "")
+
+
+def _excluded(pilot: str, exclude: list) -> bool:
+    if not exclude:
+        return False
+    team = team_of(pilot).strip().upper()
+    return any(team == str(x).strip().upper() for x in exclude)
+
+
+def consistency_weights(seg_res: dict, cfg: dict) -> dict:
+    """How much to trust each driver's laps, from how steady they are.
+
+    Spread is measured as the median absolute deviation of a driver's residuals
+    against the field baseline, which is what is left once track evolution is
+    taken out.  A driver whose laps sit inside a tenth is describing the kart;
+    one who swings a second is describing traffic and mistakes.
+
+    Scaled against the field median, so it is relative to this race rather than
+    to an absolute idea of quick, and clamped at both ends — nobody is silenced
+    and nobody decides the fleet alone.
+    """
+    if not cfg.get("weight_by_consistency", True):
+        return {}
+    spread = {}
+    for (pilot, _kart), res in seg_res.items():
+        if len(res) < 3:
+            continue
+        med = statistics.median(res)
+        spread.setdefault(pilot, []).append(
+            statistics.median([abs(r - med) for r in res]))
+    if not spread:
+        return {}
+    per_pilot = {p: statistics.median(v) for p, v in spread.items()}
+    field = statistics.median(per_pilot.values())
+    if field <= 0:
+        return {}
+    lo, hi = cfg["weight_floor"], cfg["weight_ceiling"]
+    return {p: max(lo, min(hi, field / m)) if m > 0 else hi
+            for p, m in per_pilot.items()}
+
+
 def rate(samples: list, cfg: dict = None) -> dict:
     """Score every kart from lap samples ``(ts, pilot, kart, lap_s)``.
 
@@ -199,6 +250,7 @@ def rate(samples: list, cfg: dict = None) -> dict:
     """
     cfg = cfg_with_defaults(cfg)
     samples = [s for s in samples if s[3] and s[3] > 0]
+    samples = [s for s in samples if not _excluded(s[1], cfg["exclude_teams"])]
     result = {"karts": {}, "pilots": {}, "n_laps": len(samples),
               "linked_karts": 0}
     if not samples:
@@ -221,12 +273,17 @@ def rate(samples: list, cfg: dict = None) -> dict:
         if -cfg["trim_lo"] <= r <= cfg["trim_hi"]:
             seg_res[(pilot_of[pilot], kart)].append(r)
 
+    trust = consistency_weights(seg_res, cfg)
+
     obs = []
     kart_laps = defaultdict(int)
     kart_pilots = defaultdict(set)
     comps = _Components()
     for (pilot, kart), res in seg_res.items():
-        obs.append((pilot, kart, statistics.median(res), float(len(res))))
+        # Lap count still sets the weight; consistency scales it, so a steady
+        # driver's reading of a kart outvotes a scrappy one's.
+        obs.append((pilot, kart, statistics.median(res),
+                    float(len(res)) * trust.get(pilot, 1.0)))
         kart_laps[kart] += len(res)
         kart_pilots[kart].add(pilot)
         comps.union(("P", pilot), ("K", kart))

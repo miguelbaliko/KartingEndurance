@@ -1387,6 +1387,7 @@ def make_snapshot() -> dict:
         "kartpool":         pool,
         "next_driver_id":   kv_get("next_driver_id"),
         "auto_pit":         CFG["karts"].get("auto_pit", True),
+        "exclude_teams":    (CFG["karts"].get("rating") or {}).get("exclude_teams", []),
         "my_team":          {
             "pos":   my_team.get("pos", "?"),
             "kart":  my_team.get("kart", "?"),
@@ -1686,6 +1687,52 @@ def api_kart_laps(num):
               "avg": fmt_laptime(sum(v) / len(v))} for p, v in by_pilot.items()),
             key=lambda d: -d["laps"]))
 
+@app.get("/api/driver/<int:did>/laps")
+def api_driver_laps(did):
+    """One driver's whole record: laps, stints, and which karts they had.
+
+    Their pace reads differently depending on what they were sitting in, so
+    the karts are broken out — a driver who looks slow may have drawn badly.
+    """
+    with get_db() as con:
+        row = con.execute("SELECT * FROM drivers WHERE id=?", (did,)).fetchone()
+        if not row:
+            return jsonify(error="no such driver"), 404
+        drv = dict(row)
+        stints = [dict(r) for r in con.execute(
+            "SELECT start_ts, end_ts, duration_seconds FROM stints "
+            "WHERE driver_id=? ORDER BY id DESC", (did,))]
+
+    # Laps are stored against "TEAM|Driver", so match on the driver half.
+    name = (drv["name"] or "").strip()
+    with POOL._con() as con:
+        rows = [dict(r) for r in con.execute(
+            "SELECT ts, pilot, kart, lap_s FROM kart_lap "
+            "ORDER BY id DESC LIMIT 4000")]
+    rows = [r for r in rows
+            if (r["pilot"] or "").rsplit("|", 1)[-1].strip().lower() == name.lower()]
+    by_kart = defaultdict(list)
+    for r in rows:
+        r["lap"] = fmt_laptime(r["lap_s"])
+        by_kart[r["kart"]].append(r["lap_s"])
+
+    times = [r["lap_s"] for r in rows]
+    owed = max(0.0, CFG["race"].get("driver_min_minutes", 0) * 60
+               - drv["total_seconds"])
+    for st in stints:
+        st["dur"] = fmt_duration(st["duration_seconds"] or 0)
+    return jsonify(
+        id=did, name=name, laps=rows[:600], count=len(rows),
+        best=fmt_laptime(min(times)) if times else "-",
+        avg=fmt_laptime(sum(times) / len(times)) if times else "-",
+        total_fmt=fmt_duration(drv["total_seconds"]),
+        owed_fmt=fmt_duration(owed), owed_seconds=owed,
+        stints=stints[:40], stint_count=len(stints),
+        karts=sorted(
+            ({"kart": k, "laps": len(v), "best": fmt_laptime(min(v)),
+              "avg": fmt_laptime(sum(v) / len(v))} for k, v in by_kart.items()),
+            key=lambda d: -d["laps"]))
+
 @app.get("/api/karts")
 def api_karts():
     return jsonify(POOL.snapshot())
@@ -1786,6 +1833,12 @@ def api_settings():
                       ("swap_every_stop", bool)):
         if key in data:
             CFG["karts"][key] = cast(data[key])
+    if "exclude_teams" in data:
+        # Comma separated from the settings box, a list on the wire.
+        raw = data["exclude_teams"]
+        names = raw.split(",") if isinstance(raw, str) else list(raw or [])
+        CFG["karts"].setdefault("rating", {})["exclude_teams"] = \
+            [n.strip() for n in names if n and n.strip()]
     POOL.configure(CFG["karts"])
     save_cfg()
     broadcast()

@@ -909,6 +909,58 @@ class TestKartLapHistory(AppCase):
         self.assertEqual(d["label"], "Unknown")
 
 
+class TestDriverDetail(AppCase):
+    """Clicking a driver shows their record, split by the kart they were in."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.post("/api/driver/add", json={"name": "Dinis"})
+        self.did = self.snap()["drivers"][0]["id"]
+
+    def detail(self, did=None):
+        return json.loads(self.client.get(f"/api/driver/{did or self.did}/laps").data)
+
+    def record(self, kart, times, who="Dinis"):
+        import time as _t
+        with self.app.POOL._con() as con:
+            for i, t in enumerate(times):
+                con.execute("INSERT INTO kart_lap(ts,team_no,pilot,kart,lap_s) "
+                            "VALUES(?,?,?,?,?)",
+                            (_t.time() + i, "1", f"TPC|{who}", kart, t))
+
+    def test_laps_best_and_average(self):
+        self.record("17", [62.0, 61.0, 63.0])
+        d = self.detail()
+        self.assertEqual((d["count"], d["best"]), (3, "1:01.000"))
+        self.assertEqual(d["avg"], "1:02.000")
+
+    def test_the_karts_they_had_are_broken_out(self):
+        # A driver who looks slow may simply have drawn badly.
+        self.record("17", [63.0, 63.2])
+        self.record("31", [61.0, 61.1])
+        by = {k["kart"]: k for k in self.detail()["karts"]}
+        self.assertEqual(by["31"]["best"], "1:01.000")
+        self.assertEqual(by["17"]["laps"], 2)
+
+    def test_another_driver_s_laps_are_not_counted(self):
+        self.record("17", [62.0], who="Dinis")
+        self.record("17", [50.0], who="Lobo")
+        self.assertEqual(self.detail()["count"], 1)
+
+    def test_it_carries_the_time_still_owed(self):
+        d = self.detail()
+        self.assertEqual(d["owed_seconds"],
+                         self.app.CFG["race"]["driver_min_minutes"] * 60)
+        self.assertIn("owed_fmt", d)
+
+    def test_a_driver_with_no_laps_is_empty_not_an_error(self):
+        d = self.detail()
+        self.assertEqual((d["count"], d["best"], d["karts"]), (0, "-", []))
+
+    def test_an_unknown_driver_is_a_404(self):
+        self.assertEqual(self.client.get("/api/driver/9999/laps").status_code, 404)
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)

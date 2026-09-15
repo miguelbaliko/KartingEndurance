@@ -759,6 +759,13 @@ tr.clickable{cursor:pointer}
       <input id="cfg-swap" type="checkbox" style="width:auto">
       Karts are swapped at every stop
     </label>
+    <div class="cfg-lbl">Ignore these teams when scoring karts (comma separated)</div>
+    <input id="cfg-exclude" class="cfg-inp" placeholder="usually leave empty">
+    <div class="cfg-lbl" style="color:var(--tx3);font-size:10px;margin-top:-4px">
+      Measured: dropping a team is worse than keeping it. Their laps also link
+      karts to drivers, which is how a slow kart is told from a slow driver.
+      Erratic driving is already down-weighted automatically.
+    </div>
     <div class="cfg-lbl" style="margin-top:14px">Kart data</div>
     <button class="tb-btn warn" style="width:100%"
       onclick="if(confirm('Forget every kart\'s pace and who is in which kart? Qualifying data is lost.')) api('karts/reset')">
@@ -1351,6 +1358,54 @@ function renderMatrix(s) {
     </div>`).join('') : '<div class="mx-empty">No karts entered yet.</div>';
 }
 
+/** One driver's whole record: laps, stints, and which karts they drew. */
+async function showDriver(id, name) {
+  const box = document.getElementById('laps-overlay');
+  document.getElementById('laps-title').textContent = name;
+  document.getElementById('laps-sub').textContent = '';
+  document.getElementById('laps-body').innerHTML = '<div class="bn-note">Loading…</div>';
+  box.style.display = 'flex';
+  let d;
+  try { d = await (await fetch('/api/driver/' + id + '/laps')).json(); }
+  catch (e) {
+    document.getElementById('laps-body').innerHTML =
+      '<div class="bn-note">Could not load this driver.</div>';
+    return;
+  }
+  document.getElementById('laps-sub').textContent =
+    d.count ? `${d.count} laps · best ${d.best} · avg ${d.avg}` : '';
+  const head = `
+    <div class="kd-hd">
+      <span>Driven <b>${esc(d.total_fmt)}</b> over ${d.stint_count} stint${d.stint_count===1?'':'s'}</span>
+      ${d.owed_seconds > 0
+        ? `<span class="drv-owed short">still owes ${esc(d.owed_fmt)}</span>`
+        : '<span class="drv-owed done">✓ minimum met</span>'}
+    </div>`;
+  // Pace reads differently depending on the kart, so show the split.
+  const karts = d.karts.length ? `
+    <div class="bn-hd">Karts they have had</div>
+    ${d.karts.map(k => `
+      <div class="kd-drv"><span class="who">kart ${esc(k.kart)}</span>
+        <span>${k.laps} laps</span><span>best ${esc(k.best)}</span>
+        <span>avg ${esc(k.avg)}</span></div>`).join('')}` : '';
+  const stints = d.stints.length ? `
+    <div class="bn-hd" style="margin-top:10px">Stints</div>
+    ${d.stints.map((st, i) => `
+      <div class="kd-drv"><span class="who">#${d.stint_count - i}</span>
+        <span>${esc(st.dur)}</span></div>`).join('')}` : '';
+  const laps = d.count ? `
+    <div class="bn-hd" style="margin-top:10px">Every lap</div>
+    ${d.laps.map((l, i) => `
+      <div class="lap-row">
+        <span class="lap-n">${d.count - i}</span>
+        <span class="lap-t ${l.lap===d.best?'best':''}">${esc(l.lap)}</span>
+        <span class="lap-p">kart ${esc(l.kart)}</span>
+      </div>`).join('')}`
+    : `<div class="bn-note">No laps recorded for this driver yet. Laps are only
+       stored once we know which kart the team was in.</div>`;
+  document.getElementById('laps-body').innerHTML = head + karts + stints + laps;
+}
+
 /** One kart's whole history: every lap, its best, and who has driven it. */
 async function showKart(num) {
   const box = document.getElementById('laps-overlay');
@@ -1426,7 +1481,9 @@ function renderDrivers(s) {
   }
   el.innerHTML = s.drivers.map(d => `
     <div class="drv-row" id="dr-${d.id}">
-      <span class="drv-name ${d.active?'cur':''}">${esc(d.name)}</span>
+      <span class="drv-name ${d.active?'cur':''}" style="cursor:pointer"
+            onclick="showDriver(${d.id}, '${esc(d.name).replace(/'/g, "\\'")}')"
+            title="Click for this driver's laps, stints and karts">${esc(d.name)}</span>
       <span class="drv-time ${d.total_seconds>0?'':'zero'}">${d.total_fmt}</span>
       <span class="drv-owed ${d.owed_seconds>0?'short':'done'}"
             title="${d.owed_seconds>0
@@ -1565,6 +1622,7 @@ function openCfg() {
     document.getElementById('cfg-team').value = S.team_name || '';
     const pool = S.kartpool || {};
     document.getElementById('cfg-lanes').value   = (pool.lanes||[]).length || 2;
+    document.getElementById('cfg-exclude').value = (s.exclude_teams||[]).join(', ');
     document.getElementById('cfg-autopit').checked = !!S.auto_pit;
     document.getElementById('cfg-swap').checked    = pool.swap_every_stop !== false;
   }
@@ -1586,6 +1644,8 @@ async function saveCfg() {
   if (dur)   b.duration_minutes  = parseInt(dur);
   if (pits)  b.mandatory_pits    = parseInt(pits);
   if (stint) b.stint_max_minutes = parseInt(stint);
+  const excl = document.getElementById('cfg-exclude').value.trim();
+  b.exclude_teams = excl;
   const lanes = document.getElementById('cfg-lanes').value.trim();
   if (lanes) b.lanes = parseInt(lanes);
   b.auto_pit        = document.getElementById('cfg-autopit').checked;
