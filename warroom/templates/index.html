@@ -361,6 +361,10 @@ td{padding:7px 8px;white-space:nowrap}
 }
 .cfg-card h3{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--tx)}
 .cfg-lbl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+/* §3.14: every driver owes 120 minutes, and being short is a penalty. */
+.drv-owed{font-size:10px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+.drv-owed.short{color:var(--amb,#eab308)}
+.drv-owed.done{color:#22c55e}
 .td-virt{font-weight:700;font-size:12px}
 .virt-up{color:#22c55e}
 .virt-down{color:#ef4444}
@@ -1151,6 +1155,11 @@ function renderDrivers(s) {
     <div class="drv-row" id="dr-${d.id}">
       <span class="drv-name ${d.active?'cur':''}">${esc(d.name)}</span>
       <span class="drv-time ${d.total_seconds>0?'':'zero'}">${d.total_fmt}</span>
+      <span class="drv-owed ${d.owed_seconds>0?'short':'done'}"
+            title="${d.owed_seconds>0
+              ? 'Still owes '+d.owed_fmt+' — 20s penalty per 10s short (§3.14)'
+              : 'Minimum driving time met'}"
+        >${d.owed_seconds>0 ? '−'+d.owed_fmt : '✓'}</span>
       <button class="i-btn" title="Rename" onclick="startEdit(${d.id})">✎</button>
       <button class="i-btn del" title="Delete" onclick="delDriver(${d.id})">✕</button>
     </div>
