@@ -3,12 +3,13 @@
 
 from flask import Flask, render_template, jsonify, request, Response
 import threading, time, json, sqlite3, urllib.request, urllib.error, urllib.parse
-import html.parser, re, os, queue, math, statistics
+import html.parser, re, os, queue, math, statistics, unicodedata
 from datetime import datetime, timedelta
 from typing import Optional
 from collections import defaultdict
 
 import kartpool
+import entries
 from raceclock import ApexClock
 
 try:
@@ -477,6 +478,12 @@ def _process_rows(rows: list) -> bool:
     global _teams, _apex_ok
     if not rows:
         return False
+    global _feed_team_name
+    matched = match_team(CFG.get("team_name", ""),
+                         [r.get("team", "") for r in rows])
+    if matched and matched != _feed_team_name:
+        log("APEX TEAM", f"{CFG.get('team_name','')!r} is {matched!r} in the feed")
+    _feed_team_name = matched or ""
     with _lock:
         # Two passes: every sector in this grid is read before any of them is
         # coloured, so the order Apex happens to send the rows in cannot decide
@@ -496,7 +503,7 @@ def _feed_pool(rows: list):
     if not rows:
         return
     try:
-        POOL.observe(rows, my_team=CFG.get("team_name", ""))
+        POOL.observe(rows, my_team=my_team_name())
     except Exception as e:
         log("KARTPOOL ERR", str(e))
 
@@ -1348,8 +1355,78 @@ def _int_or_last(v) -> int:
         return 10 ** 6
 
 
+def norm_team(name: str) -> tuple:
+    """A team name reduced to comparable words.
+
+    Case, accents and punctuation all differ between the entry list and the
+    timing screen — "MICROÁGUA", "Microagua" and "MICRO-AGUA" are one team —
+    so they are stripped and what is left is compared word by word.
+    """
+    flat = unicodedata.normalize("NFKD", str(name or ""))
+    flat = "".join(c for c in flat if not unicodedata.combining(c))
+    return tuple(re.sub(r"[^A-Z0-9 ]+", " ", flat.upper()).split())
+
+
+def match_team(want: str, names) -> Optional[str]:
+    """The one name in ``names`` that means ``want``, or None.
+
+    Apex does not have to spell a team the way the entry list does: we are
+    "TPC CIAO CUORE" on the entry list and may be plain "TPC" on the timing
+    screen.  Exact equality would leave the pit wall with no team at all for
+    twenty-five hours, so a name that is the start of another, or a subset of
+    its words, counts.
+
+    It never guesses between two.  This entry list has three STF teams, two
+    TRACK LIMITS and a JURASSIC KART alongside a JURASSIC KART RAPTOR, and
+    showing the wrong team's pace on the wall is worse than showing none — so
+    a tie returns None and the wall says it cannot find us.
+    """
+    w = norm_team(want)
+    if not w:
+        return None
+
+    def score(cand):
+        c = norm_team(cand)
+        if not c:
+            return 0
+        # Compared with the gaps closed up too, so a hyphen cannot split a word
+        # an accent leaves whole: "MICRO-AGUA" is "MICROÁGUA".
+        if c == w or "".join(c) == "".join(w):
+            return 3
+        short, long = (w, c) if len(w) <= len(c) else (c, w)
+        if long[:len(short)] == short:
+            return 2                      # "TPC" opening "TPC CIAO CUORE"
+        if set(short) <= set(long):
+            return 1                      # the same words, in another order
+        return 0
+
+    scored = [(score(n), n) for n in names]
+    best = max((s for s, _n in scored), default=0)
+    if not best:
+        return None
+    hits = [n for s, n in scored if s == best]
+    return hits[0] if len(hits) == 1 else None
+
+
+def category_of(team: str) -> str:
+    """PRO or AM from the entry list, or "" when it is not on it.
+
+    Only ever a fallback: the feed's own class column is the authority, and
+    the entry list is one team short.
+    """
+    found = match_team(team, [n for n, _c in entries.ENTRIES])
+    return dict(entries.ENTRIES).get(found, "") if found else ""
+
+
+# Whatever Apex is calling us, resolved from the last full grid.  Our laps are
+# filed under the feed's spelling, so anything that looks them up has to ask
+# for that and not for what we typed into the settings box.
+_feed_team_name: str = ""
+
+
 def my_team_name() -> str:
-    return (CFG.get("team_name", "") or "").strip()
+    """The name our own rows carry: the feed's if we have matched it, else ours."""
+    return (_feed_team_name or CFG.get("team_name", "") or "").strip()
 
 
 # ── Driver fatigue ─────────────────────────────────────────────────────────────
@@ -1623,7 +1700,12 @@ def make_snapshot() -> dict:
 
     # My team
     my_name = CFG.get("team_name", "")
-    my_team = next((t for t in teams_raw if t.get("team", "") == my_name), None)
+    # Apex spells teams its own way, so find ours by meaning rather than by
+    # exact text — but on one unambiguous answer only.  Everything below keys
+    # off the name the feed actually used.
+    feed_name = match_team(my_name, [t.get("team", "") for t in teams_raw])
+    my_team = next((t for t in teams_raw if t.get("team", "") == feed_name),
+                   None) if feed_name else None
     my_avg5 = my_team["avg5_s"] if my_team else None
 
     # The timekeepers' pit count is the one that settles a protest, so use it
@@ -1638,13 +1720,14 @@ def make_snapshot() -> dict:
     # Is the driver on track dropping off?  Their own laps from this stint,
     # in the order they were run — nobody else's pace comes into it.
     fade_s = None
-    if stint_running and my_name:
+    lap_name = my_team_name()
+    if stint_running and lap_name:
         with POOL._con() as con:
             stint_laps = [r["lap_s"] for r in con.execute(
                 "SELECT lap_s FROM kart_lap WHERE ts >= ? AND "
                 "(pilot = ? OR pilot LIKE ?) ORDER BY id",
                 (datetime.fromisoformat(stint_start).timestamp(),
-                 my_name, my_name + "|%"))]
+                 lap_name, lap_name + "|%"))]
         fade_s = stint_fade(stint_laps)
     fatigue = fatigue_note(fade_s, stint_s, CFG["race"])
 
@@ -1698,7 +1781,7 @@ def make_snapshot() -> dict:
             "kart":       t.get("kart", ""),
             "team":       t.get("team", ""),
             "driver":     t.get("driver", ""),
-            "category":   t.get("category", ""),
+            "category":   t.get("category", "") or category_of(t.get("team", "")),
             "in_pit":     t.get("in_pit", False),
             "my_kart":    held or "",
             "kart_label": card["label"] if card else "",
@@ -1712,7 +1795,7 @@ def make_snapshot() -> dict:
             "total_laps": t.get("total_laps", "-"),
             "pits":       t.get("pits", "-"),
             "gap":        t.get("gap", "-"),
-            "is_my_team": t.get("team", "") == my_name,
+            "is_my_team": bool(feed_name) and t.get("team", "") == feed_name,
             **(virt.get(str(t.get("kart", ""))) or
                {"virtual_pos": None, "stops_owed": None, "debt_s": None}),
             **(klass.get(str(t.get("kart", ""))) or
@@ -1782,6 +1865,10 @@ def make_snapshot() -> dict:
                                 or CFG["race"]["pit_duration_seconds"],
                                 CFG["race"]["pit_duration_seconds"]),
         "team_name":        my_name,
+        # What Apex is actually calling us.  Blank means we could not be found
+        # in the feed — or that more than one row could have been us, which is
+        # a thing to fix in the settings, not to guess at.
+        "feed_team_name":   feed_name or "",
         "apex_url":         CFG.get("apex_url", ""),
         "teams":            teams_out,
         "session_mode":     session_mode,

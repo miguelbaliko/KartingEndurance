@@ -407,6 +407,8 @@ td{padding:7px 8px;white-space:nowrap}
 .fatigue b{font-weight:700;color:var(--tx)}
 .bn-note b{color:var(--tx);font-weight:700}
 .ask-cost{color:#f97316;font-weight:700}
+.mt-lost{color:var(--org)}
+.mt-as{color:var(--tx3);font-size:10px;margin-left:6px}
 .sec-loss{color:#f97316}
 .sec-ok{color:#22c55e}
 /* §3.14: every driver owes 120 minutes, and being short is a penalty. */
@@ -1501,7 +1503,10 @@ function renderMyTeam(s) {
     <div class="mt-kart">${my
       ? `#${esc(my.kart)} · ${esc(my.laps)} laps · ${
           kartChip(my.phys_kart, my.kart_label, my.kart_delta, false)}`
-      : 'Not in timing data'}</div>
+      : `<span class="mt-lost">Not in timing data</span>`}${
+        my && s.feed_team_name && s.feed_team_name !== s.team_name
+          ? `<span class="mt-as" title="Apex spells us differently; matched on
+             the name in Settings">as ${esc(s.feed_team_name)}</span>` : ''}</div>
     <div class="mt-avg-row">
       <div class="mt-stat">
         <div class="mt-stat-val" id="stint-display">${s.stint_fmt}</div>

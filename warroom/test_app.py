@@ -423,6 +423,135 @@ class TestArchivedSessions(AppCase):
         self.assertEqual([t["kart"] for t in live], ["7"])
 
 
+class TestFindingOurselvesInTheFeed(AppCase):
+    """Apex does not have to spell a team the way the entry list does.
+
+    We are "TPC CIAO CUORE" on the organisers' list and may be plain "TPC" on
+    the timing screen.  Exact equality would leave the wall with no team for
+    twenty-five hours: no strategy, no pace, no box clock, nothing.
+    """
+
+    FIELD = ["MATRAX", "TPC CIAO CUORE", "STF PERFORMANCE", "JURASSIC KART"]
+
+    def test_a_longer_name_in_the_feed_is_still_us(self):
+        self.assertEqual(self.app.match_team("TPC", self.FIELD), "TPC CIAO CUORE")
+
+    def test_a_shorter_name_in_the_feed_is_still_us(self):
+        self.assertEqual(self.app.match_team("TPC CIAO CUORE", ["TPC", "MATRAX"]),
+                         "TPC")
+
+    def test_case_accents_and_punctuation_do_not_matter(self):
+        for spelt in ("microagua", "MICRO-AGUA", "Microágua"):
+            self.assertEqual(self.app.match_team(spelt, ["MICROÁGUA", "STCAR"]),
+                             "MICROÁGUA", spelt)
+
+    def test_an_exact_name_beats_a_longer_one_that_starts_the_same(self):
+        """JURASSIC KART and JURASSIC KART RAPTOR are two different teams."""
+        field = ["JURASSIC KART", "JURASSIC KART RAPTOR"]
+        self.assertEqual(self.app.match_team("JURASSIC KART", field),
+                         "JURASSIC KART")
+        self.assertEqual(self.app.match_team("JURASSIC KART RAPTOR", field),
+                         "JURASSIC KART RAPTOR")
+
+    def test_it_refuses_to_pick_between_two(self):
+        """Three STF teams are entered. The wrong team's pace is worse than none."""
+        field = ["STF BY KARTCUP", "STF PERFORMANCE", "STF ENDURANCE"]
+        self.assertIsNone(self.app.match_team("STF", field))
+
+    def test_roman_numerals_are_not_run_together(self):
+        """TFD I and TFD II are two entries, one character apart."""
+        field = ["TFD I", "TFD II"]
+        self.assertEqual(self.app.match_team("TFD I", field), "TFD I")
+        self.assertEqual(self.app.match_team("TFD II", field), "TFD II")
+
+    def test_a_name_that_is_not_there_is_not_forced_onto_someone(self):
+        self.assertIsNone(self.app.match_team("TPC", ["MATRAX", "STCAR"]))
+        self.assertIsNone(self.app.match_team("", self.FIELD))
+
+    def test_our_row_is_marked_when_the_feed_spells_us_differently(self):
+        self.app.CFG["team_name"] = "TPC"
+        self.app._reset_sector_best()
+        self.app._process_rows([
+            {"pos": "1", "kart": "7", "team": "TPC CIAO CUORE",
+             "last_lap": "1:03.000"},
+            {"pos": "2", "kart": "9", "team": "MATRAX", "last_lap": "1:04.000"}])
+        rows = {t["kart"]: t for t in
+                self.client.get("/api/state").get_json()["teams"]}
+        self.assertTrue(rows["7"]["is_my_team"])
+        self.assertFalse(rows["9"]["is_my_team"])
+
+    def test_nobody_is_marked_when_we_are_not_in_the_feed(self):
+        self.app.CFG["team_name"] = "TPC"
+        self.app._reset_sector_best()
+        self.app._process_rows([
+            {"pos": "1", "kart": "9", "team": "MATRAX", "last_lap": "1:04.000"}])
+        rows = self.client.get("/api/state").get_json()["teams"]
+        self.assertFalse(any(t["is_my_team"] for t in rows))
+
+    def test_our_laps_are_looked_up_under_the_feeds_spelling(self):
+        """The pool files laps under the feed's name, so that is what to ask for."""
+        self.app.CFG["team_name"] = "TPC"
+        self.app._reset_sector_best()
+        self.app._process_rows([{"pos": "1", "kart": "7",
+                                 "team": "TPC CIAO CUORE", "last_lap": "1:03.000"}])
+        self.assertEqual(self.app.my_team_name(), "TPC CIAO CUORE")
+
+
+class TestCategoryFromTheEntryList(AppCase):
+    """PRO or AM when the feed's own class column is blank."""
+
+    def test_the_entry_list_fills_a_blank(self):
+        self.assertEqual(self.app.category_of("TPC CIAO CUORE"), "AM")
+        self.assertEqual(self.app.category_of("MATRAX"), "PRO")
+
+    def test_a_team_not_on_the_list_gets_nothing_invented(self):
+        self.assertEqual(self.app.category_of("SOME OTHER TEAM"), "")
+        self.assertEqual(self.app.category_of(""), "")
+
+    def test_an_ambiguous_name_is_left_blank(self):
+        """Two of the three STF teams are PRO, but guessing is still guessing."""
+        self.assertEqual(self.app.category_of("STF"), "")
+
+    def test_the_feed_wins_when_it_says_anything(self):
+        self.app._reset_sector_best()
+        self.app._process_rows([
+            {"pos": "1", "kart": "7", "team": "TPC CIAO CUORE",
+             "category": "PRO", "last_lap": "1:03.000"},
+            {"pos": "2", "kart": "9", "team": "MATRAX", "last_lap": "1:04.000"}])
+        rows = {t["kart"]: t for t in
+                self.client.get("/api/state").get_json()["teams"]}
+        self.assertEqual(rows["7"]["category"], "PRO", "the feed is the authority")
+        self.assertEqual(rows["9"]["category"], "PRO", "filled from the entry list")
+
+    def test_every_entry_has_a_category_we_recognise(self):
+        import entries
+        for name, cat in entries.ENTRIES:
+            self.assertIn(cat, ("PRO", "AM"), name)
+        self.assertFalse(entries.COMPLETE, "one entry was obscured; say so")
+
+    def test_no_two_entries_collapse_into_the_same_name(self):
+        """If two entries normalise alike, neither could ever be matched."""
+        import entries
+        seen = {}
+        for name, _cat in entries.ENTRIES:
+            key = self.app.norm_team(name)
+            self.assertNotIn(key, seen, f"{name} collides with {seen.get(key)}")
+            seen[key] = name
+
+    def test_our_own_entry_is_findable_from_the_name_we_ship_with(self):
+        """The default in the settings has to find us on the entry list.
+
+        Read off the shipped default, not the live config: the test harness
+        renames the team, and this is a check on what we ship.
+        """
+        import entries, re as _re
+        shipped = _re.search(r'"team_name":\s*"([^"]*)"',
+                             open(self.app.__file__).read()).group(1)
+        self.assertEqual(
+            self.app.match_team(shipped, [n for n, _c in entries.ENTRIES]),
+            entries.OURS)
+
+
 class TestSectorColours(AppCase):
     """Purple, green, yellow — what every timing screen in the paddock means."""
 
