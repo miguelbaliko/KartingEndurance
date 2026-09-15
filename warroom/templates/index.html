@@ -436,6 +436,9 @@ tr.clickable{cursor:pointer}
 .fleet-row.grade-unknown{border-left-color:#2a3340}
 .fleet-row.gone{opacity:.45}
 .fleet-row.gone .fleet-num{text-decoration:line-through}
+.tow{font-size:9px;padding:0 4px;border-radius:4px;margin-left:6px;
+  color:#93c5fd;background:rgba(59,130,246,.16)}
+.lap-row.towed .lap-t{color:var(--tx2);font-weight:600}
 .fade{font-size:9px;padding:1px 5px;border-radius:4px;white-space:nowrap}
 .fade.holds{color:#c3cbdd;border:1px solid var(--line2)}
 .fade.drops{color:#f97316;background:rgba(249,115,22,.14)}
@@ -1504,13 +1507,23 @@ async function showKart(num) {
   }
   document.getElementById('laps-sub').textContent =
     d.count ? `${d.count} laps · best ${d.best} · avg ${d.avg}` : '';
+  // A lap in someone's tow is worth the best part of a second, so the clean
+  // numbers are the ones that say anything about the kart.
+  const split = d.count ? `
+    <div class="kd-hd">
+      <span class="bn-note">${d.clean_laps} clean · best ${esc(d.clean_best)}
+        · avg ${esc(d.clean_avg)}</span>
+      ${d.tow_laps ? `<span class="tow" title="Run within a length of the kart
+        ahead — a tow is worth the best part of a second, so these laps are
+        read separately">${d.tow_laps} in a tow</span>` : ''}
+    </div>` : '';
   const head = `
     <div class="kd-hd">
       <span class="kchip ${CHIP_CLS[d.label]||'unknown'}">${esc(d.label)}
         ${d.delta!=null?`<span class="kd">${fmtDelta(d.delta)}</span>`:''}</span>
       ${d.holder?`<span class="bn-note">with ${esc(d.holder)}</span>`:''}
       ${d.reason?`<span class="bn-note">${esc(d.reason)}</span>`:''}
-    </div>`;
+    </div>` + split;
   const drv = d.drivers.length ? `
     <div class="bn-hd">Who has driven it</div>
     ${d.drivers.map(x => `
@@ -1520,9 +1533,11 @@ async function showKart(num) {
     <div class="bn-hd" style="margin-top:10px">Every lap</div>` : '';
   const laps = d.count
     ? d.laps.map((l, i) => `
-        <div class="lap-row">
+        <div class="lap-row ${l.tow?'towed':''}">
           <span class="lap-n">${d.count - i}</span>
           <span class="lap-t ${l.lap===d.best?'best':''}">${esc(l.lap)}</span>
+          ${l.tow?`<span class="tow" title="${l.ahead_s.toFixed(2)}s behind the
+            kart ahead">tow</span>`:''}
           <span class="lap-p">${esc(l.pilot||'')}</span>
         </div>`).join('')
     : `<div class="bn-note">No laps recorded in this kart yet, so it has no

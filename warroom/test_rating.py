@@ -216,6 +216,75 @@ class TestRate(unittest.TestCase):
         self.assertAlmostEqual(rate(dirty)["karts"]["K1"]["effect"], clean,
                                delta=0.08)
 
+    def _towed(self, kart, n, clean_every, quicker=0.8, start=1000.0):
+        """Laps in ``kart`` by four drivers, most of them run in a tow.
+
+        One lap in ``clean_every`` is run in clear air; ``clean_every`` of 0
+        means the kart was never once seen on its own.  A towed lap is
+        ``quicker`` seconds faster than the kart deserves, which is what makes
+        a merely average kart look like a rocket.
+        """
+        rng = random.Random(11)
+        out = []
+        for i in range(n):
+            pilot = ["PRO-A", "PRO-B", "MID-C", "MID-D"][i % 4]
+            clean = bool(clean_every) and i % clean_every == 0
+            out.append((start + i * 65, pilot, kart,
+                        63.0 + self.PILOTS[pilot] - (0.0 if clean else quicker)
+                        + rng.gauss(0, 0.15),
+                        3.5 if clean else 0.25))
+        return out
+
+    def test_a_kart_only_ever_seen_in_a_tow_is_not_read_as_quick(self):
+        """The whole point of the gap check.
+
+        Every lap of K9 was run within a length of the kart ahead, so every one
+        of them is 0.8s quicker than the kart is.  Without the gap the model
+        calls it the best kart on the island; with it, it admits it has not
+        seen the kart run on its own.
+        """
+        base = simulate(self.KARTS, self.PILOTS, self._rotating())
+        base = [(t, p, k, s, None) for t, p, k, s in base]
+        towed = self._towed("K9", 60, clean_every=0)
+
+        blind = rate(base + [(t, p, k, s, None) for t, p, k, s, _ in towed])
+        self.assertIn(blind["karts"]["K9"]["label"], ("Rocket", "Very Good"),
+                      "test is void unless the tow really does fool it")
+
+        seeing = rate(base + towed)["karts"]["K9"]
+        self.assertEqual(seeing["label"], "Unknown")
+        self.assertEqual(seeing["reason"], "only ever seen in a tow")
+        self.assertEqual(seeing["clean_laps"], 0)
+        self.assertEqual(seeing["tow_laps"], 60)
+
+    def test_a_kart_with_clean_laps_is_read_on_those(self):
+        """Two thirds of K9's laps are towed; the clean third is the truth."""
+        base = simulate(self.KARTS, self.PILOTS, self._rotating())
+        base = [(t, p, k, s, None) for t, p, k, s in base]
+        mixed = self._towed("K9", 60, clean_every=3)
+
+        blind = rate(base + [(t, p, k, s, None) for t, p, k, s, _ in mixed])
+        seeing = rate(base + mixed)["karts"]["K9"]
+
+        # K9 was built at the same pace as a mid-pack kart, so the honest
+        # reading is near the middle, not at the front.
+        self.assertLess(blind["karts"]["K9"]["effect"], -0.3)
+        self.assertGreater(seeing["effect"], -0.1)
+        self.assertTrue(seeing["rated"])
+        self.assertEqual(seeing["clean_laps"], 20)
+        self.assertEqual(seeing["tow_laps"], 40)
+        # Only the clean laps count towards knowing the kart.
+        self.assertEqual(seeing["laps"], 20)
+
+    def test_a_feed_without_gaps_rates_exactly_as_before(self):
+        """Nobody loses anything when the gap column is missing."""
+        base = simulate(self.KARTS, self.PILOTS, self._rotating())
+        four = rate(base)["karts"]
+        five = rate([(t, p, k, s, None) for t, p, k, s in base])["karts"]
+        for kart in four:
+            self.assertAlmostEqual(four[kart]["effect"], five[kart]["effect"],
+                                   places=6, msg=kart)
+
     def test_empty_input(self):
         res = rate([])
         self.assertEqual(res["karts"], {})

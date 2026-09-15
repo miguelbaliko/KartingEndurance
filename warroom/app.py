@@ -1770,15 +1770,20 @@ def api_kart_laps(num):
     num = str(num)
     with POOL._con() as con:
         rows = [dict(r) for r in con.execute(
-            "SELECT ts, pilot, team_no, lap_s FROM kart_lap WHERE kart=? "
+            "SELECT ts, pilot, team_no, lap_s, ahead_s FROM kart_lap WHERE kart=? "
             "ORDER BY id DESC LIMIT 600", (num,))]
     by_pilot = defaultdict(list)
+    tow_gap = POOL.tow_gap_s
     for r in rows:
         r["pilot"] = (r["pilot"] or "").rsplit("|", 1)[-1]
         r["lap"] = fmt_laptime(r["lap_s"])
+        # A lap run within a length of the kart ahead was towed, so it says
+        # more about the slipstream than about the kart.
+        r["tow"] = r["ahead_s"] is not None and r["ahead_s"] <= tow_gap
         by_pilot[r["pilot"]].append(r["lap_s"])
 
     times = [r["lap_s"] for r in rows]
+    clean = [r["lap_s"] for r in rows if not r["tow"]]
     card = next((c for c in POOL.snapshot()["fleet"] if c["num"] == num), None)
     return jsonify(
         kart=num, laps=rows, count=len(rows),
@@ -1788,6 +1793,11 @@ def api_kart_laps(num):
         delta=(card or {}).get("delta"),
         reason=(card or {}).get("reason", ""),
         holder=(card or {}).get("holder", ""),
+        # The clean best is the one worth quoting: a tow flatters a lap by the
+        # best part of a second and says nothing about the kart.
+        tow_laps=len(rows) - len(clean), clean_laps=len(clean),
+        clean_best=fmt_laptime(min(clean)) if clean else "-",
+        clean_avg=fmt_laptime(sum(clean) / len(clean)) if clean else "-",
         drivers=sorted(
             ({"pilot": p, "laps": len(v), "best": fmt_laptime(min(v)),
               "avg": fmt_laptime(sum(v) / len(v))} for p, v in by_pilot.items()),

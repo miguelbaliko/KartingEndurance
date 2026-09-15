@@ -62,6 +62,12 @@ DEFAULTS = {
     # that is not talent, it is a very good kart, and it is about to come round
     # to a lane.  A cap keeps those rare laps and drops the rest.
     "team_lap_cap": {},
+    # A lap run in someone's slipstream is quicker than the kart deserves, so
+    # it is worth less as evidence — but not nothing, and never deleted: the
+    # gap is read at the line, so towed is a good guess about the lap rather
+    # than a fact about it.
+    "tow_gap_s": 1.0,
+    "tow_weight": 0.35,
     "weight_by_consistency": True,
     "weight_floor": 0.35,     # the least an inconsistent driver can count
     "weight_ceiling": 2.0,    # the most a metronome can count
@@ -88,7 +94,7 @@ class Baseline:
 
     def __init__(self, samples, bucket_s: float, min_laps: int):
         buckets = defaultdict(list)
-        for ts, _pilot, _kart, lap_s in samples:
+        for ts, _pilot, _kart, lap_s, *_ in samples:
             buckets[int(ts // bucket_s)].append(lap_s)
 
         self._ts, self._val = [], []
@@ -168,7 +174,7 @@ def _pilot_keys(samples: list, min_laps: int) -> dict:
     event does not name drivers.
     """
     laps = defaultdict(int)
-    for _ts, pilot, _kart, _lap_s in samples:
+    for _ts, pilot, _kart, _lap_s, *_ in samples:
         laps[pilot] += 1
     return {p: (p if laps[p] >= min_laps or "|" not in p else p.split("|", 1)[0])
             for p in laps}
@@ -295,7 +301,7 @@ def runs_from(samples: list, base, cfg: dict) -> list:
     out there.
     """
     runs, cur, key = [], [], None
-    for ts, pilot, kart, lap_s in samples:
+    for ts, pilot, kart, lap_s, *_ in samples:
         k = (pilot, kart)
         if k != key:
             if cur:
@@ -332,8 +338,17 @@ def fade_by_kart(runs: list, min_laps: int = 9) -> dict:
             for k, v in per_kart.items()}
 
 
+def split_sample(s: tuple) -> tuple:
+    """Accept ``(ts, pilot, kart, lap_s)`` or the same with a trailing gap.
+
+    Older recordings and the tests carry four fields; the live feed now carries
+    the gap to the kart ahead as a fifth.
+    """
+    return (s[0], s[1], s[2], s[3], s[4] if len(s) > 4 else None)
+
+
 def rate(samples: list, cfg: dict = None) -> dict:
-    """Score every kart from lap samples ``(ts, pilot, kart, lap_s)``.
+    """Score every kart from lap samples ``(ts, pilot, kart, lap_s[, ahead_s])``.
 
     ``ts`` is epoch seconds, ``pilot`` identifies who was driving (team, or
     team+driver when the feed names drivers) and ``kart`` is the physical kart.
@@ -346,6 +361,7 @@ def rate(samples: list, cfg: dict = None) -> dict:
     reason, which is the state most karts are in for the first hour of a race.
     """
     cfg = cfg_with_defaults(cfg)
+    samples = [split_sample(s) for s in samples]
     samples = [s for s in samples if s[3] and s[3] > 0]
     samples = [s for s in samples if not _excluded(s[1], cfg["exclude_teams"])]
     # A team's slow laps say more about the driver than the kart, so a cap
@@ -365,13 +381,17 @@ def rate(samples: list, cfg: dict = None) -> dict:
     # Every kart the feed has seen, so one that loses all its laps to the trim
     # is still listed rather than silently dropped.
     raw_laps = defaultdict(int)
-    for _ts, _pilot, kart, _lap_s in samples:
+    tow_laps = defaultdict(int)
+    for _ts, _pilot, kart, _lap_s, ahead in samples:
         raw_laps[kart] += 1
+        if ahead is not None and ahead <= cfg["tow_gap_s"]:
+            tow_laps[kart] += 1
 
     # Residual per lap, then one robust observation per (pilot, kart) segment.
     pilot_of = _pilot_keys(samples, cfg["min_pilot_laps"])
     seg_res = defaultdict(list)
-    for ts, pilot, kart, lap_s in samples:
+    seg_clean = defaultdict(list)
+    for ts, pilot, kart, lap_s, ahead in samples:
         r = lap_s - base.at(ts)
         if not (-cfg["trim_lo"] <= r <= cfg["trim_hi"]):
             continue
@@ -381,6 +401,8 @@ def rate(samples: list, cfg: dict = None) -> dict:
         if limit is not None and r > limit:
             continue
         seg_res[(pilot_of[pilot], kart)].append(r)
+        if ahead is None or ahead > cfg["tow_gap_s"]:
+            seg_clean[(pilot_of[pilot], kart)].append(r)
 
     trust = consistency_weights(seg_res, cfg)
     # Fade needs the laps in the order they were run, which seg_res has thrown
@@ -392,11 +414,21 @@ def rate(samples: list, cfg: dict = None) -> dict:
     kart_pilots = defaultdict(set)
     comps = _Components()
     for (pilot, kart), res in seg_res.items():
+        # A lap run in someone's tow measures the tow, not the kart, so the
+        # reading comes from the clean laps whenever there are any.  Towed laps
+        # still carry a little weight, because in a full field they are most of
+        # the laps and dropping them outright would starve the model.
+        clean_res = seg_clean.get((pilot, kart)) or []
+        towed = len(res) - len(clean_res)
         # Lap count still sets the weight; consistency scales it, so a steady
         # driver's reading of a kart outvotes a scrappy one's.
-        obs.append((pilot, kart, statistics.median(res),
-                    float(len(res)) * trust.get(pilot, 1.0)))
-        kart_laps[kart] += len(res)
+        weight = ((len(clean_res) + towed * cfg["tow_weight"])
+                  * trust.get(pilot, 1.0))
+        obs.append((pilot, kart, statistics.median(clean_res or res),
+                    max(0.01, weight)))
+        # Only clean laps count towards "do we know this kart yet": a kart seen
+        # exclusively in traffic has not been read, however many laps it did.
+        kart_laps[kart] += len(clean_res)
         kart_pilots[kart].add(pilot)
         comps.union(("P", pilot), ("K", kart))
 
@@ -444,6 +476,8 @@ def rate(samples: list, cfg: dict = None) -> dict:
             reason = ""
         elif not is_linked:
             reason = "not yet shared with the field"
+        elif not n and tow_laps.get(kart):
+            reason = "only ever seen in a tow"
         else:
             reason = f"only {n} clean laps"
         result["karts"][kart] = {
@@ -461,6 +495,9 @@ def rate(samples: list, cfg: dict = None) -> dict:
             # How it behaves across a stint, which the average cannot show.
             "fade_s": (fade.get(kart) or {}).get("fade_s"),
             "fade_runs": (fade.get(kart) or {}).get("runs", 0),
+            # How much of what we know about this kart came from traffic.
+            "tow_laps": tow_laps.get(kart, 0),
+            "clean_laps": max(0, n_raw - tow_laps.get(kart, 0)),
         }
 
     return result

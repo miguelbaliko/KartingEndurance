@@ -432,6 +432,55 @@ class TestMyTeamHooks(PoolCase):
         self.assertEqual(len(pool.pending()), 1, "the stop is still booked")
 
 
+class TestGapToTheKartAhead(PoolCase):
+    """Apex sends the gap to the leader; the tow is about the kart in front."""
+
+    @staticmethod
+    def grid(*pairs):
+        return [{"pos": str(p), "kart": k, "gap": g} for p, k, g in pairs]
+
+    def test_the_interval_is_the_difference_between_neighbours(self):
+        got = KartPool.gaps_ahead(self.grid((1, "10", "0.0"),
+                                            (2, "11", "0.4"),
+                                            (3, "12", "6.9")))
+        self.assertIsNone(got["10"], "the leader is behind nobody")
+        self.assertAlmostEqual(got["11"], 0.4)
+        self.assertAlmostEqual(got["12"], 6.5)
+
+    def test_a_gap_in_minutes_is_read_as_seconds(self):
+        got = KartPool.gaps_ahead(self.grid((1, "10", "0.0"), (2, "11", "1:05.5")))
+        self.assertAlmostEqual(got["11"], 65.5)
+
+    def test_lapped_karts_are_skipped_not_guessed(self):
+        """"2 laps" is not a number of seconds, so that kart gets no reading."""
+        got = KartPool.gaps_ahead(self.grid((1, "10", "0.0"),
+                                            (2, "11", "2 laps"),
+                                            (3, "12", "8.0")))
+        self.assertNotIn("11", got)
+        # 12 is measured against the last kart we could actually place, which
+        # overstates its gap — erring towards calling a lap clean.
+        self.assertAlmostEqual(got["12"], 8.0)
+
+    def test_an_unordered_or_empty_grid_is_not_a_crash(self):
+        self.assertEqual(KartPool.gaps_ahead([]), {})
+        self.assertEqual(KartPool.gaps_ahead([{"kart": "10", "gap": "1.0"}]), {})
+
+    def test_a_close_lap_is_stored_against_the_kart(self):
+        """The gap has to survive the round trip, or the rating never sees it."""
+        import sqlite3
+        self.seed([("1", "ALPHA", "10"), ("2", "BRAVO", "11")])
+        grid = [dict(row("1", "ALPHA", laps=n), pos="1", gap="0.0")
+                for n in (1,)] + [dict(row("2", "BRAVO", laps=1), pos="2", gap="0.3")]
+        self.pool.observe(grid)
+        grid = [dict(row("1", "ALPHA", laps=2), pos="1", gap="0.0"),
+                dict(row("2", "BRAVO", laps=2), pos="2", gap="0.3")]
+        self.pool.observe(grid)
+        con = sqlite3.connect(self.db)
+        got = dict(con.execute("SELECT kart, ahead_s FROM kart_lap"))
+        self.assertIsNone(got.get("10"), "the leader was in clear air")
+        self.assertAlmostEqual(got["11"], 0.3)
+
+
 class TestPersistence(PoolCase):
     def test_state_survives_a_restart(self):
         self.seed([("1", "ALPHA", "10")])
