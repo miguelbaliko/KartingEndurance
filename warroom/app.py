@@ -655,6 +655,72 @@ def _fetch_http(page_url: str) -> str:
         return ""
     return parts[2]
 
+def _apex_request(page_url: str, request: str, timeout: int = 20) -> str:
+    """POST one request to Apex's request.php and return the body.
+
+    The same host and port discovery the live feed uses; this is the channel
+    the site's own "previous lives" menu talks to.
+    """
+    ep = _find_apex_endpoints(page_url)
+    if not ep.get("ajax") or not ep.get("port"):
+        return ""
+    url = ep["ajax"].rsplit("/", 1)[0] + "/request.php"
+    data = urllib.parse.urlencode({"port": ep["port"], "request": request})
+    req = urllib.request.Request(
+        url, data=data.encode(),
+        headers={"User-Agent": _UA, "Referer": ep.get("referer", page_url),
+                 "Content-Type": "application/x-www-form-urlencoded"})
+    # A one-shot request, unlike the live poll: nothing comes round again in
+    # five seconds to cover for it, so a dropped connection is worth retrying.
+    last = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read().decode("utf-8", errors="ignore").strip()
+        except Exception as e:
+            last = e
+            time.sleep(1.5 * (attempt + 1))
+    print(f"[apex] request {request!r} failed: {last}", flush=True)
+    return ""
+
+
+def apex_sessions(page_url: str) -> list:
+    """Every session this track has archived, newest first.
+
+    Apex answers ``id#name`` a line at a time.  "error" and an empty body both
+    mean no history, which is what a track that has just come online looks
+    like — not a failure worth shouting about.
+    """
+    body = _apex_request(page_url, "S#")
+    if not body or body == "error":
+        return []
+    out = []
+    for line in body.split("\n"):
+        sid, _, name = line.strip().partition("#")
+        if sid:
+            out.append({"id": sid, "name": name or sid})
+    return out
+
+
+def apex_session_result(page_url: str, sid: str) -> dict:
+    """The final classification of an archived session.
+
+    This is the whole of what Apex keeps: where everyone finished, their best
+    lap and their lap count — not the individual laps.  A kart's rating needs
+    many laps shared between drivers, so a classification cannot feed it; it
+    is a result to read, and it is exactly what settles "what did we do in
+    qualifying".
+    """
+    body = _apex_request(page_url, f"S#{sid}")
+    if not body or body == "error":
+        return {"rows": [], "meta": {}}
+    parts = body.split("@", 2)
+    payload = parts[2] if len(parts) > 2 else body
+    rows, _cells, meta = _parse_apex_pipe(payload)
+    return {"rows": rows, "meta": {k: v for k, v in meta.items() if v},
+            "id": sid}
+
+
 def _reset_ajax_state():
     _ajax_state.update({"init": "1", "index": "0", "counter": 0})
 
@@ -2103,6 +2169,37 @@ def api_driver_laps(did):
             ({"kart": k, "laps": len(v), "best": fmt_laptime(min(v)),
               "avg": fmt_laptime(sum(v) / len(v))} for k, v in by_kart.items()),
             key=lambda d: -d["laps"]))
+
+@app.get("/api/apex/sessions")
+def api_apex_sessions():
+    """Every session this track has archived, for reviewing a finished run."""
+    return jsonify(sessions=apex_sessions(CFG.get("apex_url", "")))
+
+
+@app.get("/api/apex/session/<sid>")
+def api_apex_session(sid):
+    """One archived session's final classification.
+
+    This is all Apex keeps of a finished session: the order, each kart's best
+    lap and its lap count.  It is not the individual laps, so it cannot feed
+    the kart model — that needs many laps shared between drivers — but it is
+    what answers "what did we actually do in qualifying".
+    """
+    res = apex_session_result(CFG.get("apex_url", ""), str(sid))
+    rows = sorted(res["rows"], key=lambda r: _int_or_last(r.get("pos")))
+    return jsonify(
+        id=res.get("id", sid),
+        name=(res["meta"].get("name") or "").strip(),
+        control=res["meta"].get("control") or [],
+        finished=res["meta"].get("light") == "lf",
+        rows=[{"pos": r.get("pos", ""), "kart": r.get("kart", ""),
+               "team": r.get("team", "") or r.get("driver", ""),
+               "driver": r.get("driver", ""),
+               "best_lap": r.get("best_lap", "-"),
+               "last_lap": r.get("last_lap", "-"),
+               "total_laps": r.get("total_laps", "-"),
+               "gap": r.get("gap", "-")} for r in rows])
+
 
 @app.get("/api/karts")
 def api_karts():

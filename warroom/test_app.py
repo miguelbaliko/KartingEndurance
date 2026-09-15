@@ -360,6 +360,69 @@ class TestSwitchingEvent(AppCase):
         self.assertFalse(self.app._ws_blocked)
 
 
+class TestArchivedSessions(AppCase):
+    """Apex keeps finished sessions; this is how qualifying gets reviewed."""
+
+    def fake_request(self, answers):
+        def go(page_url, request, timeout=20):
+            return answers.get(request, "")
+        self.app._apex_request = go
+
+    LIST = "16#Session 14\n14#Session 12"
+    RESULT = ('0@0@grid||<tbody>'
+              '<tr data-id="r0" class="head" data-pos="0">'
+              '<td data-id="c1" data-type="rk"></td>'
+              '<td data-id="c2" data-type="no"></td>'
+              '<td data-id="c3" data-type="dr"></td>'
+              '<td data-id="c4" data-type="blp"></td>'
+              '<td data-id="c5" data-type="tlp"></td></tr>'
+              '<tr data-id="r1" data-pos="2">'
+              '<td data-id="r1c1">2</td><td data-id="r1c2">308</td>'
+              '<td data-id="r1c3">BAPTISTE L.</td>'
+              '<td data-id="r1c4">1:07.232</td><td data-id="r1c5">11</td></tr>'
+              '<tr data-id="r2" data-pos="1">'
+              '<td data-id="r2c1">1</td><td data-id="r2c2">309</td>'
+              '<td data-id="r2c3">OOSTERMAN B.</td>'
+              '<td data-id="r2c4">1:05.123</td><td data-id="r2c5">12</td></tr>'
+              '</tbody>\nlight|lf|\n')
+
+    def test_the_history_list_is_read(self):
+        self.fake_request({"S#": self.LIST})
+        got = self.client.get("/api/apex/sessions").get_json()["sessions"]
+        self.assertEqual(got, [{"id": "16", "name": "Session 14"},
+                               {"id": "14", "name": "Session 12"}])
+
+    def test_no_history_is_an_empty_list_not_an_error(self):
+        for answer in ("", "error"):
+            self.fake_request({"S#": answer})
+            self.assertEqual(
+                self.client.get("/api/apex/sessions").get_json()["sessions"], [])
+
+    def test_a_finished_session_comes_back_in_order(self):
+        self.fake_request({"S#16": self.RESULT})
+        got = self.client.get("/api/apex/session/16").get_json()
+        self.assertTrue(got["finished"], "chequered flag")
+        self.assertEqual([r["pos"] for r in got["rows"]], ["1", "2"])
+        self.assertEqual(got["rows"][0]["kart"], "309")
+        self.assertEqual(got["rows"][0]["best_lap"], "1:05.123")
+        self.assertEqual(got["rows"][0]["total_laps"], "12")
+
+    def test_a_session_that_cannot_be_read_is_empty_not_a_crash(self):
+        self.fake_request({})
+        got = self.client.get("/api/apex/session/99").get_json()
+        self.assertEqual(got["rows"], [])
+
+    def test_reading_a_result_does_not_disturb_the_live_grid(self):
+        """The archive must not overwrite what is on the wall right now."""
+        self.app._reset_sector_best()
+        self.app._process_rows([{"pos": "1", "kart": "7", "team": "ALPHA",
+                                 "last_lap": "1:03.000"}])
+        self.fake_request({"S#16": self.RESULT})
+        self.client.get("/api/apex/session/16")
+        live = self.client.get("/api/state").get_json()["teams"]
+        self.assertEqual([t["kart"] for t in live], ["7"])
+
+
 class TestSectorColours(AppCase):
     """Purple, green, yellow — what every timing screen in the paddock means."""
 

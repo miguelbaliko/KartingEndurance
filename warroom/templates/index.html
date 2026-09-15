@@ -123,6 +123,15 @@ html,body{height:100%;background:var(--bg0);color:var(--tx);
   font-size:11px;color:var(--tx2);
 }
 .panel-hd .avg-chip b{color:var(--cyan);font-variant-numeric:tabular-nums}
+.past-pick{margin-left:auto;background:var(--bg2);color:var(--tx2);
+  border:1px solid var(--line2);border-radius:var(--r);font-size:11px;
+  padding:3px 6px;cursor:pointer}
+.past-row{display:grid;grid-template-columns:28px 46px 1fr 74px 40px;
+  gap:8px;align-items:center;padding:5px 2px;font-size:12px;
+  border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.past-row .p{color:var(--tx3);font-weight:700}
+.past-row .b{font-family:var(--mono);color:var(--ylw);text-align:right}
+.past-row .l{color:var(--tx3);text-align:right}
 
 /* Timing table */
 .t-table{width:100%;border-collapse:collapse}
@@ -620,6 +629,12 @@ tr.clickable{cursor:pointer}
         <h2 id="timing-heading">Live Timing</h2>
         <div class="cat-chips" id="cat-chips"></div>
         <div class="avg-chip">Track avg <b id="track-avg">–</b></div>
+        <!-- Apex keeps every finished session: this is how qualifying gets
+             read back without anyone having written the result down. -->
+        <select id="past-pick" class="past-pick" onchange="showPast(this.value)"
+                title="A finished session's classification, straight from Apex">
+          <option value="">Past sessions…</option>
+        </select>
       </div>
       <table class="t-table" id="timing-table">
         <thead id="timing-thead">
@@ -878,6 +893,9 @@ async function fetchState() {
 }
 fetchState();
 setInterval(fetchState, 1000);
+// The archive changes only when a session ends, so once a minute is plenty.
+setTimeout(loadPastList, 1200);
+setInterval(loadPastList, 60000);
 
 // ═══ API ═══════════════════════════════════════════════════════
 async function api(path, body) {
@@ -1018,6 +1036,59 @@ function renderCatChips(teams) {
 function setCat(c) {
   _catFilter = c;
   if (S) { renderCatChips(S.teams); renderTable(S.teams); }
+}
+
+// ── Archived sessions ───────────────────────────────────────────
+/** Apex keeps a finished session's classification — the order, each kart's
+ *  best lap and its lap count.  Not the individual laps, so it cannot feed
+ *  the kart model; it is what answers "what did we do in qualifying". */
+async function loadPastList() {
+  const sel = document.getElementById('past-pick');
+  if (!sel) return;
+  let d;
+  try { d = await (await fetch('/api/apex/sessions')).json(); }
+  catch (e) { return; }
+  const list = d.sessions || [];
+  sel.innerHTML = '<option value="">Past sessions…</option>'
+    + list.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  sel.style.display = list.length ? '' : 'none';
+}
+
+async function showPast(id) {
+  if (!id) return;
+  document.getElementById('past-pick').value = '';
+  document.getElementById('laps-title').textContent = 'Loading…';
+  document.getElementById('laps-sub').textContent = '';
+  document.getElementById('laps-body').innerHTML = '';
+  document.getElementById('laps-overlay').style.display = 'flex';
+  let d;
+  try { d = await (await fetch('/api/apex/session/' + encodeURIComponent(id))).json(); }
+  catch (e) {
+    document.getElementById('laps-body').innerHTML =
+      '<div class="bn-note">Could not load that session.</div>';
+    return;
+  }
+  document.getElementById('laps-title').textContent = d.name || ('Session ' + id);
+  document.getElementById('laps-sub').textContent =
+    (d.finished ? 'Finished' : 'Not flagged') + ' · ' + (d.rows||[]).length + ' karts';
+  const log = (d.control || []).map(c =>
+    `<div class="kd-drv"><span class="who">${esc(c.at||'')}</span>
+      <span>${esc(c.text||c.flag||'')}</span></div>`).join('');
+  document.getElementById('laps-body').innerHTML = `
+    ${(d.rows||[]).length ? `
+      <div class="bn-hd">Classification</div>
+      ${d.rows.map(r => `
+        <div class="past-row">
+          <span class="p">${esc(r.pos)}</span>
+          <span>#${esc(r.kart)}</span>
+          <span>${esc(r.team || r.driver || '')}</span>
+          <span class="b">${esc(r.best_lap)}</span>
+          <span class="l">${esc(r.total_laps)}L</span>
+        </div>`).join('')}` : '<div class="bn-note">Nothing recorded.</div>'}
+    ${log ? `<div class="bn-hd" style="margin-top:10px">Race control</div>${log}` : ''}
+    <div class="bn-note" style="margin-top:10px">Apex keeps the classification
+      of a finished session, not its individual laps — so this is the result to
+      read, and it is not evidence the kart ratings can use.</div>`;
 }
 
 /** One sector cell, coloured the way a timing screen colours it: purple for
