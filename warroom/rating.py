@@ -41,7 +41,11 @@ DEFAULTS = {
     "lambda_pilot": 4.0,      # ridge strength, in laps, for driver effects
     "lambda_kart": 12.0,      # ridge strength, in laps, for kart effects
     "iters": 40,              # alternating least squares sweeps
-    "min_laps": 8,            # laps before a kart is rated at all
+    "min_laps": 8,            # clean laps before a kart is rated at all
+    # Clean laps before a grade stops moving.  Below this, shrinkage pulls a
+    # kart towards the middle of the fleet, and the ones that move are the
+    # extremes: measured, a genuinely Bad kart reads OK until about here.
+    "min_solid_laps": 30,
     "min_pilot_laps": 30,     # laps before a driver is scored apart from their team
     "min_pilots": 2,          # distinct drivers before a rating is called solid
     # Whose laps are worth listening to.  A kart's score is only as good as
@@ -518,6 +522,10 @@ def rate(samples: list, cfg: dict = None) -> dict:
             "linked": is_linked,
             # One driver's laps cannot tell that driver apart from the kart.
             "weak": len(kart_pilots.get(kart, ())) < cfg["min_pilots"],
+            # Graded, but on evidence thin enough that the grade can still move
+            # a band — and it moves towards the middle, so a bad kart flatters
+            # itself.  Not the same as weak: that is about who drove it.
+            "thin": is_rated and n < cfg["min_solid_laps"],
             "label": label_for(delta, cfg) if is_rated else cfg["unknown_label"],
             "reason": reason,
             # How it behaves across a stint, which the average cannot show.

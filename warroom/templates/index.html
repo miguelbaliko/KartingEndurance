@@ -409,6 +409,7 @@ td{padding:7px 8px;white-space:nowrap}
 .ask-cost{color:#f97316;font-weight:700}
 .mt-lost{color:var(--org)}
 .mt-as{color:var(--tx3);font-size:10px;margin-left:6px}
+.kd.thin{opacity:.75;font-weight:700;margin-left:2px}
 .sec-loss{color:#f97316}
 .sec-ok{color:#22c55e}
 /* §3.14: every driver owes 120 minutes, and being short is a penalty. */
@@ -1188,7 +1189,7 @@ function renderBoxNow(s) {
     karts.map(k => `
       <div class="bn-row">
         <span class="bn-num">${esc(k.num)}</span>
-        <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
+        <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}${thinMark(k)}
           ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
         <span class="bn-lane">${esc(k.lane_name||('Lane '+k.lane))}</span>
       </div>`).join('') +
@@ -1314,6 +1315,15 @@ function fmtDelta(d) {
 }
 
 /** The kart a team is holding, with how good we think it is. */
+/** A grade set on thin evidence can still move a band, and it moves towards
+ *  the middle — so the kart that flatters itself is the bad one.  Marked, not
+ *  hidden: an OK on twelve clean laps is worth knowing about, not suppressing. */
+function thinMark(k) {
+  return k && k.thin
+    ? `<span class="kd thin" title="Only ${k.laps} clean laps — this grade can
+       still move a band, and thin evidence flatters a bad kart">~</span>` : '';
+}
+
 function kartChip(num, label, delta, inPit) {
   if (!num) return '<span class="kchip none">—</span>';
   const cls = CHIP_CLS[label] || 'unknown';
@@ -1402,7 +1412,7 @@ function renderLanes(pool) {
         ${l.karts.map((k,i) => `
           <div class="lane-k ${i===0?'next':''}">
             <span class="num">${esc(k.num)}</span>
-            <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
+            <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}${thinMark(k)}${thinMark(k)}
               ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
             ${i===0 ? '<span class="nx">NEXT</span>' : ''}
             <button class="rm" title="Remove"
@@ -1424,7 +1434,7 @@ function renderFleet(pool, s) {
          style="cursor:pointer" onclick="showKart('${esc(k.num)}')"
          title="Click for this kart's laps">
       <span class="fleet-num">${esc(k.num)}</span>
-      <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
+      <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}
         ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
       ${fadeChip(k)}
       <span class="fleet-where" title="${esc([k.holder||k.reason,
@@ -1571,7 +1581,7 @@ function renderMatrix(s) {
              onclick="showKart('${esc(k.num)}')"
              title="${esc(k.label)}${k.delta!=null?' '+fmtDelta(k.delta):''} — click for its laps">
           <span class="mx-n">${esc(k.num)}</span>
-          <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}</span>
+          <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}${thinMark(k)}</span>
           <span class="mx-d">${k.delta!=null?fmtDelta(k.delta):''}</span>
         </div>`).join('')
         : '<div class="mx-empty">empty</div>'}

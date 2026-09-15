@@ -285,6 +285,44 @@ class TestRate(unittest.TestCase):
             self.assertAlmostEqual(four[kart]["effect"], five[kart]["effect"],
                                    places=6, msg=kart)
 
+    def test_a_grade_on_thin_evidence_is_marked(self):
+        """Measured: a genuinely bad kart reads OK until about thirty clean laps.
+
+        Shrinkage pulls a thinly-sampled kart towards the middle of the fleet,
+        so the ones that move are the extremes — and the direction that costs
+        us is the bad kart flattering itself into an OK a driver gets sent out
+        in.  The grade is still shown; it is shown as provisional.
+        """
+        base = simulate(self.KARTS, self.PILOTS, self._rotating())
+        thin = base + [(300_000.0 + i * 65, p, "K9", 63.9)
+                       for i, p in enumerate(["PRO-A", "PRO-B", "MID-C"] * 4)]
+        got = rate(thin)["karts"]["K9"]
+        self.assertTrue(got["rated"], "twelve clean laps is still a grade")
+        self.assertTrue(got["thin"], "…but one that can still move")
+
+    def test_a_grade_the_whole_race_backs_is_not_marked(self):
+        res = rate(simulate(self.KARTS, self.PILOTS, self._rotating()))["karts"]
+        self.assertFalse(res["K1"]["thin"])
+        self.assertFalse(res["K8"]["thin"])
+
+    def test_thin_is_not_the_same_as_unrated(self):
+        """An Unknown kart has no grade at all; a thin one has a provisional one."""
+        samples = simulate(self.KARTS, self.PILOTS, self._rotating())
+        samples += [(300_000.0 + i * 65, "PRO-A", "K9", 63.5) for i in range(3)]
+        got = rate(samples)["karts"]["K9"]
+        self.assertFalse(got["rated"])
+        self.assertFalse(got["thin"], "nothing to qualify — there is no grade")
+
+    def test_towed_laps_do_not_make_a_grade_look_solid(self):
+        """The evidence that counts is clean, here as everywhere else."""
+        base = [(t, p, k, s, None) for t, p, k, s in
+                simulate(self.KARTS, self.PILOTS, self._rotating())]
+        twelve_clean = [(300_000.0 + i * 65, p, "K9", 63.9, 3.5)
+                        for i, p in enumerate(["PRO-A", "PRO-B", "MID-C"] * 4)]
+        towed = [(400_000.0 + i * 65, "PRO-A", "K9", 63.1, 0.3) for i in range(80)]
+        got = rate(base + twelve_clean + towed)["karts"]["K9"]
+        self.assertTrue(got["thin"], "eighty tows are not thirty clean laps")
+
     def test_empty_input(self):
         res = rate([])
         self.assertEqual(res["karts"], {})

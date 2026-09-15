@@ -834,6 +834,7 @@ class KartPool:
                 "laps": info.get("laps", 0),
                 "pilots": info.get("pilots", 0),
                 "weak": info.get("weak", True),
+                "thin": info.get("thin", False),
                 "reason": info.get("reason", "no laps yet"),
                 "best_s": best.get(num),
                 "holder": holders.get(num, ""),
