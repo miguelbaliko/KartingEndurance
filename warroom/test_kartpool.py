@@ -298,6 +298,19 @@ class TestRetiringAKart(PoolCase):
         self.assertEqual(self.pool.snapshot()["retired"], [])
 
 
+class TestWipingClearsWhatIsOnScreen(PoolCase):
+    def test_a_wipe_drops_the_scores_immediately(self):
+        """The rating cache serves for a few seconds, so a wipe used to leave
+        the old grades showing — long enough to make someone wipe twice."""
+        self.pool.observe([row("1", "ALPHA", laps=1)])
+        for lap in range(2, 14):
+            self.pool.observe([row("1", "ALPHA", laps=lap)])
+        self.pool.ratings()                      # warm the cache
+        self.pool.reset()
+        self.assertEqual(self.pool.ratings()["karts"], {})
+        self.assertEqual(self.pool.snapshot()["fleet"], [])
+
+
 class TestFullPitCycle(PoolCase):
     """Three teams, two lanes, karts round-tripping the way they do in a race."""
 

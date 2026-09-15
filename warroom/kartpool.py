@@ -772,4 +772,9 @@ class KartPool:
         self._category.clear()
         self._pace.clear()
         self._log.clear()
+        # Marking it dirty is not enough: ratings() still serves the cached
+        # scores for the refresh window, so a wipe left the old grades on
+        # screen for several seconds. Throw them away outright.
+        self._rating = {"karts": {}, "pilots": {}, "n_laps": 0, "linked_karts": 0}
+        self._rating_at = 0.0
         self._rating_dirty = True
