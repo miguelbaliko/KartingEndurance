@@ -1037,6 +1037,57 @@ class TestKartWatch(AppCase):
         self.assertEqual(w["karts"], [])
 
 
+class TestSectorReview(AppCase):
+    """A lap time says a driver is four tenths off; sectors say where."""
+
+    def rows(self, pilot, s1, s2, s3=None, n=8):
+        return [{"pilot": pilot, "s1": s1, "s2": s2, "s3": s3} for _ in range(n)]
+
+    def test_it_names_the_sector_the_time_goes_in(self):
+        team = (self.rows("TPC|Balikó", 21.6, 17.0, 28.0)
+                + self.rows("TPC|Caxi", 21.2, 17.4, 28.0))
+        mine = [r for r in team if r["pilot"].endswith("Balikó")]
+        got = {x["sector"]: x for x in self.app.sector_review(mine, team)}
+        self.assertAlmostEqual(got["Sector 1"]["loss"], 0.4, places=3)
+        self.assertEqual(got["Sector 2"]["loss"], 0.0)   # theirs is the best
+        self.assertEqual(got["Sector 3"]["loss"], 0.0)   # dead level
+
+    def test_a_sector_with_too_few_laps_is_left_out(self):
+        team = self.rows("TPC|Balikó", 21.6, 17.0, None)
+        got = [x["sector"] for x in self.app.sector_review(team, team)]
+        self.assertEqual(got, ["Sector 1", "Sector 2"])
+
+    def test_one_blocked_lap_does_not_invent_a_weakness(self):
+        team = self.rows("TPC|Balikó", 21.2, 17.0) + self.rows("TPC|Caxi", 21.2, 17.0)
+        team[0] = dict(team[0], s1=40.0)          # a lap spent behind someone
+        mine = [r for r in team if r["pilot"].endswith("Balikó")]
+        got = {x["sector"]: x for x in self.app.sector_review(mine, team)}
+        self.assertLess(got["Sector 1"]["loss"], 0.01)
+
+    def test_no_sectors_at_all_is_an_empty_review_not_a_crash(self):
+        self.assertEqual(self.app.sector_review([], []), [])
+
+    def test_sectors_reach_the_driver_view_from_the_feed(self):
+        """End to end: the feed's sector columns land on the finished lap."""
+        self.client.post("/api/driver/add", json={"name": "Balikó"})
+        did = self.client.get("/api/state").get_json()["drivers"][0]["id"]
+        pool = self.app.POOL
+        pool.set_kart("7", "ALPHA", "17")
+        for lap in range(1, 12):
+            pool.observe([{"kart": "7", "team": "ALPHA", "driver": "Balikó",
+                           "pits": "0", "total_laps": str(lap),
+                           "last_lap_s": 63.0, "pos": "1", "gap": "0.0",
+                           "s1": "21.5", "s2": "17.1", "s3": "24.4"}],
+                         now=1000.0 + lap * 65)
+        got = self.client.get(f"/api/driver/{did}/laps").get_json()
+        self.assertTrue(got["sectors"], "the feed sent sectors; they must arrive")
+        self.assertEqual({x["sector"] for x in got["sectors"]},
+                         {"Sector 1", "Sector 2", "Sector 3"})
+        self.assertAlmostEqual(
+            next(x for x in got["sectors"] if x["sector"] == "Sector 2")["median"],
+            17.1, places=3)
+
+
 class TestDriverFatigue(AppCase):
     """At 4am the rota is decided on who is rested, not on who is quickest."""
 

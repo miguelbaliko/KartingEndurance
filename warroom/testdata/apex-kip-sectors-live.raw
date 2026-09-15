@@ -1,0 +1,34 @@
+init|p|
+best|hide|
+css|no9|border-bottom-color:#400080 !important; color:#FFFFFF !important;
+css|no10|border-bottom-color:#F40000 !important; color:#FFFFFF !important;
+css|no11|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no12|border-bottom-color:#3E9EFF !important; color:#FFFFFF !important;
+css|no13|border-bottom-color:#000040 !important; color:#FFFFFF !important;
+css|no14|border-bottom-color:#80FF00 !important; color:#000000 !important;
+css|no15|border-bottom-color:#FF0080 !important; color:#FFFFFF !important;
+css|no16|border-bottom-color:#FF8040 !important; color:#000000 !important;
+css|no17|border-bottom-color:#804040 !important; color:#FFFFFF !important;
+css|no18|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no1|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no2|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no3|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no4|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no5|border-bottom-color:#FF0080 !important; color:#FFFFFF !important;
+css|no6|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no7|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no8|border-bottom-color:#0000A0 !important; color:#FFFFFF !important;
+css|pena1|color:#f00; font-size:11px; font-weight: bold; text-align:center;
+effects||Display Effects
+comments||Comments
+title1||
+title2||Session 14
+dyn1|countdown|117507
+light|lg|
+wth1|ws|
+wth2||
+wth3||
+track||KIP (1270m)
+com||
+grid||<tbody><tr data-id="r0" class="head" data-pos="0"><td data-id="c1" data-type="grp" data-pr="6"></td><td data-id="c2" data-type="sta" data-pr="1"></td><td data-id="c3" data-type="rk" data-pr="1">Rnk</td><td data-id="c4" data-type="no" data-pr="1">Kart</td><td data-id="c5" data-type="dr" data-pr="1" data-width="20" data-min="16">Driver</td><td data-id="c6" data-type="s1" data-pr="3" data-width="11" data-min="6">S1</td><td data-id="c7" data-type="s2" data-pr="3" data-width="11" data-min="6">S2</td><td data-id="c8" data-type="s3" data-pr="3" data-width="11" data-min="6">S3</td><td data-id="c9" data-type="llp" data-pr="2" data-width="14" data-min="7">Last lap</td><td data-id="c10" data-type="blp" data-pr="1" data-width="14" data-min="7">Best lap</td><td data-id="c11" data-type="tlp" data-pr="5" data-width="5" data-min="4">Laps</td><td data-id="c12" data-type="gap" data-pr="4" data-width="10" data-min="7">Gap</td></tr><tr data-id="r1" data-pos="1"><td data-id="r1c1" class="gf"></td><td data-id="r1c2" class="in"></td><td class="rk"><div><p data-id="r1c3" class="">1</p></div></td><td class="no"><div data-id="r1c4" class="no13">309</div></td><td data-id="r1c5" class="dr">OOSTERMAN B.</td><td data-id="r1c6" class="tn">21.303</td><td data-id="r1c7" class="tn">17.138</td><td data-id="r1c8" class=""></td><td data-id="r1c9" class="tn">1:06.822</td><td data-id="r1c10" class="ib">1:05.123</td><td data-id="r1c11" class="in">10</td><td data-id="r1c12" class="in"></td></tr><tr data-id="r2" data-pos="3"><td data-id="r2c1" class="gs"></td><td data-id="r2c2" class="in"></td><td class="rk"><div><p data-id="r2c3" class="">3</p></div></td><td class="no"><div data-id="r2c4" class="no13">308</div></td><td data-id="r2c5" class="dr">BAPTISTE L.</td><td data-id="r2c6" class="ti">21.611</td><td data-id="r2c7" class=""></td><td data-id="r2c8" class=""></td><td data-id="r2c9" class="ti">1:07.232</td><td data-id="r2c10" class="ib">1:07.232</td><td data-id="r2c11" class="in">10</td><td data-id="r2c12" class="in">2.109</td></tr><tr data-id="r3" data-pos="2"><td data-id="r3c1" class="gl"></td><td data-id="r3c2" class="in"></td><td class="rk"><div><p data-id="r3c3" class="">2</p></div></td><td class="no"><div data-id="r3c4" class="no13">310</div></td><td data-id="r3c5" class="dr">MIGUEL_SILVA_75</td><td data-id="r3c6" class="tn">21.745</td><td data-id="r3c7" class=""></td><td data-id="r3c8" class=""></td><td data-id="r3c9" class="tn">1:05.271</td><td data-id="r3c10" class="ib">1:05.157</td><td data-id="r3c11" class="in">10</td><td data-id="r3c12" class="in">0.034</td></tr></tbody>
+msg||

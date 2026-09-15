@@ -176,12 +176,19 @@ _CELL_MAP = {
     "name": "team", "team": "team",
     "cat": "category", "class": "category", "grp": "category",
     "llp": "last_lap", "blp": "best_lap", "tlp": "total_laps",
+    # Sectors.  Where a lap was lost is the only thing a lap time cannot say,
+    # and it is what a driver debrief is actually about.
+    "s1": "s1", "s2": "s2", "s3": "s3",
     "pit": "pits", "gap": "gap", "int": "interval",
     # Apex timing state classes (only appear on lap-time cells)
     "tb": "last_lap", "ti": "last_lap", "tn": "last_lap", "ib": "best_lap",
 }
 
 _global_col_types: dict = {}   # "c6" -> "last_lap" (built from grid header row)
+# Every column the header declared, including the ones we do not read.  A
+# column the header named is never guessed at from a CSS class, which is how
+# a sector time came to be read as a lap time.
+_global_head_cols: set = set()
 _row_kart_map: dict     = {}   # "r14915" -> "17"    (built from parsed data rows)
 
 class ApexParser(html.parser.HTMLParser):
@@ -193,6 +200,7 @@ class ApexParser(html.parser.HTMLParser):
         self._is_head  = False
         self._row_did: Optional[str] = None
         self.col_types: dict    = {}   # c6 -> "last_lap" (from head row data-type)
+        self.head_cols: set     = set()  # every column the header declared
         self.saw_head = False          # this frame carried its own header
         self.row_kart_map: dict = {}   # r14915 -> "17"
 
@@ -215,35 +223,37 @@ class ApexParser(html.parser.HTMLParser):
         elif tag in ("td", "th"):
             self._col = None
             dt = a.get("data-type", "")
-            if dt in _CELL_MAP:
-                # Header row: register column type; data row: map column
-                if self._is_head and did:
+            if self._is_head and did:
+                # Every declared column is recorded, mapped or not: "this is S1"
+                # is as much an answer as "this is the last lap".
+                self.head_cols.add(did)
+                self.saw_head = True
+                if dt in _CELL_MAP:
                     self.col_types[did] = _CELL_MAP[dt]
-                    self.saw_head = True
-                if self._cur is not None:
-                    self._col = _CELL_MAP[dt]
+            elif dt in _CELL_MAP and self._cur is not None:
+                self._col = _CELL_MAP[dt]
             elif self._cur is not None:
-                for cls in a.get("class", "").split():
-                    if cls in _CELL_MAP:
-                        self._col = _CELL_MAP[cls]
-                        break
-                # Fallback: the cell's data-id ends in the header's column id,
-                # so "r93c8" is whatever column c8 was declared to be.  Prefer
-                # the header in this very frame — the module-level map is only
-                # updated once the whole frame is parsed, so on the first frame
-                # (the one that carries the header) it is still empty.
-                if self._col is None and did:
-                    col_m = re.search(r'(c\d+)$', did)
-                    if col_m:
-                        col = col_m.group(1)
-                        # A header in this frame is the last word: a column it
-                        # does not declare is not a column we read.  Falling
-                        # back to the module map here would let a previous
-                        # event's layout decide — which is how Palmela's sector
-                        # time landed in the lap time, because kartplanet had a
-                        # lap time in that same column.
-                        self._col = (self.col_types.get(col) if self.saw_head
-                                     else _global_col_types.get(col))
+                # The cell's data-id ends in the header's column id, so "r93c8"
+                # is whatever column c8 was declared to be.  Prefer the header
+                # in this very frame — the module-level map is only updated
+                # once the whole frame is parsed, so on the first frame (the
+                # one that carries the header) it is still empty.
+                types = self.col_types if self.saw_head else _global_col_types
+                known = self.head_cols if self.saw_head else _global_head_cols
+                col_m = re.search(r'(c\d+)$', did or "")
+                col = col_m.group(1) if col_m else None
+                if col and col in known:
+                    # The header's word is final, even when the answer is "not
+                    # a column we read".  Guessing from the CSS class here is
+                    # how Palmela's S1 landed in the lap time: the sector cell
+                    # carries the same "tn" class as the lap cell and comes
+                    # first, so it won.
+                    self._col = types.get(col)
+                else:
+                    for cls in a.get("class", "").split():
+                        if cls in _CELL_MAP:
+                            self._col = _CELL_MAP[cls]
+                            break
 
     def handle_data(self, data):
         v = data.strip()
@@ -583,7 +593,7 @@ def _parse_apex_pipe(msg: str) -> tuple:
     rows = full row dicts for _process_rows,
     cell_updates = {kart: {field: value}} for _apply_cell_updates,
     meta = session info for _process_meta."""
-    global _global_col_types, _row_kart_map
+    global _global_col_types, _global_head_cols, _row_kart_map
     rows: list = []
     cell_updates: dict = {}
     meta: dict = {}
@@ -604,6 +614,8 @@ def _parse_apex_pipe(msg: str) -> tuple:
                 # last one must not inherit the leftovers.
                 _global_col_types.clear()
                 _global_col_types.update(hp.col_types)
+                _global_head_cols.clear()
+                _global_head_cols.update(hp.head_cols)
             if hp.row_kart_map:
                 _row_kart_map.update(hp.row_kart_map)
             rows.extend(hp.rows)
@@ -1155,6 +1167,41 @@ def check_pit_plan(plan: list, race: dict, drivers: list) -> list:
     order = {"blocker": 0, "warn": 1}
     problems.sort(key=lambda p: order.get(p["level"], 9))
     return problems
+
+def sector_review(mine: list, team_rows: list, least: int = 5) -> list:
+    """Where a driver's lap goes, sector by sector, against the team's best.
+
+    A lap time says someone is four tenths off; only the sectors say which
+    corners, and that is the only part of a debrief a driver can do anything
+    with.  Medians on both sides, so one blocked lap does not invent a
+    weakness, and a sector nobody has ``least`` laps in is left out rather
+    than compared on two samples.
+    """
+    def median_of(rows, key):
+        vals = [r[key] for r in rows if r.get(key)]
+        return statistics.median(vals) if len(vals) >= least else None
+
+    by_driver = defaultdict(list)
+    for r in team_rows:
+        by_driver[(r["pilot"] or "").rsplit("|", 1)[-1].strip()].append(r)
+
+    out = []
+    for key, label in (("s1", "Sector 1"), ("s2", "Sector 2"), ("s3", "Sector 3")):
+        got = median_of(mine, key)
+        if got is None:
+            continue
+        others = [median_of(rows, key) for rows in by_driver.values()]
+        best = min((v for v in others if v is not None), default=None)
+        out.append({"sector": label, "median": round(got, 3),
+                    "best": round(best, 3) if best is not None else None,
+                    "loss": round(got - best, 3) if best is not None else None,
+                    "laps": sum(1 for r in mine if r.get(key))})
+    return out
+
+
+def my_team_name() -> str:
+    return (CFG.get("team_name", "") or "").strip()
+
 
 # ── Driver fatigue ─────────────────────────────────────────────────────────────
 def rest_seconds(stints: list, now: datetime) -> dict:
@@ -1920,8 +1967,11 @@ def api_driver_laps(did):
     name = (drv["name"] or "").strip()
     with POOL._con() as con:
         rows = [dict(r) for r in con.execute(
-            "SELECT ts, pilot, kart, lap_s FROM kart_lap "
+            "SELECT ts, pilot, kart, lap_s, s1, s2, s3 FROM kart_lap "
             "ORDER BY id DESC LIMIT 4000")]
+    team_rows = [r for r in rows
+                 if (r["pilot"] or "").split("|", 1)[0].strip().lower()
+                 == my_team_name().lower()]
     rows = [r for r in rows
             if (r["pilot"] or "").rsplit("|", 1)[-1].strip().lower() == name.lower()]
     by_kart = defaultdict(list)
@@ -1932,6 +1982,24 @@ def api_driver_laps(did):
     times = [r["lap_s"] for r in rows]
     owed = max(0.0, CFG["race"].get("driver_min_minutes", 0) * 60
                - drv["total_seconds"])
+
+    # How steady they are, and where that puts them among their own team.  It
+    # is measured against the field baseline, so it is not a pace ranking: a
+    # slower driver who repeats the same lap is more use on a long stint than
+    # a quick one who throws a second away every fourth lap.
+    cards = POOL.ratings().get("pilot_cards") or {}
+    mine = {k.rsplit("|", 1)[-1].strip(): v for k, v in cards.items()
+            if "|" in k and k.rsplit("|", 1)[0].strip() == my_team_name()}
+    ranked = sorted((n for n in mine if mine[n]["spread_s"] is not None),
+                    key=lambda n: mine[n]["spread_s"])
+    card = mine.get(name)
+    consistency = None
+    if card and card["spread_s"] is not None:
+        consistency = {
+            "spread_s": card["spread_s"], "laps": card["laps"],
+            "rank": ranked.index(name) + 1 if name in ranked else None,
+            "of": len(ranked),
+            "steadiest_s": mine[ranked[0]]["spread_s"] if ranked else None}
     for st in stints:
         st["dur"] = fmt_duration(st["duration_seconds"] or 0)
     return jsonify(
@@ -1940,6 +2008,8 @@ def api_driver_laps(did):
         avg=fmt_laptime(sum(times) / len(times)) if times else "-",
         total_fmt=fmt_duration(drv["total_seconds"]),
         owed_fmt=fmt_duration(owed), owed_seconds=owed,
+        consistency=consistency,
+        sectors=sector_review(rows, team_rows),
         stints=stints[:40], stint_count=len(stints),
         karts=sorted(
             ({"kart": k, "laps": len(v), "best": fmt_laptime(min(v)),

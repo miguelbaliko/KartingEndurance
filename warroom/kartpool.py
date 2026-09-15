@@ -87,7 +87,11 @@ CREATE TABLE IF NOT EXISTS kart_lap (
     -- Gap to the kart ahead when the lap was completed.  A lap run in someone
     -- else's slipstream is quicker than the kart deserves, so it is worth less
     -- as evidence.  NULL when the gap could not be read.
-    ahead_s REAL
+    ahead_s REAL,
+    -- The three sector times for this lap, in seconds.  A lap time says a
+    -- driver lost four tenths; the sectors say where, which is the only part
+    -- of a debrief a driver can act on.  NULL where the feed did not send one.
+    s1 REAL, s2 REAL, s3 REAL
 );
 CREATE TABLE IF NOT EXISTS kart_stop (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -163,6 +167,8 @@ class KartPool:
         # unknown", which stays true until the stop is resolved; the timestamp
         # answers "is this team in the box right now", which decays.
         self._pending_teams = {}
+        # team_no -> sectors of the lap they are on
+        self._sectors = {}
         self._skip = defaultdict(int)
         self._in_box_since = {}
         self._category = {}
@@ -193,8 +199,9 @@ class KartPool:
             # Databases written before the gap column exists: the laps already
             # in them were recorded without it, and read back as clean.
             cols = {r["name"] for r in con.execute("PRAGMA table_info(kart_lap)")}
-            if "ahead_s" not in cols:
-                con.execute("ALTER TABLE kart_lap ADD COLUMN ahead_s REAL")
+            for col in ("ahead_s", "s1", "s2", "s3"):
+                if col not in cols:
+                    con.execute(f"ALTER TABLE kart_lap ADD COLUMN {col} REAL")
         self._sync_lanes()
 
     def configure(self, cfg: dict):
@@ -609,6 +616,12 @@ class KartPool:
                 if fresh_lap and not stopped:
                     self._record_lap(con, team_no, team, row, lap_s, now,
                                      ahead.get(str(row.get("kart", ""))))
+                # Bank the sectors after the lap is written, never before: what
+                # is on the board now belongs to the lap being run, so banking
+                # first would file the new lap's splits under the old one.  A
+                # final sector arriving in the same frame as the lap time is
+                # lost this way, which is the safe direction to be wrong in.
+                self._note_sectors(team_no, row)
                 if fresh_lap and lap_s > 0:
                     self._pace[team_no].append(lap_s)
                 if lap_s:
@@ -658,16 +671,24 @@ class KartPool:
         between neighbours once the field is in order.  The leader is ahead of
         nobody and gets None rather than nought.
         """
-        order = []
+        placed = []
         for r in rows:
             try:
                 pos = int(str(r.get("pos", "") or 0).strip() or 0)
             except ValueError:
                 continue
-            g = _lap_or_none(r.get("gap"))
-            if pos and g is not None:
-                order.append((pos, str(r.get("kart", "")), g))
-        order.sort()
+            if pos:
+                placed.append((pos, str(r.get("kart", "")), r.get("gap")))
+        placed.sort()
+        order = []
+        for i, (pos, kart, raw) in enumerate(placed):
+            # The leader's gap cell is blank on every Apex board: they are
+            # ahead of the field by nought, not by an unknown amount.  Reading
+            # that as missing drops them out of the order and hands the leader's
+            # place to the kart behind.
+            g = 0.0 if i == 0 else _lap_or_none(raw)
+            if g is not None:
+                order.append((pos, kart, g))
         out = {}
         for i, (_pos, kart, g) in enumerate(order):
             out[kart] = None if i == 0 else round(g - order[i - 1][2], 3)
@@ -676,6 +697,9 @@ class KartPool:
     def _record_lap(self, con, team_no: str, team: str, row: dict,
                     lap_s: float, now: float, ahead_s: float = None):
         """Store one lap against the kart we believe the team is holding."""
+        # The sector buffer is emptied whether or not the lap is kept, because
+        # those sectors belong to the lap that has just ended either way.
+        sectors = self._sectors.pop(team_no, {})
         if team_no in self._pending_teams:
             return                       # in the box, kart unknown
         if self._skip[team_no] > 0:
@@ -686,10 +710,25 @@ class KartPool:
             return
         driver = (row.get("driver") or "").strip()
         pilot = f"{team or team_no}|{driver}" if driver else (team or team_no)
-        con.execute("INSERT INTO kart_lap(ts,team_no,pilot,kart,lap_s,ahead_s) "
-                    "VALUES(?,?,?,?,?,?)",
-                    (now, team_no, pilot, kart, float(lap_s), ahead_s))
+        con.execute("INSERT INTO kart_lap(ts,team_no,pilot,kart,lap_s,ahead_s,"
+                    "s1,s2,s3) VALUES(?,?,?,?,?,?,?,?,?)",
+                    (now, team_no, pilot, kart, float(lap_s), ahead_s,
+                     sectors.get("s1"), sectors.get("s2"), sectors.get("s3")))
         self._rating_dirty = True
+
+    def _note_sectors(self, team_no: str, row: dict):
+        """Remember the sectors of the lap a team is on, until it ends.
+
+        Apex fills the sector columns as a kart passes each split, so what is
+        on the board belongs to the lap in progress, not the one on the
+        timesheet.  They are held here and written when that lap completes.
+        A sector the feed never sent stays missing rather than being guessed.
+        """
+        buf = self._sectors.setdefault(team_no, {})
+        for key in ("s1", "s2", "s3"):
+            v = _lap_or_none(row.get(key))
+            if v is not None:
+                buf[key] = v
 
     # ── rating ────────────────────────────────────────────────────────────────
     @property

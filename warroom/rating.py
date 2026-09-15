@@ -283,13 +283,30 @@ def consistency_weights(seg_res: dict, cfg: dict) -> dict:
             statistics.median([abs(r - med) for r in res]))
     if not spread:
         return {}
-    per_pilot = {p: statistics.median(v) for p, v in spread.items()}
+    per_pilot = pilot_spread(seg_res)
     field = statistics.median(per_pilot.values())
     if field <= 0:
         return {}
     lo, hi = cfg["weight_floor"], cfg["weight_ceiling"]
     return {p: max(lo, min(hi, field / m)) if m > 0 else hi
             for p, m in per_pilot.items()}
+
+
+def pilot_spread(seg_res: dict) -> dict:
+    """Each driver's typical lap-to-lap scatter, in seconds.
+
+    The same median absolute deviation the weighting is built on, but left in
+    seconds instead of turned into a ratio, because "±0.12s" is a number a
+    driver can be shown and a ratio is not.
+    """
+    spread = {}
+    for (pilot, _kart), res in seg_res.items():
+        if len(res) < 3:
+            continue
+        med = statistics.median(res)
+        spread.setdefault(pilot, []).append(
+            statistics.median([abs(r - med) for r in res]))
+    return {p: round(statistics.median(v), 3) for p, v in spread.items()}
 
 
 def runs_from(samples: list, base, cfg: dict) -> list:
@@ -370,8 +387,8 @@ def rate(samples: list, cfg: dict = None) -> dict:
     if caps:
         samples = [s for s in samples
                    if s[3] <= caps.get(team_of(s[1]).strip().upper(), s[3])]
-    result = {"karts": {}, "pilots": {}, "n_laps": len(samples),
-              "linked_karts": 0}
+    result = {"karts": {}, "pilots": {}, "pilot_cards": {},
+              "n_laps": len(samples), "linked_karts": 0}
     if not samples:
         return result
 
@@ -460,6 +477,17 @@ def rate(samples: list, cfg: dict = None) -> dict:
                   else set())
         result["linked_karts"] = len(linked)
         result["pilots"] = {p: round(v, 3) for p, v in pilots.items()}
+        # What each driver's own laps look like: pace against the field, how
+        # steady they are, and how much the model leaned on them.
+        laps_by_pilot = defaultdict(int)
+        for (pilot, _k), res in seg_res.items():
+            laps_by_pilot[pilot] += len(res)
+        spread = pilot_spread(seg_res)
+        result["pilot_cards"] = {
+            p: {"effect": round(v, 3), "spread_s": spread.get(p),
+                "laps": laps_by_pilot.get(p, 0),
+                "trust": round(trust.get(p, 1.0), 2)}
+            for p, v in pilots.items()}
     else:
         pilots, karts, linked = {}, {}, set()
 

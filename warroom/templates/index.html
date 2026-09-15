@@ -374,6 +374,9 @@ td{padding:7px 8px;white-space:nowrap}
 .fatigue.note{color:#eab308;background:rgba(234,179,8,.10);border-color:rgba(234,179,8,.25)}
 .fatigue.good{color:var(--tx2)}
 .fatigue b{font-weight:700;color:var(--tx)}
+.bn-note b{color:var(--tx);font-weight:700}
+.sec-loss{color:#f97316}
+.sec-ok{color:#22c55e}
 /* §3.14: every driver owes 120 minutes, and being short is a penalty. */
 .drv-owed{font-size:10px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
 .drv-owed.short{color:var(--amb,#eab308)}
@@ -1477,7 +1480,18 @@ async function showDriver(id, name) {
       ${d.owed_seconds > 0
         ? `<span class="drv-owed short">still owes ${esc(d.owed_fmt)}</span>`
         : '<span class="drv-owed done">✓ minimum met</span>'}
-    </div>`;
+    </div>` + consistencyLine(d);
+  // A lap time says they are four tenths off; only the sectors say where.
+  const sectors = (d.sectors || []).length ? `
+    <div class="bn-hd" style="margin-top:10px">Where the lap goes</div>
+    ${d.sectors.map(x => `
+      <div class="kd-drv"><span class="who">${esc(x.sector)}</span>
+        <span>${x.median.toFixed(3)}s</span>
+        <span class="${x.loss > 0.05 ? 'sec-loss' : 'sec-ok'}">${
+          x.loss == null ? '' : (x.loss <= 0
+            ? 'best in the team'
+            : '+' + x.loss.toFixed(3) + ' on ' + x.best.toFixed(3))}</span>
+        <span>${x.laps} laps</span></div>`).join('')}` : '';
   // Pace reads differently depending on the kart, so show the split.
   const karts = d.karts.length ? `
     <div class="bn-hd">Karts they have had</div>
@@ -1500,7 +1514,8 @@ async function showDriver(id, name) {
       </div>`).join('')}`
     : `<div class="bn-note">No laps recorded for this driver yet. Laps are only
        stored once we know which kart the team was in.</div>`;
-  document.getElementById('laps-body').innerHTML = head + karts + stints + laps;
+  document.getElementById('laps-body').innerHTML =
+    head + sectors + karts + stints + laps;
 }
 
 /** One kart's whole history: every lap, its best, and who has driven it. */
@@ -1589,6 +1604,21 @@ function renderPit(s) {
 }
 
 // ── Drivers ──────────────────────────────────────────────────────
+/** How repeatable their laps are, and where that puts them in the team.
+ *  Not a pace ranking: on a long stint a steady driver who is two tenths off
+ *  beats a quick one who throws a second away every fourth lap. */
+function consistencyLine(d) {
+  const c = d.consistency;
+  if (!c) return '';
+  const rank = c.rank ? `${c.rank} of ${c.of} in the team` : '';
+  const gap = (c.rank && c.rank > 1 && c.steadiest_s != null)
+    ? ` · steadiest is ±${c.steadiest_s.toFixed(2)}s` : '';
+  return `<div class="kd-hd"><span class="bn-note"
+    title="Median lap-to-lap scatter against the field baseline, over
+    ${c.laps} laps">Consistency <b>±${c.spread_s.toFixed(2)}s</b>${
+      rank ? ' — ' + rank : ''}${gap}</span></div>`;
+}
+
 /** A driver back out within the half hour has not really rested. */
 function restCls(d) {
   if (d.active) return 'out';

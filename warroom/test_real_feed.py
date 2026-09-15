@@ -168,5 +168,60 @@ class TestPalmelaLayout(RealFeedCase):
         self.assertEqual(rows, [])
 
 
+SECTORS = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "testdata", "apex-kip-sectors-live.raw")
+
+
+class TestPalmelaWithKartsRunning(RealFeedCase):
+    """KIP Palmela mid-session, captured 2026-09-15 with three karts circulating.
+
+    This is the frame that caught it: the sector cells carry the very classes
+    the parser treats as a lap time (``tn``, ``ti``, ``tb``), and they come
+    before the lap columns, so the class fallback was reading S1 as the last
+    lap — 21.303 where the board said 1:06.822.  The header says which column
+    is which, and it has to be believed over the class.
+    """
+
+    def setUp(self):
+        super().setUp()
+        with open(SECTORS, encoding="utf-8") as f:
+            self.raw = f.read()
+        self.rows = {r["kart"]: r for r in self.app._parse_apex_pipe(self.raw)[0]}
+
+    def test_all_three_karts_parse(self):
+        self.assertEqual(set(self.rows), {"308", "309", "310"})
+
+    def test_the_lap_time_is_the_lap_not_the_first_sector(self):
+        self.assertEqual(self.rows["309"]["last_lap"], "1:06.822")
+        self.assertEqual(self.rows["309"]["best_lap"], "1:05.123")
+        # The sector times are in the frame and must not reach any field.
+        for row in self.rows.values():
+            for field in ("last_lap", "best_lap", "gap"):
+                self.assertNotIn(row.get(field),
+                                 ("21.303", "21.611", "21.745", "17.138"))
+
+    def test_a_lap_time_a_sector_could_never_be(self):
+        """Sanity the other way: a real lap here is over a minute."""
+        for kart, row in self.rows.items():
+            self.assertGreater(self.app.parse_laptime(row["last_lap"]), 60.0, kart)
+
+    def test_the_gap_to_the_kart_ahead_survives(self):
+        """0.034s is the tow the kart rating now has to know about."""
+        self.assertEqual(self.rows["310"]["gap"], "0.034")
+        import kartpool
+        ahead = kartpool.KartPool.gaps_ahead(list(self.rows.values()))
+        self.assertIsNone(ahead["309"])           # the leader
+        self.assertAlmostEqual(ahead["310"], 0.034)
+        self.assertAlmostEqual(ahead["308"], 2.075)
+
+    def test_the_session_is_named_and_the_light_is_green(self):
+        meta = {}
+        for frame in self.raw.split("\n\x00\n"):
+            meta.update({k: v for k, v in self.app._parse_apex_pipe(frame)[2].items()
+                         if v})
+        self.assertEqual(meta.get("light"), "lg")
+        self.assertEqual(meta.get("track"), "KIP (1270m)")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
