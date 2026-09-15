@@ -59,6 +59,12 @@ def load_cfg() -> dict:
             "driver_min_minutes": 120,    # §3.14 every driver, over the event
             "pace_drop_warn": 0.30,
             "pace_drop_box": 0.50,
+            # Fatigue: how far a driver's laps have to drop against their own
+            # opening ones before it is worth saying, and how long they have to
+            # have been in the kart before a drop means tiredness rather than
+            # a scruffy first few laps.
+            "fade_warn_s": 0.40,
+            "fade_after_minutes": 25,
         },
         "karts": dict(kartpool.DEFAULTS),
     }
@@ -1150,6 +1156,71 @@ def check_pit_plan(plan: list, race: dict, drivers: list) -> list:
     problems.sort(key=lambda p: order.get(p["level"], 9))
     return problems
 
+# ── Driver fatigue ─────────────────────────────────────────────────────────────
+def rest_seconds(stints: list, now: datetime) -> dict:
+    """How long each driver has been out of the kart, by driver id.
+
+    At 4am this is the number that decides who goes next.  A driver who got
+    out twenty minutes ago is not rested, however much time they still owe.
+    Only finished stints count: whoever is out on track is not resting.
+    """
+    last = {}
+    for st in stints:
+        did, end = str(st.get("driver_id") or ""), st.get("end_ts")
+        if not did or not end:
+            continue
+        try:
+            ts = datetime.fromisoformat(end)
+        except (TypeError, ValueError):
+            continue
+        if did not in last or ts > last[did]:
+            last[did] = ts
+    return {d: max(0.0, (now - ts).total_seconds()) for d, ts in last.items()}
+
+
+def stint_fade(lap_times: list, edge: int = 5) -> Optional[float]:
+    """How much slower the last few laps are than the first few, in seconds.
+
+    ``lap_times`` is one stint's laps in the order they were run.  Positive
+    means the driver is dropping off — the thing you cannot see from the tower
+    and the driver will not admit on the radio.  Medians, because one lap stuck
+    behind a backmarker is not fatigue.
+
+    None until there are laps enough at both ends to compare, which is the
+    honest answer for the first ten minutes of every stint.
+    """
+    laps = [t for t in lap_times if t and t > 0]
+    if len(laps) < edge * 2:
+        return None
+    return round(statistics.median(laps[-edge:])
+                 - statistics.median(laps[:edge]), 3)
+
+
+def fatigue_note(fade_s: Optional[float], stint_s: float,
+                 cfg: dict = None) -> Optional[dict]:
+    """A word about the driver on track, or nothing at all.
+
+    It never says who to put in — that is the team's rota and the team's call.
+    It says what the laps are doing, so the call is made knowing.
+    """
+    cfg = cfg or {}
+    slow = cfg.get("fade_warn_s", 0.4)
+    long_s = cfg.get("fade_after_minutes", 25) * 60
+    if fade_s is None or stint_s < long_s:
+        return None
+    if fade_s >= slow * 2:
+        return {"level": "warn",
+                "text": f"Dropping off: {fade_s:+.2f}s on their opening laps "
+                        f"after {fmt_duration(stint_s)} in the kart."}
+    if fade_s >= slow:
+        return {"level": "note",
+                "text": f"Slipping {fade_s:+.2f}s against their opening laps."}
+    if fade_s <= -slow:
+        return {"level": "good",
+                "text": f"Still building: {fade_s:+.2f}s on their opening laps."}
+    return {"level": "good", "text": "Holding their pace."}
+
+
 # ── Strategy engine ────────────────────────────────────────────────────────────
 def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
                      my_avg5: Optional[float], prev_avg5: Optional[float],
@@ -1325,6 +1396,16 @@ def make_snapshot() -> dict:
             drivers.append(d)
 
         stints_done = con.execute("SELECT COUNT(*) FROM stints").fetchone()[0]
+        finished = [dict(r) for r in con.execute(
+            "SELECT driver_id, end_ts FROM stints WHERE end_ts IS NOT NULL")]
+
+    # How long each driver has been out of the kart.  Whoever is on track is
+    # not resting, however long ago their previous stint ended.
+    rested = rest_seconds(finished, now)
+    for d in drivers:
+        r = None if d["active"] else rested.get(str(d["id"]))
+        d["rested_s"] = r
+        d["rested_fmt"] = fmt_duration(r) if r is not None else ""
 
         for i, row in enumerate(con.execute("""
             SELECT s.id, s.driver_id, s.start_ts, s.end_ts, s.duration_seconds,
@@ -1357,6 +1438,19 @@ def make_snapshot() -> dict:
             pits_done = int(str(my_team.get("pits", "")).strip())
         except (TypeError, ValueError):
             pass
+
+    # Is the driver on track dropping off?  Their own laps from this stint,
+    # in the order they were run — nobody else's pace comes into it.
+    fade_s = None
+    if stint_running and my_name:
+        with POOL._con() as con:
+            stint_laps = [r["lap_s"] for r in con.execute(
+                "SELECT lap_s FROM kart_lap WHERE ts >= ? AND "
+                "(pilot = ? OR pilot LIKE ?) ORDER BY id",
+                (datetime.fromisoformat(stint_start).timestamp(),
+                 my_name, my_name + "|%"))]
+        fade_s = stint_fade(stint_laps)
+    fatigue = fatigue_note(fade_s, stint_s, CFG["race"])
 
     strat = None      # filled in below, once the kart pool has been read
     _prev_avg5 = my_avg5
@@ -1464,6 +1558,9 @@ def make_snapshot() -> dict:
         "strategy":         strat,
         "current_driver":   current_driver,
         "drivers":          drivers,
+        # What this stint's laps are doing, so the rota is decided knowing.
+        "stint_fade_s":     fade_s,
+        "fatigue":          fatigue,
         "pits_done":        pits_done,
         "stints_done":      stints_done,
         "mandatory_pits":   CFG["race"]["mandatory_pits"],

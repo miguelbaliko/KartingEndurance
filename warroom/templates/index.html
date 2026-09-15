@@ -363,6 +363,17 @@ td{padding:7px 8px;white-space:nowrap}
 }
 .cfg-card h3{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--tx)}
 .cfg-lbl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+/* At 4am the rota turns on who is rested, not on who is quickest. */
+.drv-rest{font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums;
+  min-width:44px;text-align:right}
+.drv-rest.fresh{color:#f97316}
+.drv-rest.out{color:#22c55e}
+.fatigue{display:flex;align-items:center;gap:7px;font-size:11px;
+  padding:7px 9px;border-radius:8px;margin-top:8px;border:1px solid var(--line2)}
+.fatigue.warn{color:#f97316;background:rgba(249,115,22,.12);border-color:rgba(249,115,22,.3)}
+.fatigue.note{color:#eab308;background:rgba(234,179,8,.10);border-color:rgba(234,179,8,.25)}
+.fatigue.good{color:var(--tx2)}
+.fatigue b{font-weight:700;color:var(--tx)}
 /* §3.14: every driver owes 120 minutes, and being short is a penalty. */
 .drv-owed{font-size:10px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
 .drv-owed.short{color:var(--amb,#eab308)}
@@ -685,6 +696,7 @@ tr.clickable{cursor:pointer}
       <div class="card">
         <div class="card-hd">Drivers &amp; Time Driven</div>
         <div class="drv-rows" id="drivers-list"></div>
+        <div class="fatigue" id="fatigue" hidden></div>
         <div class="add-row">
           <input id="add-name" class="add-inp" placeholder="New driver…"
                  onkeydown="if(event.key==='Enter')addDriver()">
@@ -1577,6 +1589,13 @@ function renderPit(s) {
 }
 
 // ── Drivers ──────────────────────────────────────────────────────
+/** A driver back out within the half hour has not really rested. */
+function restCls(d) {
+  if (d.active) return 'out';
+  if (d.rested_s == null) return '';
+  return d.rested_s < 1800 ? 'fresh' : '';
+}
+
 function renderDrivers(s) {
   // Don't re-render while user is actively editing a driver name
   if (document.querySelector('.drv-edit-inp:focus')) return;
@@ -1591,6 +1610,10 @@ function renderDrivers(s) {
             onclick="showDriver(${d.id}, '${esc(d.name).replace(/'/g, "\\'")}')"
             title="Click for this driver's laps, stints and karts">${esc(d.name)}</span>
       <span class="drv-time ${d.total_seconds>0?'':'zero'}">${d.total_fmt}</span>
+      <span class="drv-rest ${restCls(d)}" title="${d.active ? 'Out on track now'
+            : d.rested_s==null ? 'Has not driven yet'
+            : 'Out of the kart for '+d.rested_fmt}"
+        >${d.active ? 'OUT' : (d.rested_fmt || '—')}</span>
       <span class="drv-owed ${d.owed_seconds>0?'short':'done'}"
             title="${d.owed_seconds>0
               ? 'Still owes '+d.owed_fmt+' — 20s penalty per 10s short (§3.14)'
@@ -1605,6 +1628,15 @@ function renderDrivers(s) {
       <button class="i-btn" style="color:var(--grn)" onclick="saveEdit(${d.id})">✓</button>
       <button class="i-btn" onclick="cancelEdit(${d.id})">✕</button>
     </div>`).join('');
+  // What this stint's laps are doing.  It never names a replacement — the
+  // rota is the team's call; this is so the call is made knowing.
+  const f = document.getElementById('fatigue');
+  if (f) {
+    f.className = 'fatigue ' + ((s.fatigue && s.fatigue.level) || '');
+    f.hidden = !s.fatigue;
+    if (s.fatigue) f.innerHTML =
+      `<b>${esc((s.current_driver||{}).name || 'On track')}:</b> ${esc(s.fatigue.text)}`;
+  }
 }
 
 // ── Pit log ──────────────────────────────────────────────────────

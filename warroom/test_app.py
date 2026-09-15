@@ -1037,6 +1037,76 @@ class TestKartWatch(AppCase):
         self.assertEqual(w["karts"], [])
 
 
+class TestDriverFatigue(AppCase):
+    """At 4am the rota is decided on who is rested, not on who is quickest."""
+
+    def rest(self, stints, now="2026-09-20T04:00:00"):
+        from datetime import datetime
+        return self.app.rest_seconds(stints, datetime.fromisoformat(now))
+
+    def test_rest_is_measured_from_the_last_stint_that_ended(self):
+        got = self.rest([{"driver_id": 1, "end_ts": "2026-09-20T01:00:00"},
+                         {"driver_id": 1, "end_ts": "2026-09-20T03:30:00"},
+                         {"driver_id": 2, "end_ts": "2026-09-20T02:00:00"}])
+        self.assertAlmostEqual(got["1"], 1800.0)
+        self.assertAlmostEqual(got["2"], 7200.0)
+
+    def test_a_driver_who_has_not_driven_has_no_reading(self):
+        self.assertEqual(self.rest([]), {})
+
+    def test_a_stint_still_running_is_not_rest(self):
+        self.assertEqual(self.rest([{"driver_id": 1, "end_ts": None}]), {})
+
+    def test_a_broken_timestamp_is_skipped_not_guessed(self):
+        self.assertEqual(self.rest([{"driver_id": 1, "end_ts": "soon"}]), {})
+
+    def test_fade_compares_the_last_laps_to_the_opening_ones(self):
+        laps = [62.0] * 5 + [62.5] * 10 + [63.0] * 5
+        self.assertAlmostEqual(self.app.stint_fade(laps), 1.0, places=3)
+
+    def test_a_driver_finding_the_pace_reads_negative(self):
+        self.assertLess(self.app.stint_fade([64.0] * 5 + [62.0] * 5), 0)
+
+    def test_one_lap_in_traffic_is_not_fatigue(self):
+        """A median, so a single blocked lap does not read as a driver dying."""
+        laps = [62.0] * 9 + [75.0]
+        self.assertAlmostEqual(self.app.stint_fade(laps), 0.0, places=3)
+
+    def test_too_few_laps_says_nothing_rather_than_guessing(self):
+        self.assertIsNone(self.app.stint_fade([62.0] * 9))
+        self.assertIsNone(self.app.stint_fade([]))
+
+    def test_nothing_is_said_early_in_a_stint(self):
+        """Scruffy opening laps are not tiredness — wait for the stint to run."""
+        self.assertIsNone(self.app.fatigue_note(1.2, stint_s=600,
+                                                cfg=self.app.CFG["race"]))
+
+    def test_a_real_drop_late_in_a_stint_is_called_out(self):
+        note = self.app.fatigue_note(0.9, stint_s=2400, cfg=self.app.CFG["race"])
+        self.assertEqual(note["level"], "warn")
+        self.assertIn("+0.90s", note["text"])
+
+    def test_holding_pace_is_worth_saying_too(self):
+        note = self.app.fatigue_note(0.05, stint_s=2400, cfg=self.app.CFG["race"])
+        self.assertEqual(note["level"], "good")
+
+    def test_it_never_names_a_replacement(self):
+        """The rota is the team's; the app reports the laps and stops there."""
+        for fade in (-1.0, 0.0, 0.5, 2.0):
+            note = self.app.fatigue_note(fade, 3000, self.app.CFG["race"])
+            self.assertNotIn("swap", (note or {}).get("text", "").lower())
+            self.assertNotIn("put ", (note or {}).get("text", "").lower())
+
+    def test_the_driver_on_track_is_not_shown_as_rested(self):
+        self.app.kv_set("status", "racing")
+        self.client.post("/api/driver/add", json={"name": "Balikó"})
+        did = self.client.get("/api/state").get_json()["drivers"][0]["id"]
+        self.client.post("/api/driver/set", json={"driver_id": did})
+        row = self.client.get("/api/state").get_json()["drivers"][0]
+        self.assertTrue(row["active"])
+        self.assertIsNone(row["rested_s"])
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)
