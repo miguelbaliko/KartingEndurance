@@ -552,6 +552,90 @@ class TestCategoryFromTheEntryList(AppCase):
             entries.OURS)
 
 
+class TestHowLongThisStopCanWait(AppCase):
+    """One number, and which rule is holding it.
+
+    Two deadlines run at once: the stint ceiling (§3.10, and §15.4 charges 20s
+    per started 10s over it) and the schedule (every stop still owed needs its
+    three minutes before the lane shuts at 24:30, §3.8). The earlier one is
+    the only one that matters, and the wall needs to know which it is.
+    """
+
+    def by(self, stint_min, elapsed_h, pits, **over):
+        race = dict(self.app.CFG["race"])
+        race.update(over)
+        return self.app.pit_by_seconds(stint_min * 60, elapsed_h * 3600,
+                                       pits, race)
+
+    def test_early_on_the_ceiling_is_what_binds(self):
+        got = self.by(stint_min=20, elapsed_h=2, pits=3)
+        self.assertEqual(got["reason"], "stint limit")
+        self.assertAlmostEqual(got["seconds"], 40 * 60, delta=1)
+
+    def test_it_counts_down_with_the_stint(self):
+        a = self.by(stint_min=20, elapsed_h=2, pits=3)["seconds"]
+        b = self.by(stint_min=35, elapsed_h=2, pits=3)["seconds"]
+        self.assertAlmostEqual(a - b, 15 * 60, delta=1)
+
+    def test_the_ceiling_still_wins_while_there_is_race_left(self):
+        """At 23h with four stops owed the schedule allows 78 min — but the
+        stint ceiling only 55, so the ceiling is still the binding rule."""
+        got = self.by(stint_min=5, elapsed_h=23, pits=30)
+        self.assertEqual(got["reason"], "stint limit")
+        self.assertAlmostEqual(got["seconds"], 55 * 60, delta=1)
+
+    def test_late_on_the_schedule_is_what_binds(self):
+        """An hour later the window is 30 min and four stops need twelve."""
+        got = self.by(stint_min=5, elapsed_h=24, pits=30)
+        self.assertEqual(got["reason"], "schedule")
+        self.assertAlmostEqual(got["seconds"], 18 * 60, delta=1)
+        self.assertIn("4 stop", got["detail"])
+
+    def test_it_never_goes_negative(self):
+        for args in ((70, 2, 3), (5, 24, 30), (70, 24, 33)):
+            self.assertGreaterEqual(self.by(*args)["seconds"], 0.0)
+
+    def test_once_the_lane_shuts_it_says_so(self):
+        got = self.by(stint_min=10, elapsed_h=24.9, pits=34)
+        self.assertEqual(got["reason"], "lane shut")
+        self.assertEqual(got["seconds"], 0)
+
+    def test_with_every_stop_served_only_the_ceiling_is_left(self):
+        got = self.by(stint_min=10, elapsed_h=20, pits=34)
+        self.assertEqual(got["reason"], "stint limit")
+        self.assertAlmostEqual(got["seconds"], 50 * 60, delta=1)
+        self.assertIn("mandatory stop served", got["detail"])
+
+    def test_it_agrees_with_box_now_at_the_ceiling(self):
+        """The countdown and the call must not disagree on the wall."""
+        race = self.app.CFG["race"]
+        at_limit = race["stint_max_minutes"] * 60 - 30
+        got = self.app.pit_by_seconds(at_limit, 3600, 2, race)
+        self.assertLess(got["seconds"], 60)
+        strat = self.app.compute_strategy(at_limit, 3600, 2, None, None, "lg")
+        self.assertEqual(strat["label"], "BOX NOW")
+
+    def test_the_shape_a_real_race_actually_had(self):
+        """Read off a 24h Palmela board: 10h14 gone, teams on 8-10 stops.
+
+        Our own race is 25h with 34 stops, so the schedule bites far harder
+        than it did for them — this is the arithmetic that says by how much.
+        """
+        ours = self.by(stint_min=0, elapsed_h=10.24, pits=10)
+        self.assertEqual(ours["reason"], "stint limit",
+                         "ten hours in, the ceiling is still the binding rule")
+        # 24 stops still owed at three minutes is 72 minutes of box time, and
+        # there are about 13 hours of open pit lane left to fit it in.
+        late = self.by(stint_min=0, elapsed_h=10.24, pits=10)
+        self.assertGreater(late["seconds"], 0)
+
+    def test_it_reaches_the_wall(self):
+        self.app.kv_set("status", "racing")
+        got = self.client.get("/api/state").get_json()["pit_by"]
+        self.assertIn(got["reason"], ("stint limit", "schedule", "lane shut"))
+        self.assertGreaterEqual(got["seconds"], 0)
+
+
 class TestSectorColours(AppCase):
     """Purple, green, yellow — what every timing screen in the paddock means."""
 

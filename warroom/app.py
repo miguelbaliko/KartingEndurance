@@ -1494,6 +1494,50 @@ def fatigue_note(fade_s: Optional[float], stint_s: float,
     return {"level": "good", "text": "Holding their pace."}
 
 
+def pit_by_seconds(stint_s: float, race_elapsed_s: float, pits_done: int,
+                   race: dict) -> dict:
+    """How long the next stop can still wait, and which rule is holding it.
+
+    Two deadlines run at once and the earlier one is the only one that matters:
+
+    * the stint ceiling — §3.10 caps a stint and §15.4 charges 20s for every
+      started 10s over it, so this one is a penalty the moment it passes;
+    * the schedule — every mandatory stop still owed needs its three minutes
+      in the box before the lane shuts at 24:30 (§3.8, §3.9), so waiting past
+      this point means a stop that can never be served.
+
+    Returned in seconds with the rule named, because "box by 21:40" and why
+    are one thought on a pit wall and two clicks anywhere else.
+    """
+    total_s  = race["duration_minutes"] * 60
+    max_s    = race["stint_max_minutes"] * 60
+    no_pit_s = race["no_pit_last_minutes"] * 60
+    box_s    = race["pit_duration_seconds"]
+    stops_left = max(0, int(race["mandatory_pits"]) - int(pits_done))
+
+    # Time left before the pit lane shuts for good.
+    room = (total_s - race_elapsed_s) - no_pit_s
+    if room <= 0:
+        return {"seconds": 0, "reason": "lane shut",
+                "detail": f"Pit lane shut for the last {race['no_pit_last_minutes']} min"}
+
+    ceiling = max_s - stint_s
+    if not stops_left:
+        return {"seconds": max(0.0, ceiling), "reason": "stint limit",
+                "detail": f"Every mandatory stop served — only the "
+                          f"{race['stint_max_minutes']} min stint ceiling left"}
+
+    schedule = room - stops_left * box_s
+    if schedule <= ceiling:
+        return {"seconds": max(0.0, schedule), "reason": "schedule",
+                "detail": f"{stops_left} stop(s) still owed, "
+                          f"{fmt_duration(stops_left * box_s)} of box time to fit "
+                          f"before the lane shuts"}
+    return {"seconds": max(0.0, ceiling), "reason": "stint limit",
+            "detail": f"{race['stint_max_minutes']} min ceiling — over it is "
+                      f"20s per started 10s (§15.4)"}
+
+
 # ── Strategy engine ────────────────────────────────────────────────────────────
 def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
                      my_avg5: Optional[float], prev_avg5: Optional[float],
@@ -1839,6 +1883,10 @@ def make_snapshot() -> dict:
         "stint_running":    stint_running,
         "stint_fmt":        fmt_duration(stint_s),
         "stint_pct":        round(stint_pct, 1),
+        # The one pit number a wall reads at a glance: how long this stop can
+        # still wait, and which rule is the one holding it.
+        "pit_by":           pit_by_seconds(stint_s, race_elapsed, pits_done,
+                                           CFG["race"]),
         "pit_remaining":    pit_remaining,
         "pit_remaining_fmt": fmt_mmss(pit_remaining),
         "pit_min_met":       pit_min_met,

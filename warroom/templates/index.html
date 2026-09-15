@@ -62,6 +62,14 @@ html,body{height:100%;background:var(--bg0);color:var(--tx);
 .tb-clock.low{color:var(--ylw)}
 .tb-clock.crit{color:var(--red)}
 .tb-sep{width:1px;height:22px;background:var(--line2);margin:0 14px}
+.pitby{display:flex;flex-direction:column;align-items:center;margin-left:12px;
+  padding:2px 9px;border:1px solid var(--line2);border-radius:var(--r);
+  background:var(--bg2)}
+.pitby-lbl{font-size:8px;letter-spacing:.11em;color:var(--tx3)}
+.pitby-val{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;
+  color:var(--tx);line-height:1.1}
+.pitby.low .pitby-val{color:var(--ylw)}
+.pitby.crit .pitby-val{color:var(--red)}
 #status-badge{
   font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   padding:3px 10px;border-radius:99px;
@@ -613,6 +621,12 @@ tr.clickable{cursor:pointer}
     <div class="tb-brand">⚑ <span>Pit Wall</span></div>
     <span id="race-remaining" class="tb-clock">--:--:--</span>
     <span class="clock-src" id="clock-src" title="Where the race clock comes from">LOCAL</span>
+    <!-- How long this stop can still wait.  Two rules run at once — the stint
+         ceiling and the schedule — and this is whichever bites first. -->
+    <div class="pitby" id="pitby" hidden>
+      <span class="pitby-lbl" id="pitby-lbl">PIT BY</span>
+      <span class="pitby-val" id="pitby-val">--:--</span>
+    </div>
     <div class="tb-sep"></div>
     <span id="status-badge" class="s-idle">IDLE</span>
     <div class="tb-apex">
@@ -966,6 +980,24 @@ function tick() {
   if (bf) { bf.style.width=pct+'%'; bf.className='stint-bar-fill '+barCls; }
   const bl = document.getElementById('stint-bar-left');
   if (bl) bl.textContent = fmtDur(stintS);
+
+  // How long this stop can still wait.  Both deadlines run down with the
+  // stint, so it ticks here rather than waiting for the next state.
+  const pb = document.getElementById('pitby');
+  if (pb) {
+    const src = S.pit_by;
+    const live = S.status === 'racing' || S.status === 'pitting';
+    pb.hidden = !src || !live;
+    if (src && live) {
+      // The stint ceiling runs down with the stint; the schedule with the race.
+      const left = Math.max(0, src.seconds - elapsed);
+      pb.className = 'pitby' + (left < 120 ? ' crit' : left < 300 ? ' low' : '');
+      document.getElementById('pitby-val').textContent = fmtMmss(left);
+      document.getElementById('pitby-lbl').textContent =
+        src.reason === 'lane shut' ? 'LANE SHUT' : 'PIT BY';
+      pb.title = src.detail || '';
+    }
+  }
 
   // Pit countdown
   if (S.status==='pitting') {
