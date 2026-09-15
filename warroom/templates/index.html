@@ -369,7 +369,6 @@ td{padding:7px 8px;white-space:nowrap}
 .bn-hd{font-size:11px;color:var(--tx3);margin-bottom:7px}
 .bn-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;
   background:var(--bg2);border:1px solid var(--line);margin-bottom:6px}
-.bn-pip{width:8px;height:8px;border-radius:2px;flex:none}
 .bn-num{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;min-width:26px}
 .bn-lane{font-size:10px;color:var(--tx3);margin-left:auto}
 .bn-verdict{font-size:12px;font-weight:700;text-align:center;padding:8px;border-radius:8px;
@@ -404,7 +403,6 @@ tr.clickable{cursor:pointer}
 .matrix-hd{font-size:10px;color:var(--tx3);margin:10px 0 6px}
 .matrix{display:flex;gap:8px}
 .mx-col{flex:1;min-width:0}
-.mx-top{height:3px;border-radius:2px;margin-bottom:5px}
 .mx-nm{font-size:10px;color:var(--tx3);margin-bottom:4px;display:flex;
   justify-content:space-between}
 .mx-k{display:flex;align-items:center;gap:5px;padding:4px 6px;margin-bottom:3px;
@@ -498,7 +496,6 @@ tr.clickable{cursor:pointer}
 /* Pit lanes */
 .lane{margin-bottom:9px}
 .lane-hd{display:flex;align-items:center;gap:7px;font-size:11px;margin-bottom:5px}
-.lane-pip{width:8px;height:8px;border-radius:2px;flex:none}
 .lane-nm{font-weight:700;color:var(--tx2)}
 .lane-n{margin-left:auto;color:var(--tx3);font-size:10px}
 .lane-q{display:flex;flex-direction:column;gap:3px}
@@ -1040,7 +1037,6 @@ function renderBoxNow(s) {
     `<div class="bn-hd">Box now and we get one of these:</div>` +
     karts.map(k => `
       <div class="bn-row">
-        <span class="bn-pip" style="background:${esc(k.lane_color||'#888')}"></span>
         <span class="bn-num">${esc(k.num)}</span>
         <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
           ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
@@ -1223,7 +1219,6 @@ function renderLanes(pool) {
   document.getElementById('lanes-body').innerHTML = (pool.lanes||[]).map(l => `
     <div class="lane">
       <div class="lane-hd">
-        <span class="lane-pip" style="background:${esc(l.color)}"></span>
         <span class="lane-nm">${esc(l.name)}</span>
         <span class="lane-n">${l.karts.length} kart${l.karts.length===1?'':'s'}</span>
       </div>
@@ -1390,7 +1385,6 @@ function renderMatrix(s) {
   const lanes = (s.kartpool || {}).lanes || [];
   el.innerHTML = lanes.length ? lanes.map(l => `
     <div class="mx-col">
-      <div class="mx-top" style="background:${esc(l.color||'#888')}"></div>
       <div class="mx-nm"><span>${esc(l.name||('Lane '+l.lane))}</span>
         <span>${l.karts.length}</span></div>
       ${l.karts.length ? l.karts.map((k, i) => `

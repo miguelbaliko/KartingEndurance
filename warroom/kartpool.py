@@ -34,9 +34,19 @@ from datetime import datetime, timezone
 
 import rating
 
-# Lane colours match the pit-phone page, so "the red lane" means the same thing
-# on the wall screen and in the hand of the person standing in the pit lane.
-LANE_COLORS = ["#ef4444", "#22c55e", "#3b82f6", "#eab308", "#a855f7", "#f97316"]
+# Lanes are told apart by where they are, not by colour.  Colour now means how
+# good a kart is — red bad, green good — so colouring a lane red made it look
+# like the lane full of bad karts.  A lane is a place: left, right, or a number.
+LANE_NAMES = ["Left", "Right"]
+LANE_COLORS = ["#64748b"] * 6      # one neutral slate, kept so the UI has a key
+MAX_LANES = 6
+
+def lane_name(i: int, total: int) -> str:
+    """Two lanes are the left and the right one; more than two get numbers."""
+    if total == 2 and 1 <= i <= 2:
+        return LANE_NAMES[i - 1]
+    return f"Lane {i}"
+
 
 DEFAULTS = {
     "enabled": True,
@@ -165,7 +175,7 @@ class KartPool:
         """Apply settings.  Safe to call while racing: lanes are added, and a
         lane is only dropped once it is empty."""
         self.cfg.update({k: v for k, v in (cfg or {}).items() if k in DEFAULTS})
-        self.cfg["lanes"] = max(1, min(len(LANE_COLORS), _int(self.cfg["lanes"], 2) or 2))
+        self.cfg["lanes"] = max(1, min(MAX_LANES, _int(self.cfg["lanes"], 2) or 2))
         if getattr(self, "_lock", None):
             self._sync_lanes()
 
@@ -177,7 +187,8 @@ class KartPool:
                 if i not in have:
                     con.execute(
                         "INSERT INTO kart_lane(lane,name,color,queue) VALUES(?,?,?,'[]')",
-                        (i, f"Lane {i}", LANE_COLORS[(i - 1) % len(LANE_COLORS)]))
+                        (i, lane_name(i, self.cfg["lanes"]),
+                         LANE_COLORS[(i - 1) % len(LANE_COLORS)]))
             for lane, row in have.items():
                 if lane > self.cfg["lanes"] and not json.loads(row["queue"] or "[]"):
                     con.execute("DELETE FROM kart_lane WHERE lane=?", (lane,))
