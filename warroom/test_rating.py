@@ -323,6 +323,38 @@ class TestRate(unittest.TestCase):
         got = rate(base + twelve_clean + towed)["karts"]["K9"]
         self.assertTrue(got["thin"], "eighty tows are not thirty clean laps")
 
+    def test_the_tow_threshold_sits_where_the_tow_does(self):
+        """Not a free parameter — both ends of it cost something measurable.
+
+        Karting's published slipstream range is two to five kart lengths for
+        the full effect, nothing left by ten to fifteen; at Palmela's speeds
+        that is 0.14-0.35s of gap, gone by 0.70-1.06s.  Too narrow and a kart
+        seen only in traffic is graded anyway; too wide and clean laps are
+        thrown away for an effect that is already zero out there.
+        """
+        from rating import DEFAULTS
+        self.assertGreaterEqual(DEFAULTS["tow_gap_s"], 0.5,
+                                "under this, an all-tow kart still gets a grade")
+        self.assertLessEqual(DEFAULTS["tow_gap_s"], 1.06,
+                             "past this the slipstream is gone; the laps are clean")
+
+    def test_a_kart_seen_only_in_traffic_is_refused_at_this_threshold(self):
+        """The floor of the range above, checked rather than asserted."""
+        base = [(t, p, k, s, None) for t, p, k, s in
+                simulate(self.KARTS, self.PILOTS, self._rotating())]
+        towed = self._towed("K9", 40, clean_every=0)
+        self.assertEqual(rate(base + towed)["karts"]["K9"]["label"], "Unknown")
+
+    def test_a_kart_a_length_or_two_clear_is_not_called_towed(self):
+        """The ceiling: a kart running its own race must keep its clean laps."""
+        base = [(t, p, k, s, None) for t, p, k, s in
+                simulate(self.KARTS, self.PILOTS, self._rotating())]
+        clear = [(300_000.0 + i * 65, p, "K9", 63.4, 1.2)
+                 for i, p in enumerate(["PRO-A", "PRO-B", "MID-C"] * 12)]
+        got = rate(base + clear)["karts"]["K9"]
+        self.assertEqual(got["tow_laps"], 0, "1.2s back is not a tow")
+        self.assertTrue(got["rated"])
+
     def test_empty_input(self):
         res = rate([])
         self.assertEqual(res["karts"], {})

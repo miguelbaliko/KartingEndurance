@@ -70,7 +70,15 @@ DEFAULTS = {
     # it is worth less as evidence — but not nothing, and never deleted: the
     # gap is read at the line, so towed is a good guess about the lap rather
     # than a fact about it.
-    "tow_gap_s": 1.0,
+    # Where a tow stops being a tow.  Published range for karting is two to
+    # five kart lengths for the full effect and nothing left by ten to fifteen
+    # — at Palmela's speeds that is 0.14s to 0.35s, gone by 0.70s to 1.06s.
+    # We sample the gap once a lap at the line, so the threshold sits at the
+    # far end of that: wide enough to catch a lap spent in traffic, narrow
+    # enough not to throw away clean laps.  Measured, 1.5 costs accuracy and
+    # discards 60% of the field's laps for an effect that is already zero
+    # there; under 0.5 a kart seen only in traffic gets graded anyway.
+    "tow_gap_s": 0.8,
     "tow_weight": 0.35,
     "weight_by_consistency": True,
     "weight_floor": 0.35,     # the least an inconsistent driver can count
