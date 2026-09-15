@@ -413,7 +413,64 @@ def _enrich(t: dict) -> dict:
     t["avg10_s"] = sum(hist[-10:]) / len(hist[-10:]) if hist else None
     t["avg5"]    = fmt_laptime(t["avg5_s"])
     t["avg10"]   = fmt_laptime(t["avg10_s"])
+    t["sectors"] = mark_sectors(str(key), t, _sector_best["session"],
+                                _sector_best["by_kart"])
     return t
+
+# Sector benchmarks, the way every timing screen in the paddock reads them:
+# purple is the fastest anyone has gone through that sector all session, green
+# is this kart's own best, yellow is slower than its own best.
+_sector_best: dict = {"session": {}, "by_kart": {}}
+SECTORS = ("s1", "s2", "s3")
+
+
+def _reset_sector_best():
+    _sector_best["session"] = {}
+    _sector_best["by_kart"] = {}
+
+
+def note_sectors(kart: str, row: dict, session: dict, by_kart: dict):
+    """Fold one kart's sector times into the session and its own bests.
+
+    Every row in a grid is folded in before any row is coloured.  Rows arrive
+    in whatever order Apex sends them, so a kart coloured before a quicker one
+    had been read would keep a purple that was no longer its own — which is
+    how the slowest kart at Palmela came to be shown in purple.
+    """
+    mine = by_kart.setdefault(kart, {})
+    for key in SECTORS:
+        t = parse_laptime((row.get(key) or "").strip())
+        if t is None or t <= 0:
+            continue
+        if session.get(key) is None or t < session[key]:
+            session[key] = t
+        if mine.get(key) is None or t < mine[key]:
+            mine[key] = t
+
+
+def mark_sectors(kart: str, row: dict, session: dict, by_kart: dict) -> dict:
+    """Colour one kart's sectors against the session and against itself.
+
+    Returns ``{"s1": {"t": "24.176", "mark": "sb"}, ...}`` where the mark is
+    ``sb`` (purple, fastest in the session), ``pb`` (green, this kart's own
+    best) or ``slow`` (yellow).  Read off the bests as they stand, so when
+    someone takes a purple the previous holder goes green on the next frame.
+
+    A sector the feed has not sent is left out rather than shown as nought.
+    """
+    note_sectors(kart, row, session, by_kart)
+    mine = by_kart.get(kart, {})
+    out = {}
+    for key in SECTORS:
+        raw = (row.get(key) or "").strip()
+        t = parse_laptime(raw)
+        if t is None or t <= 0:
+            continue
+        out[key] = {"t": raw,
+                    "mark": ("sb" if t <= session.get(key, t)
+                             else "pb" if t <= mine.get(key, t) else "slow")}
+    return out
+
 
 def _process_rows(rows: list) -> bool:
     """Replace _teams with a newly-parsed full grid. Returns True if any rows."""
@@ -421,6 +478,12 @@ def _process_rows(rows: list) -> bool:
     if not rows:
         return False
     with _lock:
+        # Two passes: every sector in this grid is read before any of them is
+        # coloured, so the order Apex happens to send the rows in cannot decide
+        # who holds the purple.
+        for r in rows:
+            note_sectors(str(r.get("kart") or r.get("team") or r.get("pos", "")),
+                         r, _sector_best["session"], _sector_best["by_kart"])
         built = [_enrich(dict(r)) for r in rows]
         if built:
             _teams = built
@@ -465,6 +528,9 @@ def _http_get(url: str, referer: str = "", timeout: int = 5) -> str:
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read().decode("utf-8", errors="ignore")
 
+DISCOVERY_TTL_S = 300      # how long a working answer is trusted
+DISCOVERY_RETRY_S = 15     # how soon a failed one is tried again
+
 def _find_apex_endpoints(page_url: str) -> dict:
     """Read the event page + its config.js and work out where the data lives.
 
@@ -479,7 +545,12 @@ def _find_apex_endpoints(page_url: str) -> dict:
     """
     global _ws_url_cache, _ws_url_checked_at, _apex_endpoints
     now_t = time.time()
-    if _ws_url_checked_at and now_t - _ws_url_checked_at < 300:
+    # A discovery that worked is good for five minutes.  One that failed is
+    # good for fifteen seconds: over twenty-five hours the network will drop a
+    # handshake sooner or later, and caching that answer alongside a real one
+    # blacked the feed out for five minutes every time it happened.
+    ttl = DISCOVERY_TTL_S if _apex_endpoints else DISCOVERY_RETRY_S
+    if _ws_url_checked_at and now_t - _ws_url_checked_at < ttl:
         return _apex_endpoints
     _ws_url_checked_at = now_t
     _apex_endpoints, _ws_url_cache = {}, ""
@@ -1199,6 +1270,14 @@ def sector_review(mine: list, team_rows: list, least: int = 5) -> list:
     return out
 
 
+def _int_or_last(v) -> int:
+    """A position as a number; anything unreadable sorts to the back."""
+    try:
+        return int(str(v).strip())
+    except (TypeError, ValueError):
+        return 10 ** 6
+
+
 def my_team_name() -> str:
     return (CFG.get("team_name", "") or "").strip()
 
@@ -1534,6 +1613,13 @@ def make_snapshot() -> dict:
                              R.get("pit_loss_seconds") or R["pit_duration_seconds"],
                              track_avg_s)
     teams_out = []
+    # Interval to the kart directly ahead on the road — the column an F1 wall
+    # reads next to the gap, because the gap says where you are in the race and
+    # the interval says whether you can do anything about it.
+    road_int = kartpool.KartPool.gaps_ahead(teams_raw)
+    # Race order, always.  Apex sends its rows in whatever order suits it, and
+    # a timing screen that is not in position order cannot be read at a glance.
+    teams_raw.sort(key=lambda t: _int_or_last(t.get("pos")))
     for t in teams_raw:
         held = kart_of.get(str(t.get("kart", "")))
         card = kart_card.get(held) if held else None
@@ -1547,6 +1633,8 @@ def make_snapshot() -> dict:
             "my_kart":    held or "",
             "kart_label": card["label"] if card else "",
             "kart_delta": card["delta"] if card else None,
+            "sectors":    t.get("sectors") or {},
+            "int_s":      road_int.get(str(t.get("kart", ""))),
             "last_lap":   t.get("last_lap", "-"),
             "avg5":       t.get("avg5", "-"),
             "avg10":      t.get("avg10", "-"),
@@ -2117,6 +2205,8 @@ def api_settings():
         # The new event has its own AJAX cursor and its own socket; carrying the
         # old track's over would ask Apex to resume a stream that is not ours.
         _reset_ajax_state()
+        # Another track's purple is not ours.
+        _reset_sector_best()
         _ws_blocked = False
     if "team_name" in data:
         CFG["team_name"] = data["team_name"].strip()

@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -357,6 +358,167 @@ class TestSwitchingEvent(AppCase):
                          json={"apex_url": "https://live.apex-timing.com/kartalcanede/"})
         self.assertEqual(self.app._ajax_state["index"], "0")
         self.assertFalse(self.app._ws_blocked)
+
+
+class TestSectorColours(AppCase):
+    """Purple, green, yellow — what every timing screen in the paddock means."""
+
+    def setUp(self):
+        super().setUp()
+        self.session, self.by_kart = {}, {}
+
+    def mark(self, kart, s1=None, s2=None, s3=None):
+        row = {k: v for k, v in (("s1", s1), ("s2", s2), ("s3", s3))
+               if v is not None}
+        return self.app.mark_sectors(kart, row, self.session, self.by_kart)
+
+    def test_the_first_time_through_is_the_session_best(self):
+        self.assertEqual(self.mark("17", s1="24.176")["s1"]["mark"], "sb")
+
+    def test_beating_the_field_is_purple(self):
+        self.mark("17", s1="24.176")
+        self.assertEqual(self.mark("21", s1="23.900")["s1"]["mark"], "sb")
+
+    def test_beating_only_yourself_is_green(self):
+        self.mark("17", s1="24.176")
+        self.mark("21", s1="23.900")
+        self.assertEqual(self.mark("17", s1="24.000")["s1"]["mark"], "pb")
+
+    def test_slower_than_your_own_best_is_yellow(self):
+        self.mark("17", s1="24.176")
+        self.assertEqual(self.mark("17", s1="24.900")["s1"]["mark"], "slow")
+
+    def test_purple_moves_when_someone_beats_it(self):
+        self.mark("17", s1="24.176")
+        self.mark("21", s1="23.900")
+        # 17 goes quicker than its own best but not quicker than 21.
+        self.assertEqual(self.mark("17", s1="23.950")["s1"]["mark"], "pb")
+        # Now it does.
+        self.assertEqual(self.mark("17", s1="23.800")["s1"]["mark"], "sb")
+
+    def test_each_sector_is_judged_on_its_own(self):
+        self.mark("17", s1="24.0", s2="18.0", s3="21.0")
+        got = self.mark("17", s1="23.5", s2="18.4", s3="21.6")
+        self.assertEqual([got[k]["mark"] for k in ("s1", "s2", "s3")],
+                         ["sb", "slow", "slow"])
+
+    def test_matching_the_best_keeps_the_purple(self):
+        """Joint fastest is fastest — nobody has been quicker through there."""
+        self.mark("17", s3="21.0")
+        self.assertEqual(self.mark("17", s3="21.0")["s3"]["mark"], "sb")
+
+    def test_the_purple_moves_off_a_kart_that_has_been_beaten(self):
+        """The first kart through owns the purple; it must not keep it.
+
+        Live at Palmela this showed the slowest kart on track in purple: it was
+        first through the sector, and its mark was frozen at the moment it was
+        set instead of being read off the bests as they stand.
+        """
+        self.assertEqual(self.mark("102", s1="39.137")["s1"]["mark"], "sb")
+        self.assertEqual(self.mark("222", s1="22.997")["s1"]["mark"], "sb")
+        # Same time, same kart, next frame: the purple is not theirs any more.
+        self.assertEqual(self.mark("102", s1="39.137")["s1"]["mark"], "pb")
+
+    def test_the_order_rows_arrive_in_cannot_decide_the_purple(self):
+        """Apex sends rows in its own order, not in race order.
+
+        Live at Palmela the slowest kart on track was shown in purple: its row
+        came first, and the quicker kart further down the same grid could not
+        take the colour back from it.
+        """
+        grid = [{"pos": "6", "kart": "102", "team": "SLOW", "s1": "34.804"},
+                {"pos": "1", "kart": "222", "team": "QUICK", "s1": "23.030"}]
+        self.app._reset_sector_best()
+        self.app._process_rows(grid)
+        rows = {t["kart"]: t for t in
+                self.client.get("/api/state").get_json()["teams"]}
+        self.assertEqual(rows["222"]["sectors"]["s1"]["mark"], "sb")
+        self.assertEqual(rows["102"]["sectors"]["s1"]["mark"], "pb",
+                         "the slow kart cannot keep a purple it has lost")
+
+    def test_the_table_comes_out_in_race_order(self):
+        """Apex sends rows in its own order; a timing screen is read top down."""
+        self.app._reset_sector_best()
+        self.app._process_rows([
+            {"pos": p, "kart": k, "team": k, "last_lap": "1:03.000"}
+            for p, k in (("6", "102"), ("3", "202"), ("1", "222"), ("4", "214"))])
+        got = [t["pos"] for t in self.client.get("/api/state").get_json()["teams"]]
+        self.assertEqual(got, ["1", "3", "4", "6"])
+
+    def test_a_kart_with_no_position_sorts_to_the_back(self):
+        self.app._reset_sector_best()
+        self.app._process_rows([
+            {"pos": "", "kart": "9", "team": "NEW", "last_lap": "1:03.000"},
+            {"pos": "2", "kart": "7", "team": "OLD", "last_lap": "1:03.000"}])
+        got = [t["kart"] for t in self.client.get("/api/state").get_json()["teams"]]
+        self.assertEqual(got, ["7", "9"])
+
+    def test_a_sector_not_yet_set_is_absent_not_zero(self):
+        got = self.mark("17", s1="24.0", s2="", s3="-")
+        self.assertEqual(set(got), {"s1"})
+
+    def test_the_raw_text_is_carried_through_for_display(self):
+        self.assertEqual(self.mark("17", s1="24.176")["s1"]["t"], "24.176")
+
+    def test_sectors_reach_the_timing_table(self):
+        """End to end: the feed's sector cells come out coloured."""
+        self.app._reset_sector_best()
+        self.app._process_rows([
+            {"pos": "1", "kart": "7", "team": "ALPHA", "last_lap": "1:03.000",
+             "s1": "24.176", "s2": "18.000"},
+            {"pos": "2", "kart": "9", "team": "BRAVO", "last_lap": "1:04.000",
+             "s1": "24.500", "s2": "17.800"}])
+        rows = {t["kart"]: t for t in
+                self.client.get("/api/state").get_json()["teams"]}
+        self.assertEqual(rows["7"]["sectors"]["s1"]["mark"], "sb")
+        self.assertEqual(rows["7"]["sectors"]["s1"]["t"], "24.176")
+        # 9 is slower than 7 through S1, so green, not purple — and quicker
+        # through S2, so it takes the purple there.
+        self.assertEqual(rows["9"]["sectors"]["s1"]["mark"], "pb")
+        self.assertEqual(rows["9"]["sectors"]["s2"]["mark"], "sb")
+
+
+class TestDiscoverySurvivesABlip(AppCase):
+    """Twenty-five hours means the network will drop a handshake sooner or later."""
+
+    def setUp(self):
+        super().setUp()
+        self.calls = []
+        self.app._apex_endpoints = {}
+        self.app._ws_url_checked_at = 0.0
+
+    def fail_once_then_work(self):
+        def fake_get(url, referer="", timeout=5):
+            self.calls.append(url)
+            if len(self.calls) == 1:
+                raise OSError("handshake operation timed out")
+            if url.endswith("config.js"):
+                return "var configHost='live-data.apex-timing.com';var configPort=10110;"
+            return '<script src="config.js"></script>'
+        self.app._http_get = fake_get
+
+    def test_a_failed_discovery_is_retried_within_seconds(self):
+        self.fail_once_then_work()
+        url = "https://apex-timing.com/live-timing/kip-palmela/"
+        self.assertEqual(self.app._find_apex_endpoints(url), {},
+                         "the blip must not be papered over")
+        # A failure is held for seconds, not for the five minutes a working
+        # answer earns — otherwise one dropped handshake blacks out the feed.
+        self.app._ws_url_checked_at = time.time() - self.app.DISCOVERY_RETRY_S - 1
+        got = self.app._find_apex_endpoints(url)
+        self.assertEqual(got.get("port"), 10110)
+        self.assertEqual(got.get("ws"), "wss://live-data.apex-timing.com:10113/")
+
+    def test_a_working_answer_is_not_re_fetched_every_poll(self):
+        self.fail_once_then_work()
+        self.calls.append("burn the failure")
+        url = "https://apex-timing.com/live-timing/kip-palmela/"
+        first = self.app._find_apex_endpoints(url)
+        self.assertTrue(first)
+        before = len(self.calls)
+        for _ in range(5):
+            self.assertEqual(self.app._find_apex_endpoints(url), first)
+        self.assertEqual(len(self.calls), before, "cached, not re-fetched")
 
 
 class TestRegulation(AppCase):

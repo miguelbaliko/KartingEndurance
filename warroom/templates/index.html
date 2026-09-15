@@ -24,7 +24,12 @@
   --org: #ff9100;
   --red: #ff3d3d;
   --r:5px;
-  --mono:'Courier New',monospace;
+  /* The timing-screen benchmarks: purple is the fastest anyone has gone,
+     green is a personal best, yellow is slower than your own. */
+  --purple:#c77bff;
+  --pb:#00e676;
+  --slow:#ffd740;
+  --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,'Liberation Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg0);color:var(--tx);
@@ -127,6 +132,23 @@ html,body{height:100%;background:var(--bg0);color:var(--tx);
   text-align:left;white-space:nowrap;
 }
 .t-table thead th.r{text-align:right}
+/* Every number on a timing screen is read by scanning down a column, so the
+   digits have to be the same width whatever they are. */
+.t-table{font-variant-numeric:tabular-nums}
+.t-table td{padding:5px 8px}
+/* Sectors, coloured against the session and against the kart itself. */
+.td-sec{font-family:var(--mono);font-size:12px;text-align:right;
+  width:64px;color:var(--tx3)}
+.td-sec.sb{color:var(--purple);font-weight:700}
+.td-sec.pb{color:var(--pb)}
+.td-sec.slow{color:var(--slow)}
+.sec-hd{color:var(--tx3)}
+/* A kart in the box is the slowest thing on track and must not be read as
+   pace: the lap time gives way to the state, the way it does on the wall. */
+.td-inpit{font-family:var(--mono);font-size:11px;font-weight:700;
+  color:var(--red);letter-spacing:.06em}
+.t-table tbody tr.boxed{background:rgba(255,61,61,.07)}
+.t-table tbody tr.boxed .td-team{color:var(--red)}
 .t-table tbody tr{border-bottom:1px solid #0f1118;transition:background .1s}
 .t-table tbody tr:hover{background:var(--bg3)}
 .t-table tbody tr.mine{background:#0c1428}
@@ -609,13 +631,17 @@ tr.clickable{cursor:pointer}
             <th>Team</th>
             <th>Driver</th>
             <th>Kart</th>
+            <th class="r sec-hd" title="Sector 1 — purple is the session's best, green this kart's own, yellow slower than its own">S1</th>
+            <th class="r sec-hd" title="Sector 2 — purple is the session's best, green this kart's own, yellow slower than its own">S2</th>
+            <th class="r sec-hd" title="Sector 3 — purple is the session's best, green this kart's own, yellow slower than its own">S3</th>
             <th class="r">Last Lap</th>
             <th class="r">Avg 5</th>
             <th class="r">Avg 10</th>
             <th class="r">Best</th>
             <th class="r">Laps</th>
             <th class="r">Pits</th>
-            <th class="r">Gap</th>
+            <th class="r" title="Behind the leader">Gap</th>
+            <th class="r" title="Behind the kart directly ahead on the road">Int</th>
             <th class="r" title="Gap to the team ahead in the same category">In class</th>
           </tr>
         </thead>
@@ -994,13 +1020,22 @@ function setCat(c) {
   if (S) { renderCatChips(S.teams); renderTable(S.teams); }
 }
 
+/** One sector cell, coloured the way a timing screen colours it: purple for
+ *  the fastest anyone has gone, green for this kart's own best, yellow for
+ *  slower than its own.  A sector not yet set this lap stays blank. */
+function secCell(t, key) {
+  const x = (t.sectors || {})[key];
+  if (!x) return '<td class="td-sec"></td>';
+  return `<td class="td-sec ${x.mark}">${esc(x.t)}</td>`;
+}
+
 function renderTable(allTeams) {
   const tb = document.getElementById('tbody');
   renderCatChips(allTeams);
   const teams = _catFilter
     ? (allTeams||[]).filter(t => t.category === _catFilter) : allTeams;
   if (!teams || !teams.length) {
-    tb.innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
+    tb.innerHTML='<tr><td colspan="19" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">No data</td></tr>';
     return;
   }
   tb.innerHTML = teams.map(t => {
@@ -1009,7 +1044,7 @@ function renderTable(allTeams) {
     // repeating the position beside it is noise on a wall screen.
     const pos   = parseInt(t.pos)||99;
     const posCls = pos===1 ? 'td-pos top1' : pos<=3 ? 'td-pos top3' : 'td-pos';
-    return `<tr class="clickable ${t.is_my_team?'mine':''}"
+    return `<tr class="clickable ${t.is_my_team?'mine':''} ${t.in_pit?'boxed':''}"
       onclick="showLaps('${esc(t.kart)}','${esc(t.team)}')"
       title="Click for every lap this team has done">
       <td class="${posCls}${t.is_my_team?' td-mine':''}">${esc(t.pos)}</td>
@@ -1022,13 +1057,17 @@ function renderTable(allTeams) {
       <td style="cursor:pointer" title="Click to set the kart this team is in"
           onclick="event.stopPropagation();setTeamKart('${esc(t.kart)}','${esc(t.team)}','${esc(t.my_kart)}')"
         >${kartChip(t.my_kart, t.kart_label, t.kart_delta, t.in_pit)}</td>
-      <td class="td-lap td-r">${esc(t.last_lap)}</td>
+      ${secCell(t,'s1')}${secCell(t,'s2')}${secCell(t,'s3')}
+      <td class="td-lap td-r">${t.in_pit
+          ? '<span class="td-inpit">IN PIT</span>' : esc(t.last_lap)}</td>
       <td class="td-avg td-r">${esc(t.avg5)}</td>
       <td class="td-dim td-r">${esc(t.avg10)}</td>
       <td class="td-best td-r">${esc(t.best_lap)}</td>
       <td class="td-muted td-r">${esc(t.total_laps)}</td>
       <td class="td-muted td-r">${esc(t.pits)}</td>
       <td class="td-muted td-r">${esc(t.gap)}</td>
+      <td class="td-dim td-r">${t.int_s != null ? '+' + t.int_s.toFixed(3)
+          : (pos === 1 ? '' : '·')}</td>
       <td class="td-r cls-gap">${t.ahead_s != null
           ? '+' + t.ahead_s.toFixed(1)
           : (t.class_pos === 1 ? '<span class="td-dim">leads</span>'
