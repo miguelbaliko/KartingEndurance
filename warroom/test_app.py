@@ -408,6 +408,51 @@ class TestRegulation(AppCase):
         self.assertIn("owed_fmt", d)
 
 
+class TestQualifyingSurvivesIntoTheRace(AppCase):
+    """§3.2.1: the race starts on exactly the karts qualifying finished on.
+
+    So the pace measured in qualifying is worth something from lap one, and
+    clearing the race clock before the start must not throw it away.
+    """
+
+    def qualifying(self):
+        """A kart that has turned laps, and a team sitting in it."""
+        self.app.POOL.set_kart("1", "TPC", "17")
+        for lap in range(2, 8):
+            self.app.POOL.observe([{"kart": "1", "team": "TPC", "pits": "0",
+                                    "total_laps": str(lap), "last_lap_s": 62.5,
+                                    "driver": "Dinis", "in_pit": False}])
+        with self.app.POOL._con() as con:
+            return con.execute("SELECT COUNT(*) FROM kart_lap").fetchone()[0]
+
+    def laps_kept(self):
+        with self.app.POOL._con() as con:
+            return con.execute("SELECT COUNT(*) FROM kart_lap").fetchone()[0]
+
+    def test_resetting_the_race_keeps_what_qualifying_measured(self):
+        laps = self.qualifying()
+        self.assertGreater(laps, 0, "qualifying recorded nothing to keep")
+        self.client.post("/api/race/reset")
+        self.assertEqual(self.laps_kept(), laps)
+        self.assertEqual(self.app.POOL.kart_of().get("1"), "17",
+                         "the race starts on the kart qualifying finished on")
+
+    def test_resetting_the_race_still_clears_the_race(self):
+        self.qualifying()
+        self.client.post("/api/driver/add", json={"name": "Dinis"})
+        self.client.post("/api/race/reset")
+        state = self.snap()
+        self.assertEqual(state["status"], "idle")
+        self.assertEqual(state["stints_done"], 0)
+        self.assertEqual(state["drivers"][0]["total_seconds"], 0)
+
+    def test_wiping_the_fleet_is_its_own_deliberate_action(self):
+        self.qualifying()
+        self.client.post("/api/karts/reset")
+        self.assertEqual(self.laps_kept(), 0)
+        self.assertIsNone(self.app.POOL.kart_of().get("1"))
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)

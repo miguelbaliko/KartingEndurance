@@ -632,15 +632,15 @@ td{padding:7px 8px;white-space:nowrap}
     <div class="cfg-row">
       <div>
         <div class="cfg-lbl">Race duration (min)</div>
-        <input id="cfg-dur"   class="cfg-inp" type="number" placeholder="780">
+        <input id="cfg-dur"   class="cfg-inp" type="number" placeholder="1500">
       </div>
       <div>
         <div class="cfg-lbl">Mandatory pits</div>
-        <input id="cfg-pits"  class="cfg-inp" type="number" placeholder="23">
+        <input id="cfg-pits"  class="cfg-inp" type="number" placeholder="34">
       </div>
       <div>
         <div class="cfg-lbl">Max stint (min)</div>
-        <input id="cfg-stint" class="cfg-inp" type="number" placeholder="45">
+        <input id="cfg-stint" class="cfg-inp" type="number" placeholder="60">
       </div>
       <div>
         <div class="cfg-lbl">Pit lanes</div>
@@ -655,6 +655,11 @@ td{padding:7px 8px;white-space:nowrap}
       <input id="cfg-swap" type="checkbox" style="width:auto">
       Karts are swapped at every stop
     </label>
+    <div class="cfg-lbl" style="margin-top:14px">Kart data</div>
+    <button class="tb-btn warn" style="width:100%"
+      onclick="if(confirm('Forget every kart\'s pace and who is in which kart? Qualifying data is lost.')) api('karts/reset')">
+      Clear kart ratings &amp; assignments
+    </button>
     <div class="cfg-actions">
       <button class="cfg-cancel" onclick="closeCfg()">Cancel</button>
       <button class="cfg-save"   onclick="saveCfg()">Save</button>

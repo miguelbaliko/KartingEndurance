@@ -1052,9 +1052,13 @@ def race_reset():
     with get_db() as con:
         con.execute("DELETE FROM stints")
         con.execute("UPDATE drivers SET total_seconds=0")
-    POOL.reset()
+    # The kart pool is deliberately left alone.  It holds what we learned about
+    # the physical karts and who is sitting in which one, and §3.2.1 starts the
+    # race on exactly the karts the teams finished qualifying in — so clearing
+    # the race clock between qualifying and the start must not throw away the
+    # pace measured in qualifying.  /api/karts/reset wipes the fleet on purpose.
     _apex_clock.reset()
-    log("RACE RESET")
+    log("RACE RESET", "kart pool kept")
     broadcast()
     return jsonify(ok=True)
 
@@ -1220,6 +1224,18 @@ def pit_phone():
 @app.get("/api/karts")
 def api_karts():
     return jsonify(POOL.snapshot())
+
+@app.post("/api/karts/reset")
+def api_karts_reset():
+    """Forget the fleet: every kart's measured pace and who is holding it.
+
+    Separate from the race reset on purpose — this is the one that loses the
+    qualifying data, so it should only happen when someone means it.
+    """
+    POOL.reset()
+    log("KART POOL RESET", "ratings and assignments cleared")
+    broadcast()
+    return jsonify(ok=True)
 
 @app.post("/api/kart/lane")
 def api_kart_lane():
