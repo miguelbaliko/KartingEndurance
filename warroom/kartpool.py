@@ -169,6 +169,8 @@ class KartPool:
         self._pending_teams = {}
         # team_no -> sectors of the lap they are on
         self._sectors = {}
+        # team_no -> laps thrown away for want of an answer about a stop
+        self._dropped = defaultdict(int)
         self._skip = defaultdict(int)
         self._in_box_since = {}
         self._category = {}
@@ -451,6 +453,7 @@ class KartPool:
         if kart_out:
             self._assign(con, stop["team_no"], stop["team"], kart_out, stop["ts"])
             self._pending_teams.pop(str(stop["team_no"]), None)
+            self._dropped.pop(str(stop["team_no"]), None)
             self._skip[str(stop["team_no"])] = self.cfg["skip_laps_after_stop"]
             self._note(f"kart {stop['kart_in'] or '?'} → {kart_out} via lane {lane}",
                        stop["team"], tag="swap")
@@ -470,6 +473,7 @@ class KartPool:
                     con.execute("UPDATE kart_stop SET state=?, kart_out=? WHERE id=?",
                                 (NO_CHANGE, stop["kart_in"], stop_id))
                     self._pending_teams.pop(str(stop["team_no"]), None)
+                    self._dropped.pop(str(stop["team_no"]), None)
                     self._skip[str(stop["team_no"])] = self.cfg["skip_laps_after_stop"]
                     self._note("driver change only, same kart", stop["team"],
                                tag="swap")
@@ -512,6 +516,7 @@ class KartPool:
                     (kart_out, RESOLVED, stop_id))
         self._assign(con, stop["team_no"], stop["team"], kart_out, stop["ts"])
         self._pending_teams.pop(str(stop["team_no"]), None)
+        self._dropped.pop(str(stop["team_no"]), None)
         self._skip[str(stop["team_no"])] = self.cfg["skip_laps_after_stop"]
         self._note(f"kart {kart_in or '?'} → {kart_out} (read off the kart)",
                    stop["team"], tag="swap")
@@ -538,6 +543,9 @@ class KartPool:
                     "at": _hhmmss(r["ts"]),
                     "in_box_s": int(now - since) if since else None,
                     "with_them": self._others_in_box(str(r["team_no"])),
+                    # What the silence is costing: every lap since this stop
+                    # is a lap the kart ratings never see.
+                    "laps_lost": self._dropped.get(str(r["team_no"]), 0),
                 })
             return out
 
@@ -701,7 +709,15 @@ class KartPool:
         # those sectors belong to the lap that has just ended either way.
         sectors = self._sectors.pop(team_no, {})
         if team_no in self._pending_teams:
-            return                       # in the box, kart unknown
+            # In the box with the kart unknown: attributing this lap to the
+            # kart they walked out of would be a guess, so it is dropped.  The
+            # count is kept, because an answer nobody gives costs a lap a
+            # minute for the rest of the race and that has to be visible.
+            self._dropped[team_no] += 1
+            if self._dropped[team_no] in (5, 20, 60):
+                self._note(f"{self._dropped[team_no]} laps not counted while "
+                           f"this stop is unanswered", team or team_no, tag="ask")
+            return
         if self._skip[team_no] > 0:
             self._skip[team_no] -= 1     # out-lap is not the kart's fault
             return

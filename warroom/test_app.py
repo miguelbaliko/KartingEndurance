@@ -692,6 +692,59 @@ class TestQualifyingSurvivesIntoTheRace(AppCase):
         self.assertEqual(self.laps_kept(), 0)
         self.assertIsNone(self.app.POOL.kart_of().get("1"))
 
+    def graded_qualifying(self):
+        """Long enough to actually grade the karts, not just record laps.
+
+        Two teams swapping two karts is the least that lets the model tell a
+        kart apart from whoever is driving it, which is the whole point of
+        carrying the grades forward.
+        """
+        pool = self.app.POOL
+        pairs, karts, lap, ts = [("7", "ALPHA"), ("9", "BRAVO")], \
+            {"7": "17", "9": "19"}, 0, 1000.0
+        for _swap in range(6):
+            # Told directly which kart each team is in, the way the pit wall
+            # does it in qualifying — the pit counter never ticks, so no stop
+            # is opened and there is nothing waiting on an answer.
+            for team_no, team in pairs:
+                pool.set_kart(team_no, team, karts[team_no])
+            for _ in range(14):
+                lap, ts = lap + 1, ts + 65
+                pool.observe([
+                    {"kart": t, "team": nm, "pits": "0",
+                     "total_laps": str(lap), "pos": str(i + 1), "gap": "8.0",
+                     # 17 is the quick kart whoever is sitting in it, and
+                     # ALPHA the quick team whatever they are sitting in.
+                     "last_lap_s": (62.5 if karts[t] == "17" else 63.7)
+                                   + (0.0 if nm == "ALPHA" else 0.4)}
+                    for i, (t, nm) in enumerate(pairs)], now=ts)
+            karts = {"7": karts["9"], "9": karts["7"]}
+        return pool
+
+    def test_qualifying_is_long_enough_to_grade_the_fleet(self):
+        rated = self.graded_qualifying().ratings(force=True)["karts"]
+        self.assertTrue(rated["17"]["rated"], "nothing to carry forward")
+        self.assertLess(rated["17"]["effect"], rated["19"]["effect"],
+                        "17 was quicker whoever drove it")
+
+    def test_the_grades_themselves_survive_the_reset(self):
+        """Not just the laps: the score on the screen has to be the same one."""
+        before = {k: v["effect"] for k, v in
+                  self.graded_qualifying().ratings(force=True)["karts"].items()}
+        self.client.post("/api/race/reset")
+        after = {k: v["effect"] for k, v in
+                 self.app.POOL.ratings(force=True)["karts"].items()}
+        self.assertEqual(before, after)
+        self.assertTrue(self.app.POOL.ratings()["karts"]["17"]["rated"])
+
+    def test_the_grades_survive_switching_into_race_mode(self):
+        before = {k: v["effect"] for k, v in
+                  self.graded_qualifying().ratings(force=True)["karts"].items()}
+        self.client.post("/api/session/mode", json={"mode": "race"})
+        self.assertEqual(
+            {k: v["effect"] for k, v in
+             self.app.POOL.ratings(force=True)["karts"].items()}, before)
+
 
 class TestPenaltyLadder(AppCase):
     """§15.1/15.4/15.5 all charge 20 seconds per started block of ten short."""

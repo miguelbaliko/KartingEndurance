@@ -406,6 +406,7 @@ td{padding:7px 8px;white-space:nowrap}
 .fatigue.good{color:var(--tx2)}
 .fatigue b{font-weight:700;color:var(--tx)}
 .bn-note b{color:var(--tx);font-weight:700}
+.ask-cost{color:#f97316;font-weight:700}
 .sec-loss{color:#f97316}
 .sec-ok{color:#22c55e}
 /* §3.14: every driver owes 120 minutes, and being short is a penalty. */
@@ -1350,9 +1351,13 @@ function renderAsks(pool) {
 
   document.getElementById('ask-body').innerHTML = pending.map(p => {
     const who = esc(p.team || ('#' + p.team_no));
-    const when = p.in_box_s != null
+    // What the silence is costing: until someone says which kart came out,
+    // that team's laps cannot be filed against any kart and are dropped.
+    const lost = p.laps_lost
+      ? ` · <b class="ask-cost">${p.laps_lost} laps not counted</b>` : '';
+    const when = (p.in_box_s != null
       ? `in the box ${Math.floor(p.in_box_s/60)}:${String(p.in_box_s%60).padStart(2,'0')}`
-      : esc(p.at);
+      : esc(p.at)) + lost;
     if (p.state === 'await_kart') {
       return `<div class="ask-row">
         <div class="ask-team">${who}<span class="ask-when">${when}</span></div>

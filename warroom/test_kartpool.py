@@ -481,6 +481,44 @@ class TestGapToTheKartAhead(PoolCase):
         self.assertAlmostEqual(got["11"], 0.3)
 
 
+class TestAnUnansweredStopIsNotFree(PoolCase):
+    """A stop nobody answers costs a lap a minute, silently, for 25 hours.
+
+    While the kart a team came out in is unknown, their laps cannot be filed
+    against any kart — filing them against the one they walked out of would be
+    a guess.  Dropping them is right; dropping them without saying so is not.
+    """
+
+    def stop_and_run(self, laps=6):
+        self.seed([("1", "ALPHA", "10")])
+        self.pool.observe([row("1", "ALPHA", pits=0)])
+        self.pool.observe([row("1", "ALPHA", pits=1, laps=2)])
+        for n in range(3, 3 + laps):
+            self.pool.observe([row("1", "ALPHA", pits=1, laps=n)])
+
+    def test_the_laps_it_costs_are_counted(self):
+        self.stop_and_run(laps=6)
+        self.assertEqual(self.pool.pending()[0]["laps_lost"], 6)
+
+    def test_a_stop_answered_straight_away_costs_nothing(self):
+        self.seed([("1", "ALPHA", "10")])
+        self.pool.observe([row("1", "ALPHA", pits=0)])
+        self.pool.observe([row("1", "ALPHA", pits=1, laps=2)])
+        self.pool.resolve(self.pool.pending()[0]["id"], kart_out="21")
+        self.assertEqual(self.pool.pending(), [])
+        self.assertEqual(self.pool._dropped.get("1", 0), 0)
+
+    def test_answering_it_late_stops_the_bleeding(self):
+        self.stop_and_run(laps=6)
+        self.pool.resolve(self.pool.pending()[0]["id"], kart_out="21")
+        self.assertEqual(self.pool._dropped.get("1", 0), 0)
+
+    def test_it_says_so_rather_than_only_counting(self):
+        self.stop_and_run(laps=6)
+        notes = " ".join(n["text"] for n in self.pool.snapshot()["log"])
+        self.assertIn("not counted", notes)
+
+
 class TestPersistence(PoolCase):
     def test_state_survives_a_restart(self):
         self.seed([("1", "ALPHA", "10")])
