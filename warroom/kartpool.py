@@ -824,6 +824,7 @@ class KartPool:
             stops_seen = con.execute("SELECT COUNT(*) FROM kart_stop").fetchone()[0]
             best = {r["kart"]: r["b"] for r in con.execute(
                 "SELECT kart, MIN(lap_s) AS b FROM kart_lap GROUP BY kart")}
+        fleet_best = min(best.values(), default=None)
 
         def card(num: str) -> dict:
             info = rated.get(num, {})
@@ -837,6 +838,13 @@ class KartPool:
                 "thin": info.get("thin", False),
                 "reason": info.get("reason", "no laps yet"),
                 "best_s": best.get(num),
+                # The kart's best lap against the fleet's, for the first hour
+                # when no kart has a grade yet.  Half of it is whoever was
+                # driving, so it is a hint and never a score — measured, it
+                # ranks the fleet at about 0.55 against the truth in a field
+                # as mixed as PRO and AM, where the model ranks it at zero.
+                "best_delta_s": (round(best[num] - fleet_best, 3)
+                                 if fleet_best and num in best else None),
                 "holder": holders.get(num, ""),
                 "fade_s": info.get("fade_s"),
                 "fade_runs": info.get("fade_runs", 0),
@@ -873,6 +881,16 @@ class KartPool:
             "log": list(self._log)[:40],
             "stops_seen": stops_seen,
             "unrated": sum(1 for c in fleet if c["delta"] is None),
+            # How much of the fleet we can actually say anything about.  A kart
+            # needs a second driver before it can be told apart from whoever
+            # drove it, so a race started cold is blind for about the first
+            # hour — this is what says so before the lights go out.
+            "ready": {
+                "graded": sum(1 for c in fleet if c["delta"] is not None),
+                "solid": sum(1 for c in fleet
+                             if c["delta"] is not None and not c["thin"]),
+                "total": len(fleet),
+            },
             "retired": sorted(gone),
             "swap_every_stop": self.cfg["swap_every_stop"],
         }

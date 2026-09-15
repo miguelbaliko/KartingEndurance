@@ -519,6 +519,53 @@ class TestAnUnansweredStopIsNotFree(PoolCase):
         self.assertIn("not counted", notes)
 
 
+class TestKnowingWhereWeStandBeforeTheLightsGoOut(PoolCase):
+    """A kart cannot be told apart from its driver until a second driver has it.
+
+    Measured on a thirty-team race with forty-lap stints, the first kart is not
+    gradeable until fifty minutes in and the fleet not until an hour and forty
+    — so a race started cold is blind through the opening stint, and the wall
+    has to say so rather than let the pit crew find out at the first stop.
+    """
+
+    def running(self, teams=3, laps=6, start=1000.0):
+        for i in range(teams):
+            self.pool.set_kart(str(i + 1), f"T{i+1}", str(10 + i))
+        ts = start
+        for n in range(2, 2 + laps):
+            self.pool.observe(
+                [dict(row(str(i + 1), f"T{i+1}", laps=n, lap_s=63.0 + i * 0.4),
+                      pos=str(i + 1), gap=f"{i * 4.0}")
+                 for i in range(teams)], now=ts)
+            ts += 65
+        return ts
+
+    def test_a_cold_fleet_says_it_is_cold(self):
+        r = self.pool.snapshot()["ready"]
+        self.assertEqual((r["graded"], r["solid"]), (0, 0))
+
+    def test_laps_without_a_second_driver_do_not_grade_anything(self):
+        self.running(laps=20)
+        r = self.pool.snapshot()["ready"]
+        self.assertEqual(r["graded"], 0, "one driver per kart is not evidence")
+        self.assertEqual(r["total"], 3)
+
+    def test_the_best_lap_hint_is_there_while_the_grade_is_not(self):
+        """The one real signal in the blind hour, and it is not a grade."""
+        self.running(laps=20)
+        fleet = {c["num"]: c for c in self.pool.snapshot()["fleet"]}
+        self.assertIsNone(fleet["10"]["delta"], "no grade yet")
+        # 10 is the quick kart here, so it sets the fleet best and reads zero.
+        self.assertEqual(fleet["10"]["best_delta_s"], 0.0)
+        self.assertGreater(fleet["12"]["best_delta_s"], 0.5)
+
+    def test_a_kart_nobody_has_driven_has_no_hint_either(self):
+        self.running(laps=6)
+        self.pool.lane_add(1, "30")
+        fleet = {c["num"]: c for c in self.pool.snapshot()["fleet"]}
+        self.assertIsNone(fleet["30"]["best_delta_s"])
+
+
 class TestPersistence(PoolCase):
     def test_state_survives_a_restart(self):
         self.seed([("1", "ALPHA", "10")])

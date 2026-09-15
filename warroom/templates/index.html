@@ -410,6 +410,10 @@ td{padding:7px 8px;white-space:nowrap}
 .mt-lost{color:var(--org)}
 .mt-as{color:var(--tx3);font-size:10px;margin-left:6px}
 .kd.thin{opacity:.75;font-weight:700;margin-left:2px}
+.hint{font-size:10px;color:var(--tx3);font-family:var(--mono);font-style:italic}
+.ready{font-size:10px;margin-left:8px;color:var(--tx3)}
+.ready.cold{color:var(--org);font-weight:700}
+.ready.warming{color:var(--ylw)}
 .sec-loss{color:#f97316}
 .sec-ok{color:#22c55e}
 /* §3.14: every driver owes 120 minutes, and being short is a penalty. */
@@ -704,7 +708,8 @@ tr.clickable{cursor:pointer}
           <span class="lbl">Pit stops</span>
           <span class="pits-val" id="pits-val">0 <span>/ 34</span></span>
         </div>
-        <div class="matrix-hd">Pit lane — front of each queue goes out next</div>
+        <div class="matrix-hd">Pit lane — front of each queue goes out next
+          <span id="fleet-ready" class="ready"></span></div>
         <div id="kart-matrix" class="matrix"></div>
       </div>
 
@@ -1189,8 +1194,9 @@ function renderBoxNow(s) {
     karts.map(k => `
       <div class="bn-row">
         <span class="bn-num">${esc(k.num)}</span>
-        <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}${thinMark(k)}
+        <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}
           ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
+        ${paceHint(k)}
         <span class="bn-lane">${esc(k.lane_name||('Lane '+k.lane))}</span>
       </div>`).join('') +
     (bn.detail ? `<div class="bn-note">${esc(bn.detail)}</div>` : '');
@@ -1324,6 +1330,19 @@ function thinMark(k) {
        still move a band, and thin evidence flatters a bad kart">~</span>` : '';
 }
 
+/** Before any kart has a grade — the first hour, until karts have had a second
+ *  driver — the only thing we have is the kart's own best lap against the
+ *  fleet's.  Half of it is whoever was driving, so it is shown as a pace hint
+ *  and never as a score: measured on a field as mixed as PRO and AM it ranks
+ *  the fleet at about 0.55 against the truth, where the model ranks it at 0. */
+function paceHint(k) {
+  if (!k || k.rated || k.best_delta_s == null) return '';
+  const d = k.best_delta_s;
+  return `<span class="hint" title="Best lap ${d <= 0 ? 'is the fleet best' :
+    '+' + d.toFixed(2) + 's off the fleet best'} — a hint only, half of it is
+    whoever was driving. Not a grade.">${d <= 0 ? 'fleet best' : '+' + d.toFixed(2)}</span>`;
+}
+
 function kartChip(num, label, delta, inPit) {
   if (!num) return '<span class="kchip none">—</span>';
   const cls = CHIP_CLS[label] || 'unknown';
@@ -1412,7 +1431,7 @@ function renderLanes(pool) {
         ${l.karts.map((k,i) => `
           <div class="lane-k ${i===0?'next':''}">
             <span class="num">${esc(k.num)}</span>
-            <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}${thinMark(k)}${thinMark(k)}
+            <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}${thinMark(k)}
               ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
             ${i===0 ? '<span class="nx">NEXT</span>' : ''}
             <button class="rm" title="Remove"
@@ -1436,7 +1455,7 @@ function renderFleet(pool, s) {
       <span class="fleet-num">${esc(k.num)}</span>
       <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}
         ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
-      ${fadeChip(k)}
+      ${paceHint(k)}${fadeChip(k)}
       <span class="fleet-where" title="${esc([k.holder||k.reason,
             k.weak && k.laps ? 'only one team has driven it' : ''].filter(Boolean).join(' · '))
         }">${k.retired ? 'OUT'+(k.retired_reason?' · '+esc(k.retired_reason):'')
@@ -1452,7 +1471,9 @@ function renderFleet(pool, s) {
   if (!fleet.length) { note.textContent = ''; return; }
   note.textContent = pool.unrated
     ? `${pool.unrated} kart${pool.unrated===1?'':'s'} not rated yet — a kart needs clean ` +
-      `laps from more than one team before its pace can be told apart from the driver's.`
+      `laps from more than one team before its pace can be told apart from the driver's. ` +
+      `That is the first round of stops, about an hour in; until then the only ` +
+      `reading is each kart's best lap, and half of that is whoever was driving.`
     : `Scored against the field, with each team's own pace taken out. ` +
       `${pool.stops_seen} stop${pool.stops_seen===1?'':'s'} counted.`;
 }
@@ -1571,6 +1592,23 @@ function renderStrategy(s) {
 function renderMatrix(s) {
   const el = document.getElementById('kart-matrix');
   if (!el) return;
+  // A kart cannot be told apart from its driver until a second driver has had
+  // it, so a race started cold is blind for about the first hour.  Say where
+  // we are rather than let the wall discover it at the first stop.
+  const r = ((s.kartpool || {}).ready) || null;
+  const rd = document.getElementById('fleet-ready');
+  if (rd && r && r.total) {
+    const cold = r.graded === 0;
+    rd.className = 'ready' + (cold ? ' cold' : r.solid < r.total ? ' warming' : '');
+    rd.textContent = cold
+      ? `fleet cold — no kart graded yet (${r.total} karts)`
+      : `${r.solid}/${r.total} graded firm, ${r.graded - r.solid} still thin`;
+    rd.title = 'A kart needs a second driver before it can be told apart from '
+             + 'whoever drove it. Running through practice or qualifying means '
+             + 'the race starts with the fleet already read.';
+  } else if (rd) {
+    rd.textContent = '';
+  }
   const lanes = (s.kartpool || {}).lanes || [];
   el.innerHTML = lanes.length ? lanes.map(l => `
     <div class="mx-col">
@@ -1581,8 +1619,8 @@ function renderMatrix(s) {
              onclick="showKart('${esc(k.num)}')"
              title="${esc(k.label)}${k.delta!=null?' '+fmtDelta(k.delta):''} — click for its laps">
           <span class="mx-n">${esc(k.num)}</span>
-          <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}${thinMark(k)}</span>
-          <span class="mx-d">${k.delta!=null?fmtDelta(k.delta):''}</span>
+          <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}</span>
+          <span class="mx-d">${k.delta!=null?fmtDelta(k.delta):paceHint(k)}</span>
         </div>`).join('')
         : '<div class="mx-empty">empty</div>'}
     </div>`).join('') : '<div class="mx-empty">No karts entered yet.</div>';
