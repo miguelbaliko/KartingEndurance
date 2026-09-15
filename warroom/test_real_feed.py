@@ -17,6 +17,7 @@ What that session showed, and the previous fixtures did not:
 """
 
 import os
+import re
 import sys
 import unittest
 
@@ -96,6 +97,75 @@ class TestRealFeedReachesTheWarRoom(RealFeedCase):
             _r, _c, m = self.app._parse_apex_pipe(frame)
             meta.update({k: v for k, v in m.items() if v})
         self.assertEqual(meta.get("light"), "lg")     # green flag
+
+
+PALMELA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      "testdata", "apex-kip-palmela-live.raw")
+
+
+class TestPalmelaLayout(RealFeedCase):
+    """Frames from KIP Palmela itself, captured 2026-09-15 before a session.
+
+    Our track sends three sector columns that kartplanet does not, which shifts
+    everything after them.  The grid was empty — a countdown to a 15 minute
+    session under a red light — so the header is the real part, and the header
+    is exactly what the shift depends on.
+    """
+
+    def setUp(self):
+        super().setUp()
+        with open(PALMELA, encoding="utf-8") as f:
+            self.raw = f.read()
+        self.head = re.search(r'<tr[^>]*class="head".*?</tr>', self.raw).group(0)
+
+    def palmela_row(self, vals):
+        ids = re.findall(r'data-id="(c\d+)"', self.head)
+        body = "".join(f'<td data-id="r17{cid}" class="{cls}">{v}</td>'
+                       for cid, (cls, v) in zip(ids, vals))
+        rows, _c, _m = self.app._parse_apex_pipe(
+            "grid||" + self.head + f'<tr data-id="r17">{body}</tr>')
+        return rows[0] if rows else {}
+
+    def test_the_columns_our_track_sends(self):
+        self.assertEqual(
+            re.findall(r'data-type="([^"]*)"', self.head),
+            ["grp", "sta", "rk", "no", "dr", "s1", "s2", "s3",
+             "llp", "blp", "tlp", "gap"])
+
+    def test_sectors_do_not_shift_the_columns_after_them(self):
+        # The three sector cells carry the meaningless class "in", the same as
+        # gap and lap count, so only the header can say which is which.
+        got = self.palmela_row([("gf", ""), ("in", ""), ("rk", "4"),
+                                ("no", "17"), ("dr", "DINIS"),
+                                ("in", "21.4"), ("in", "19.8"), ("in", "22.1"),
+                                ("ti", "1:03.312"), ("ib", "1:02.998"),
+                                ("in", "41"), ("in", "12.4")])
+        self.assertEqual(got.get("last_lap"), "1:03.312")
+        self.assertEqual(got.get("best_lap"), "1:02.998")
+        self.assertEqual(got.get("total_laps"), "41")
+        self.assertEqual(got.get("gap"), "12.4")
+        self.assertEqual((got.get("pos"), got.get("kart")), ("4", "17"))
+
+    def test_a_sector_time_is_never_read_as_a_lap_time(self):
+        got = self.palmela_row([("gf", ""), ("in", ""), ("rk", "1"),
+                                ("no", "17"), ("dr", "DINIS"),
+                                ("in", "21.4"), ("in", "19.8"), ("in", "22.1"),
+                                ("ti", "1:03.312"), ("ib", "1:02.998"),
+                                ("in", "41"), ("in", "")])
+        for field in ("last_lap", "best_lap"):
+            self.assertNotIn(got.get(field), ("21.4", "19.8", "22.1"))
+
+    def test_the_session_header_is_read(self):
+        meta = {}
+        for frame in self.raw.split("\n\x00\n"):
+            _r, _c, m = self.app._parse_apex_pipe(frame)
+            meta.update({k: v for k, v in m.items() if v})
+        self.assertEqual(meta.get("track"), "KIP (1270m)")
+        self.assertEqual(meta.get("light"), "lr")          # red, session not out
+
+    def test_an_empty_grid_yields_no_karts(self):
+        rows, _c, _m = self.app._parse_apex_pipe(self.raw)
+        self.assertEqual(rows, [])
 
 
 if __name__ == "__main__":

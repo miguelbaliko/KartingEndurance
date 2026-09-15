@@ -181,6 +181,7 @@ class ApexParser(html.parser.HTMLParser):
         self._is_head  = False
         self._row_did: Optional[str] = None
         self.col_types: dict    = {}   # c6 -> "last_lap" (from head row data-type)
+        self.saw_head = False          # this frame carried its own header
         self.row_kart_map: dict = {}   # r14915 -> "17"
 
     def handle_starttag(self, tag, attrs):
@@ -194,6 +195,8 @@ class ApexParser(html.parser.HTMLParser):
         if tag == "tr":
             tr_cls = a.get("class", "").split()
             self._is_head = "head" in tr_cls
+            if self._is_head:
+                self.saw_head = True
             self._row_did = did
             self._cur = None if self._is_head else {"row_cls": " ".join(tr_cls)}
             self._meta_id = None
@@ -204,6 +207,7 @@ class ApexParser(html.parser.HTMLParser):
                 # Header row: register column type; data row: map column
                 if self._is_head and did:
                     self.col_types[did] = _CELL_MAP[dt]
+                    self.saw_head = True
                 if self._cur is not None:
                     self._col = _CELL_MAP[dt]
             elif self._cur is not None:
@@ -220,7 +224,14 @@ class ApexParser(html.parser.HTMLParser):
                     col_m = re.search(r'(c\d+)$', did)
                     if col_m:
                         col = col_m.group(1)
-                        self._col = self.col_types.get(col) or _global_col_types.get(col)
+                        # A header in this frame is the last word: a column it
+                        # does not declare is not a column we read.  Falling
+                        # back to the module map here would let a previous
+                        # event's layout decide — which is how Palmela's sector
+                        # time landed in the lap time, because kartplanet had a
+                        # lap time in that same column.
+                        self._col = (self.col_types.get(col) if self.saw_head
+                                     else _global_col_types.get(col))
 
     def handle_data(self, data):
         v = data.strip()
@@ -577,6 +588,9 @@ def _parse_apex_pipe(msg: str) -> tuple:
             hp = ApexParser()
             hp.feed(val)
             if hp.col_types:
+                # Replace, never merge: a layout with fewer columns than the
+                # last one must not inherit the leftovers.
+                _global_col_types.clear()
                 _global_col_types.update(hp.col_types)
             if hp.row_kart_map:
                 _row_kart_map.update(hp.row_kart_map)
