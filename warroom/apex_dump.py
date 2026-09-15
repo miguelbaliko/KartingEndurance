@@ -177,31 +177,59 @@ def listen_ws(url: str, seconds: float) -> list:
     return frames
 
 
-def listen_ajax(url: str, seconds: float, interval: float = 2.0) -> list:
-    """Poll the AJAX feed and keep every non-empty payload as a frame."""
+def listen_ajax(url: str, seconds: float, interval: float = 2.0,
+                retries: int = 3) -> list:
+    """Poll the AJAX feed and keep every non-empty payload as a frame.
+
+    A dropped TLS handshake is routine here and must not eat the budget: a
+    failed poll buys back the time it cost, up to ``retries`` times, because
+    otherwise a short probe spends its whole window on one timeout and calls
+    a live track dark.
+    """
     frames, stop_at = [], time.time() + seconds
-    while time.time() < stop_at:
+    left = retries
+    while True:
+        before = warroom._ajax_state.get("errors", 0)
         payload = warroom._fetch_http(url)
         if payload.strip():
             frames.append(payload)
+        failed = warroom._ajax_state.get("errors", 0) > before
+        if time.time() >= stop_at:
+            # Out of time.  A probe that has heard nothing but failures gets a
+            # few more goes — a dropped handshake is not an answer — but a
+            # track that is genuinely unreachable must not hold up the sweep.
+            if not (failed and left and not frames):
+                return frames
+            left -= 1
         time.sleep(interval)
-    return frames
 
 
 def find(slugs: list, seconds: float):
     """Probe each event and say which ones have karts on track."""
     print(f"\nProbing {len(slugs)} event(s), {seconds:g}s each\n")
-    live = []
+    live, unreachable = [], []
     for slug in slugs:
         url = event_url(slug)
         print(f"  {event_name(url):<22}", end="", flush=True)
+        errs_before = warroom._ajax_state.get("errors", 0)
         try:
             frames = listen(url, seconds)
         except Exception as e:
+            unreachable.append(slug)
             print(f"unreachable — {e}")
             continue
         if not frames:
-            print("no feed (event page up, nothing broadcasting)")
+            # Nothing came back — but only silence from a feed we actually
+            # reached means the track is dark.  Reporting a timeout as "nothing
+            # broadcasting" is how this watch missed a live session.
+            # Discovery failing is the same kind of silence: without endpoints
+            # we never reached the feed, so we have not heard it say anything.
+            if (warroom._ajax_state.get("errors", 0) > errs_before
+                    or not warroom._find_apex_endpoints(url)):
+                unreachable.append(slug)
+                print("could not reach the feed (polls failed) — not a verdict")
+            else:
+                print("no feed (event page up, nothing broadcasting)")
             continue
         s = summarise(frames)
         if not s["live"]:
@@ -221,8 +249,18 @@ def find(slugs: list, seconds: float):
         print("\n  Record one with:\n")
         for url, _s in live:
             print(f"    python3 apex_dump.py {url} --seconds 120")
+    elif unreachable:
+        # Never report a sweep that could not reach anything as a quiet track:
+        # the whole point of the watch is to notice a live session, and this is
+        # the shape of a failure that looks exactly like success.
+        print(f"\n  Reached nothing: {len(unreachable)} of {len(slugs)} events "
+              f"failed to answer ({', '.join(unreachable[:6])}"
+              f"{'…' if len(unreachable) > 6 else ''}).")
+        print("  This is a network result, not a verdict on what is running.")
     else:
         print("\n  Nothing running. Try again during a race, practice or qualifying.")
+    if live and unreachable:
+        print(f"  ({len(unreachable)} other event(s) could not be reached.)")
     print()
 
 

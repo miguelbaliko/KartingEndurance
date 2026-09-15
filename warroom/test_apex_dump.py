@@ -75,6 +75,116 @@ class TestSummarise(unittest.TestCase):
             self.assertEqual(s["light"], name)
 
 
+class TestASweepThatCannotReachAnythingSaysSo(unittest.TestCase):
+    """The failure that looks exactly like success.
+
+    This watch runs hourly and stays quiet when nothing is live.  A dropped TLS
+    handshake made every event read as "nothing broadcasting", so a sweep that
+    reached no feed at all reported a quiet paddock and said nothing — while
+    KIP Palmela had three karts on track.
+    """
+
+    def setUp(self):
+        import io, contextlib
+        self.warroom = apex_dump.warroom
+        self._listen = apex_dump.listen
+        self._state = dict(self.warroom._ajax_state)
+        self.addCleanup(setattr, apex_dump, "listen", self._listen)
+        self.addCleanup(self.warroom._ajax_state.update, self._state)
+        self._find_ep = self.warroom._find_apex_endpoints
+        self.io, self.ctx = io, contextlib
+
+    def sweep(self, listen):
+        apex_dump.listen = listen
+        buf = self.io.StringIO()
+        with self.ctx.redirect_stdout(buf):
+            apex_dump.find(["kip-palmela", "kartplanet"], seconds=1)
+        return buf.getvalue()
+
+    def test_a_failed_poll_is_not_reported_as_a_quiet_track(self):
+        self.warroom._find_apex_endpoints = lambda url: {"ws": "wss://x/"}
+        self.addCleanup(setattr, self.warroom, "_find_apex_endpoints",
+                        self._find_ep)
+
+        def failing(url, seconds):
+            self.warroom._ajax_state["errors"] = \
+                self.warroom._ajax_state.get("errors", 0) + 1
+            return []
+        out = self.sweep(failing)
+        self.assertIn("could not reach the feed", out)
+        self.assertNotIn("nothing broadcasting", out)
+        self.assertNotIn("Nothing running", out)
+        self.assertIn("network result", out)
+
+    def test_discovery_failing_is_not_a_quiet_track_either(self):
+        """Without endpoints we never reached the feed, so we heard nothing."""
+        self.warroom._find_apex_endpoints = lambda url: {}
+        self.addCleanup(setattr, self.warroom, "_find_apex_endpoints",
+                        self._find_ep)
+        out = self.sweep(lambda url, seconds: [])
+        self.assertIn("could not reach the feed", out)
+        self.assertNotIn("Nothing running", out)
+
+    def test_a_track_we_did_reach_and_that_was_quiet_still_reads_as_quiet(self):
+        self.warroom._find_apex_endpoints = lambda url: {"ws": "wss://x/"}
+        self.addCleanup(setattr, self.warroom, "_find_apex_endpoints",
+                        self._find_ep)
+        out = self.sweep(lambda url, seconds: [])
+        self.assertIn("nothing broadcasting", out)
+        self.assertIn("Nothing running", out)
+        self.assertNotIn("could not reach", out)
+
+    def test_a_live_session_is_still_reported_as_live(self):
+        out = self.sweep(lambda url, seconds: [grid(rows=2)])
+        self.assertIn("LIVE", out)
+        self.assertNotIn("Nothing running", out)
+
+
+class TestAFailedPollBuysBackItsTime(unittest.TestCase):
+    """A short probe must not spend its whole window on one timeout."""
+
+    def setUp(self):
+        self.warroom = apex_dump.warroom
+        self._fetch = self.warroom._fetch_http
+        self._state = dict(self.warroom._ajax_state)
+        self.addCleanup(setattr, self.warroom, "_fetch_http", self._fetch)
+        self.addCleanup(self.warroom._ajax_state.update, self._state)
+
+    def test_the_poll_after_a_failure_still_gets_a_turn(self):
+        calls = []
+
+        def fetch(url):
+            calls.append(url)
+            if len(calls) == 1:              # the dropped handshake
+                self.warroom._ajax_state["errors"] = \
+                    self.warroom._ajax_state.get("errors", 0) + 1
+                return ""
+            return "grid||<tbody></tbody>"
+
+        self.warroom._fetch_http = fetch
+        self.warroom._ajax_state["errors"] = 0
+        # A window already spent, so the only polls left are the retries.
+        frames = apex_dump.listen_ajax("http://x/", seconds=0, interval=0.0)
+        self.assertGreaterEqual(len(calls), 2, "the retry never happened")
+        self.assertTrue(frames, "the frame after the failure was lost")
+
+    def test_retries_are_not_unlimited(self):
+        """A track that is genuinely unreachable must not hold the sweep up."""
+        calls = []
+
+        def fetch(url):
+            calls.append(url)
+            self.warroom._ajax_state["errors"] = \
+                self.warroom._ajax_state.get("errors", 0) + 1
+            return ""
+
+        self.warroom._fetch_http = fetch
+        self.warroom._ajax_state["errors"] = 0
+        apex_dump.listen_ajax("http://x/", seconds=0, interval=0.0, retries=3)
+        # The first poll, then three retries, then it gives up.
+        self.assertEqual(len(calls), 4)
+
+
 class TestUrls(unittest.TestCase):
     def test_a_slug_becomes_an_event_url(self):
         self.assertEqual(apex_dump.event_url("kip-palmela"),

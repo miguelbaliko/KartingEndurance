@@ -618,7 +618,7 @@ def _find_ws_url(page_url: str) -> Optional[str]:
 
 # live_ajax.php is a resumable cursor: it hands back the init flag and index to
 # send on the next call, so each poll returns only what changed since the last.
-_ajax_state: dict = {"init": "1", "index": "0", "counter": 0}
+_ajax_state: dict = {"init": "1", "index": "0", "counter": 0, "errors": 0}
 
 def _fetch_http(page_url: str) -> str:
     """Poll Apex's AJAX fallback and return one pipe-protocol payload.
@@ -643,6 +643,10 @@ def _fetch_http(page_url: str) -> str:
     try:
         text = _http_get(f"{ep['ajax']}?{q}", referer=ep.get("referer", page_url), timeout=8)
     except Exception as e:
+        # An empty return means "nothing new" to every caller, so a poll that
+        # never got through has to be counted separately — otherwise a track
+        # we could not reach is indistinguishable from a track sitting idle.
+        _ajax_state["errors"] = _ajax_state.get("errors", 0) + 1
         print(f"[apex] AJAX poll failed: {e}", flush=True)
         return ""
     parts = text.split("@", 2)
@@ -722,7 +726,7 @@ def apex_session_result(page_url: str, sid: str) -> dict:
 
 
 def _reset_ajax_state():
-    _ajax_state.update({"init": "1", "index": "0", "counter": 0})
+    _ajax_state.update({"init": "1", "index": "0", "counter": 0, "errors": 0})
 
 def _parse_apex_pipe(msg: str) -> tuple:
     """Parse Apex Timing pipe-delimited WebSocket protocol.
