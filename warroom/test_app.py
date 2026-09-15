@@ -691,6 +691,112 @@ class TestRaceControlLog(AppCase):
         self.assertEqual(self.snap()["apex_session"]["control"][0]["text"], "Start")
 
 
+class TestClassPositions(AppCase):
+    """We are classified against AM, not against the PRO team leading on track."""
+
+    def grid(self, rows):
+        return [{"kart": k, "pos": str(p), "gap": g, "category": c}
+                for p, (k, g, c) in enumerate(rows, start=1)]
+
+    def test_position_is_counted_inside_the_category(self):
+        v = self.app.class_positions(self.grid([
+            ("11", "",      "PRO"), ("22", "10.0", "AM"),
+            ("33", "15.0",  "PRO"), ("44", "25.0", "AM")]), 60.0)
+        self.assertEqual((v["22"]["class"], v["22"]["class_pos"], v["22"]["class_of"]),
+                         ("AM", 1, 2))
+        self.assertEqual(v["44"]["class_pos"], 2)
+        self.assertEqual(v["11"]["class_pos"], 1)          # PRO has its own count
+
+    def test_the_gap_that_matters_is_to_the_car_ahead_in_class(self):
+        v = self.app.class_positions(self.grid([
+            ("11", "",     "PRO"), ("22", "10.0", "AM"),
+            ("33", "15.0", "PRO"), ("44", "25.0", "AM")]), 60.0)
+        # 44 is 25s off the overall leader but only 15s off the AM team ahead.
+        self.assertEqual(v["44"]["ahead_kart"], "22")
+        self.assertAlmostEqual(v["44"]["ahead_s"], 15.0)
+        self.assertAlmostEqual(v["44"]["class_gap_s"], 15.0)
+
+    def test_the_class_leader_leads_by_nothing(self):
+        v = self.app.class_positions(self.grid([
+            ("11", "", "PRO"), ("22", "10.0", "AM")]), 60.0)
+        self.assertEqual(v["22"]["class_gap_s"], 0.0)
+        self.assertIsNone(v["22"]["ahead_s"])
+
+    def test_an_event_with_no_categories_is_one_class(self):
+        v = self.app.class_positions(self.grid([
+            ("11", "", ""), ("22", "10.0", ""), ("33", "20.0", "")]), 60.0)
+        self.assertEqual(v["33"]["class_of"], 3)
+        self.assertAlmostEqual(v["33"]["ahead_s"], 10.0)
+
+    def test_an_unreadable_gap_is_left_out(self):
+        v = self.app.class_positions(self.grid([
+            ("11", "", "AM"), ("22", "?", "AM")]), 60.0)
+        self.assertNotIn("22", v)
+
+
+class TestPitPlanCheck(AppCase):
+    """A plan that cannot be driven should say so on Friday, not at 4am."""
+
+    def race(self, **over):
+        r = dict(self.app.CFG["race"])
+        r.update(over)
+        return r
+
+    def plan(self, ids):
+        return [{"driver_id": d, "note": ""} for d in ids]
+
+    def drivers(self, *names):
+        return [{"id": i, "name": n} for i, n in enumerate(names, start=1)]
+
+    def test_our_own_am_numbers_are_drivable(self):
+        # 25h, 34 stops, 60 min ceiling, six drivers sharing evenly.
+        ids = [(i % 6) + 1 for i in range(34)]
+        probs = self.app.check_pit_plan(
+            self.plan(ids), self.race(),
+            self.drivers("a", "b", "c", "d", "e", "f"))
+        self.assertEqual([p for p in probs if p["level"] == "blocker"], [])
+
+    def test_too_few_stops_for_the_stint_ceiling_is_a_blocker(self):
+        # 25 hours over 6 stints is four hours a stint; the ceiling is one.
+        probs = self.app.check_pit_plan(
+            self.plan([1] * 5), self.race(mandatory_pits=5), self.drivers("a"))
+        self.assertTrue(any(p["level"] == "blocker" and "limit" in p["text"]
+                            for p in probs), probs)
+
+    def test_a_driver_planned_under_their_minimum_is_a_blocker(self):
+        # One stop for the joker, everything else to the other five.
+        ids = [1] * 33 + [7]
+        probs = self.app.check_pit_plan(
+            self.plan(ids), self.race(),
+            self.drivers("Balikó", "b", "c", "d", "e", "f", "Casinha"))
+        self.assertTrue(any("Casinha" in p["text"] and p["level"] == "blocker"
+                            for p in probs), probs)
+
+    def test_unassigned_stops_are_flagged_but_not_fatal(self):
+        probs = self.app.check_pit_plan(
+            self.plan([1] * 30 + [None] * 4), self.race(), self.drivers("a"))
+        self.assertTrue(any(p["level"] == "warn" and "no driver" in p["text"]
+                            for p in probs), probs)
+
+    def test_stops_that_cannot_fit_before_the_lane_shuts(self):
+        probs = self.app.check_pit_plan(
+            self.plan([1] * 34),
+            self.race(duration_minutes=60, no_pit_last_minutes=30),
+            self.drivers("a"))
+        self.assertTrue(any("shuts" in p["text"] for p in probs), probs)
+
+    def test_blockers_are_listed_before_warnings(self):
+        ids = [1] * 33 + [None]
+        probs = self.app.check_pit_plan(
+            self.plan(ids), self.race(mandatory_pits=5), self.drivers("a"))
+        levels = [p["level"] for p in probs]
+        self.assertEqual(levels, sorted(levels, key=lambda l: l != "blocker"))
+
+    def test_the_check_reaches_the_screen(self):
+        self.client.post("/api/driver/add", json={"name": "Solo"})
+        self.assertIn("plan_problems", self.snap())
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)

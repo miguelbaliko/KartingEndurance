@@ -6,6 +6,7 @@ import threading, time, json, sqlite3, urllib.request, urllib.error, urllib.pars
 import html.parser, re, os, queue, math
 from datetime import datetime, timedelta
 from typing import Optional
+from collections import defaultdict
 
 import kartpool
 from raceclock import ApexClock
@@ -938,6 +939,124 @@ def fmt_delta(d: Optional[float]) -> str:
         return "?"
     return f"{d:+.2f}s"
 
+def class_positions(teams: list, lap_s: Optional[float]) -> dict:
+    """Position and gaps within a team's own category.
+
+    We race AM (§2.5).  The leader on the timing screen is very likely a PRO
+    team we are not classified against, so the overall gap is the wrong number
+    to make a call on — what matters is the AM team directly ahead.
+
+    Returns {kart: {"class", "class_pos", "class_of", "class_gap_s",
+    "ahead_kart", "ahead_s"}}.  Teams whose gap cannot be read are left out
+    rather than guessed at; an event with no category column is simply one
+    class, which is the truth for it.
+    """
+    rows = []
+    for t in teams:
+        kart = str(t.get("kart", ""))
+        if not kart:
+            continue
+        try:
+            pos = int(str(t.get("pos", "") or 0).strip() or 0)
+        except ValueError:
+            pos = 0
+        gap = 0.0 if pos == 1 else gap_seconds(t.get("gap", ""), lap_s)
+        if gap is None:
+            continue
+        rows.append({"kart": kart, "pos": pos, "gap": gap,
+                     "cat": (t.get("category") or "").strip().upper()})
+
+    out = {}
+    by_cat = defaultdict(list)
+    for r in rows:
+        by_cat[r["cat"]].append(r)
+    for cat, group in by_cat.items():
+        group.sort(key=lambda r: (r["pos"] or 10 ** 6, r["gap"]))
+        leader = group[0]["gap"]
+        for i, r in enumerate(group):
+            ahead = group[i - 1] if i else None
+            out[r["kart"]] = {
+                "class":       cat,
+                "class_pos":   i + 1,
+                "class_of":    len(group),
+                "class_gap_s": round(r["gap"] - leader, 1),
+                "ahead_kart":  ahead["kart"] if ahead else "",
+                "ahead_s":     round(r["gap"] - ahead["gap"], 1) if ahead else None,
+            }
+    return out
+
+
+def check_pit_plan(plan: list, race: dict, drivers: list) -> list:
+    """Everything wrong with a plan, worst first, before the race finds out.
+
+    A plan is only legal if every stint fits under the ceiling (§3.10), every
+    driver clears their 120 minutes (§3.14), and all the stops fit before the
+    pit lane shuts at 24:30 (§3.8).  All three are arithmetic, and all three
+    are cheaper to discover on Friday than at 4am.
+    """
+    stops   = int(race["mandatory_pits"])
+    total_s = race["duration_minutes"] * 60
+    close_s = total_s - race["no_pit_last_minutes"] * 60
+    box_s   = race["pit_duration_seconds"]
+    max_s   = race["stint_max_minutes"] * 60
+    min_s   = race.get("stint_min_minutes", 0) * 60
+    owed_s  = race.get("driver_min_minutes", 0) * 60
+
+    # Time in the box does not count as stint time (§3.11), so the driving is
+    # what is left once every stop has been served.
+    driving_s = max(0.0, total_s - stops * box_s)
+    stints    = stops + 1
+    avg_s     = driving_s / stints if stints else 0.0
+
+    problems = []
+    if avg_s > max_s:
+        problems.append({
+            "level": "blocker",
+            "text": f"{stints} stints over {fmt_duration(driving_s)} of driving "
+                    f"averages {fmt_duration(avg_s)}, past the "
+                    f"{race['stint_max_minutes']} min limit. More stops than the "
+                    f"{stops} mandatory ones are needed."})
+    if min_s and avg_s < min_s:
+        problems.append({
+            "level": "warn",
+            "text": f"Average stint {fmt_duration(avg_s)} is under the "
+                    f"{race.get('stint_min_minutes')} min minimum."})
+
+    # Can the mandatory stops physically fit before the lane shuts?
+    if stops * box_s > close_s:
+        problems.append({
+            "level": "blocker",
+            "text": f"{stops} stops of {fmt_duration(box_s)} cannot fit before "
+                    f"the pit lane shuts at {fmt_duration(close_s)}."})
+
+    assigned = [p.get("driver_id") for p in plan[:stops]]
+    unassigned = sum(1 for d in assigned if not d)
+    if unassigned:
+        problems.append({
+            "level": "warn",
+            "text": f"{unassigned} of {stops} stops have no driver yet."})
+
+    # Each stop hands the kart to the driver named for it, so a driver's time
+    # is the stints that follow their stops, plus the first stint for whoever
+    # starts the race.
+    if owed_s and drivers:
+        share = defaultdict(float)
+        for d in assigned:
+            if d:
+                share[str(d)] += avg_s
+        for drv in drivers:
+            got = share.get(str(drv["id"]), 0.0)
+            if got + 1e-6 < owed_s:
+                problems.append({
+                    "level": "blocker",
+                    "text": f"{drv['name']} is planned for {fmt_duration(got)}, "
+                            f"short of the {race.get('driver_min_minutes')} min "
+                            f"every driver owes."})
+
+    order = {"blocker": 0, "warn": 1}
+    problems.sort(key=lambda p: order.get(p["level"], 9))
+    return problems
+
 # ── Strategy engine ────────────────────────────────────────────────────────────
 def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
                      my_avg5: Optional[float], prev_avg5: Optional[float]) -> dict:
@@ -1107,6 +1226,8 @@ def make_snapshot() -> dict:
     my_held = kart_of.get(str(my_team.get("kart", ""))) if my_team else None
     my_card = kart_card.get(my_held) if my_held else None
     box_now = box_now_verdict(candidates, my_card["delta"] if my_card else None)
+    # We are classified against our own category, not the overall leader.
+    klass = class_positions(teams_raw, track_avg_s)
     R = CFG["race"]
     virt = virtual_positions(teams_raw, R["mandatory_pits"],
                              R.get("pit_loss_seconds") or R["pit_duration_seconds"],
@@ -1136,6 +1257,9 @@ def make_snapshot() -> dict:
             **(virt.get(str(t.get("kart", ""))) or
                {"virtual_pos": None, "stops_owed": None,
                 "debt_s": None, "virtual_gap_s": None}),
+            **(klass.get(str(t.get("kart", ""))) or
+               {"class": "", "class_pos": None, "class_of": None,
+                "class_gap_s": None, "ahead_kart": "", "ahead_s": None}),
         })
 
     stint_pct = min(100, (stint_s / (CFG["race"]["stint_max_minutes"] * 60)) * 100) if stint_s else 0
@@ -1187,6 +1311,7 @@ def make_snapshot() -> dict:
         "mandatory_pits":   CFG["race"]["mandatory_pits"],
         "stint_max_minutes": CFG["race"]["stint_max_minutes"],
         "next_karts":       candidates,
+        "plan_problems":    check_pit_plan(get_pit_plan(), CFG["race"], drivers),
         "box_now":          box_now,
         "track_avg":        track_avg,
         "pit_history":      pit_history,

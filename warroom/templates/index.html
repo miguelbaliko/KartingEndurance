@@ -399,6 +399,16 @@ tr.clickable{cursor:pointer}
 .rc-at{color:var(--tx3);font-variant-numeric:tabular-nums;min-width:38px}
 .rc-flag{width:9px;height:9px;border-radius:2px;flex:none;align-self:center}
 .rc-txt{color:var(--tx2)}
+.cls-p{margin-left:5px;font-size:10px;color:var(--tx3);font-weight:700}
+.cls-gap{font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums}
+/* A plan that cannot be driven, said out loud before the race finds out. */
+.pp-row{display:flex;gap:8px;align-items:baseline;padding:6px 2px;font-size:11px;
+  border-bottom:1px solid var(--line)}
+.pp-row:last-child{border-bottom:none}
+.pp-tag{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;flex:none}
+.pp-blocker{background:rgba(239,68,68,.18);color:#ef4444}
+.pp-warn{background:rgba(234,179,8,.18);color:#eab308}
+.pp-ok{color:#22c55e;font-size:11px;padding:6px 2px}
 .td-virt{font-weight:700;font-size:12px}
 .virt-up{color:#22c55e}
 .virt-down{color:#ef4444}
@@ -530,7 +540,7 @@ tr.clickable{cursor:pointer}
             <th style="width:32px"></th>
             <th title="Position once every stop still owed has been taken">V</th>
             <th>#</th>
-            <th>Cat</th>
+            <th title="Position in our own category">Cat</th>
             <th>Team</th>
             <th>Driver</th>
             <th>Kart</th>
@@ -541,10 +551,11 @@ tr.clickable{cursor:pointer}
             <th class="r">Laps</th>
             <th class="r">Pits</th>
             <th class="r">Gap</th>
+            <th class="r" title="Gap to the team ahead in the same category">In class</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="14" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
+          <tr><td colspan="15" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
             Waiting for Apex Timing data — set URL in ⚙ Settings
           </td></tr>
         </tbody>
@@ -642,6 +653,12 @@ tr.clickable{cursor:pointer}
         </div>
         <div class="fleet" id="fleet-body"></div>
         <div class="kart-note" id="fleet-note"></div>
+      </div>
+
+      <!-- PLAN CHECK -->
+      <div class="card" id="plan-card" style="display:none">
+        <div class="card-hd">Plan Check</div>
+        <div id="plan-body"></div>
       </div>
 
       <!-- RACE CONTROL -->
@@ -861,6 +878,7 @@ function render(s) {
   renderKarts(s);
   renderBoxNow(s);
   renderControl(s);
+  renderPlanCheck(s);
   renderMyTeam(s);
   renderStrategy(s);
   renderPit(s);
@@ -908,7 +926,8 @@ function renderTable(allTeams) {
       <td class="${posCls}${t.is_my_team?' td-mine':''}">${esc(t.pos)}</td>
       <td class="td-virt td-r" title="${virtTitle(t)}">${virtCell(t, pos)}</td>
       <td>${esc(t.kart)}</td>
-      <td class="td-cat">${esc(t.category||'')}</td>
+      <td class="td-cat">${esc(t.category||'')}${t.class_pos
+          ? `<span class="cls-p">P${t.class_pos}</span>` : ''}</td>
       <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
       <td class="td-muted" title="${esc(t.driver)}">${esc(t.driver||'')}</td>
       <td style="cursor:pointer" title="Click to set the kart this team is in"
@@ -921,6 +940,10 @@ function renderTable(allTeams) {
       <td class="td-muted td-r">${esc(t.total_laps)}</td>
       <td class="td-muted td-r">${esc(t.pits)}</td>
       <td class="td-muted td-r">${esc(t.gap)}</td>
+      <td class="td-r cls-gap">${t.ahead_s != null
+          ? '+' + t.ahead_s.toFixed(1)
+          : (t.class_pos === 1 ? '<span class="td-dim">leads</span>'
+                               : '<span class="td-dim">·</span>')}</td>
     </tr>`;
   }).join('');
 }
@@ -1005,6 +1028,24 @@ function renderControl(s) {
       ${e.flag ? `<span class="rc-flag" style="background:${RC_FLAG[e.flag]||'#888'}"></span>` : ''}
       <span class="rc-txt">${esc(e.text||'')}</span>
     </div>`).join('');
+}
+
+/** Whether the pit plan is actually drivable under the regulation. */
+function renderPlanCheck(s) {
+  const card = document.getElementById('plan-card');
+  if (!card) return;
+  const probs = s.plan_problems || [];
+  const blockers = probs.filter(p => p.level === 'blocker').length;
+  card.style.display = 'block';
+  card.querySelector('.card-hd').textContent =
+    blockers ? `Plan Check · ${blockers} blocker${blockers===1?'':'s'}` : 'Plan Check';
+  document.getElementById('plan-body').innerHTML = probs.length
+    ? probs.map(p => `
+        <div class="pp-row">
+          <span class="pp-tag pp-${esc(p.level)}">${p.level==='blocker'?'STOP':'CHECK'}</span>
+          <span>${esc(p.text)}</span>
+        </div>`).join('')
+    : '<div class="pp-ok">✓ Stints, driver minimums and the pit window all add up.</div>';
 }
 
 /** Virtual position, and the arrow showing which way it moves them. */
