@@ -74,8 +74,11 @@ def event_url(slug: str) -> str:
     return slug if slug.startswith("http") else f"https://live.apex-timing.com/{slug}/"
 
 
-# Apex's light command: lr red, lg green, ly yellow, lsc safety car.
-LIGHTS = {"lg": "GREEN", "ly": "YELLOW", "lr": "RED", "lsc": "SAFETY CAR"}
+# Apex's light command: lr red, lg green, ly yellow, lsc safety car, lf the
+# chequered flag.  Without lf a finished session reports its raw code and reads
+# as if it were still running.
+LIGHTS = {"lg": "GREEN", "ly": "YELLOW", "lr": "RED", "lsc": "SAFETY CAR",
+          "lf": "CHEQUERED"}
 
 
 def summarise(frames: list) -> dict:

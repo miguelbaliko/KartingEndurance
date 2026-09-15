@@ -70,7 +70,10 @@ class TestSummarise(unittest.TestCase):
         self.assertEqual(s["columns_ignored"], [])
 
     def test_light_states_are_translated(self):
-        for code, name in (("lr", "RED"), ("ly", "YELLOW"), ("lsc", "SAFETY CAR")):
+        # lf is the chequered flag: without it a finished session printed its
+        # raw code and read as one still running.
+        for code, name in (("lr", "RED"), ("ly", "YELLOW"), ("lsc", "SAFETY CAR"),
+                           ("lg", "GREEN"), ("lf", "CHEQUERED")):
             s = apex_dump.summarise([grid(), f"light|{code}|"])
             self.assertEqual(s["light"], name)
 
