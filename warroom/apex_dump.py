@@ -97,7 +97,15 @@ def summarise(frames: list) -> dict:
         "clock": meta.get("dyn1") or meta.get("dyn2") or "",
         "karts": report["rows_parsed"],
         "on_track": report["rows_on_track"],
-        "live": report["rows_parsed"] > 0,
+        # Karts on the board is not a session running.  Apex leaves the final
+        # grid up after the flag, green light and all, so a finished session
+        # looks exactly like a live one in a single frame — kartplanet read as
+        # LIVE for three hourly sweeps with nobody on track.  What tells them
+        # apart is movement: a running session sends cell updates every few
+        # seconds, a finished one sends the grid and then nothing.
+        "updates": max(0, len(frames) - 1),
+        "live": report["rows_parsed"] > 0 and len(frames) > 1,
+        "grid_up": report["rows_parsed"] > 0,
         "columns_ignored": report["columns_ignored"],
         "has_pit_counter": report["has_pit_counter"],
         "has_category": report["has_category"],
@@ -236,7 +244,11 @@ def find(slugs: list, seconds: float):
             continue
         s = summarise(frames)
         if not s["live"]:
-            print("connected, empty grid")
+            if s["grid_up"]:
+                print(f"grid up, nothing moved in {seconds:g}s — "
+                      f"{s['karts']} karts, session likely over")
+            else:
+                print("connected, empty grid")
             continue
         live.append((url, s))
         print(f"LIVE · {s['karts']} karts, {s['on_track']} with lap times"

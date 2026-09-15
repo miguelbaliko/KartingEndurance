@@ -138,9 +138,34 @@ class TestASweepThatCannotReachAnythingSaysSo(unittest.TestCase):
         self.assertNotIn("could not reach", out)
 
     def test_a_live_session_is_still_reported_as_live(self):
-        out = self.sweep(lambda url, seconds: [grid(rows=2)])
+        """A running session sends the grid and then keeps sending updates."""
+        out = self.sweep(lambda url, seconds: [grid(rows=2), "r1c9|tb|1:02.478"])
         self.assertIn("LIVE", out)
         self.assertNotIn("Nothing running", out)
+
+    def test_a_board_left_up_after_the_flag_is_not_live(self):
+        """Apex leaves the final grid up, green light and all.
+
+        kartplanet read as "LIVE · 12 karts" for three hourly sweeps with
+        nobody on track: the session had ended and the board was frozen.
+        Polled ninety seconds apart, not one lap count had moved.
+        """
+        out = self.sweep(lambda url, seconds: [grid(rows=12) + "\nlight|lg|"])
+        self.assertIn("nothing moved", out)
+        self.assertIn("session likely over", out)
+        self.assertNotIn("LIVE", out)
+
+    def test_a_static_board_still_reports_what_is_on_it(self):
+        s = apex_dump.summarise([grid(rows=12)])
+        self.assertFalse(s["live"])
+        self.assertTrue(s["grid_up"], "the karts are still worth naming")
+        self.assertEqual(s["karts"], 12)
+        self.assertEqual(s["updates"], 0)
+
+    def test_movement_is_what_makes_it_live(self):
+        s = apex_dump.summarise([grid(rows=2), "r1c9|tb|1:02.1", "r2c9|tn|1:03.9"])
+        self.assertTrue(s["live"])
+        self.assertEqual(s["updates"], 2)
 
 
 class TestAFailedPollBuysBackItsTime(unittest.TestCase):
