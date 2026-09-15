@@ -53,7 +53,15 @@ import app as warroom
 
 
 # The events this war room follows.  Add a slug and --find will watch it too.
+#
+# The first two are ours.  The rest are other Apex tracks, kept here only so
+# there is something running to test the parser against midweek — ours are dark
+# except on race weekends, and a layout we have never parsed is the main risk.
 KNOWN_EVENTS = ["kip-palmela", "kartalcanede"]
+
+OTHER_TRACKS = ["kartplanet", "kartodromodeviana", "wsk", "rgmmc", "rgmmc2",
+                "ligue-karting-op", "korridas", "rkc", "lemans-karting",
+                "elk-motorsport"]
 
 
 def event_name(url: str) -> str:
@@ -267,6 +275,9 @@ def main():
     ap.add_argument("--find", nargs="*", metavar="EVENT",
                     help="probe events for a live session; no names means "
                          + ", ".join(KNOWN_EVENTS))
+    ap.add_argument("--anywhere", action="store_true",
+                    help="also probe other Apex tracks, to find any live "
+                         "session to test the parser against")
     ap.add_argument("--seconds", type=float, default=90.0)
     ap.add_argument("--out", default=os.path.dirname(os.path.abspath(__file__)))
     ap.add_argument("--replay", help="a .raw file recorded earlier")
@@ -274,7 +285,8 @@ def main():
     args = ap.parse_args()
 
     if args.find is not None:
-        find(args.find or KNOWN_EVENTS, min(args.seconds, 15.0))
+        slugs = args.find or KNOWN_EVENTS + (OTHER_TRACKS if args.anywhere else [])
+        find(slugs, min(args.seconds, 15.0))
     elif args.replay:
         replay(args.replay, args.speed)
     elif args.url:

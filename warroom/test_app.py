@@ -453,6 +453,99 @@ class TestQualifyingSurvivesIntoTheRace(AppCase):
         self.assertIsNone(self.app.POOL.kart_of().get("1"))
 
 
+class TestPenaltyLadder(AppCase):
+    """§15.1/15.4/15.5 all charge 20 seconds per started block of ten short."""
+
+    def test_the_ladder(self):
+        for short, penalty in [(0, 0), (-5, 0), (0.5, 20), (10, 20),
+                               (10.1, 40), (11, 40), (20, 40), (21, 60), (45, 100)]:
+            self.assertEqual(self.app.penalty_for_shortfall(short), penalty,
+                             f"{short}s short")
+
+    def test_the_box_clock_says_what_leaving_now_costs(self):
+        self.client.post("/api/pit/start")
+        s = self.snap()
+        # Three minutes still owed is 20s per ten of them.
+        self.assertGreater(s["pit_penalty_now"], 0)
+        self.assertEqual(s["pit_penalty_now"],
+                         self.app.penalty_for_shortfall(s["pit_remaining"]))
+
+    def test_no_penalty_once_the_minimum_is_served(self):
+        self.assertEqual(self.app.penalty_for_shortfall(0), 0)
+
+
+class TestGapReading(AppCase):
+    def test_seconds(self):
+        self.assertAlmostEqual(self.app.gap_seconds("1.034", 60.0), 1.034)
+        self.assertAlmostEqual(self.app.gap_seconds("+2.6", 60.0), 2.6)
+        self.assertAlmostEqual(self.app.gap_seconds("1:02.500", 60.0), 62.5)
+
+    def test_whole_laps_need_a_lap_time(self):
+        self.assertAlmostEqual(self.app.gap_seconds("2 Laps", 61.0), 122.0)
+        # Without a lap time a lapped gap is unknown, not zero — calling it
+        # zero would rank a lapped team as if it were on the leader's tail.
+        self.assertIsNone(self.app.gap_seconds("2 Laps", None))
+
+    def test_nothing_useful(self):
+        for g in ("", "-", "--", "abc", None):
+            self.assertIsNone(self.app.gap_seconds(g, 60.0))
+
+
+class TestVirtualPosition(AppCase):
+    """Track position lies while stops are still owed."""
+
+    def teams(self, rows):
+        return [{"kart": k, "pos": str(p), "pits": str(d), "gap": g}
+                for p, (k, d, g) in enumerate(rows, start=1)]
+
+    def test_a_team_that_has_skipped_its_stops_is_not_really_leading(self):
+        # P1 has taken 10 stops, P2 has taken 14, of 34. P1 owes four more,
+        # each costing 200s, against a 30s lead on the road.
+        v = self.app.virtual_positions(
+            self.teams([("11", 10, ""), ("22", 14, "30.0")]), 34, 200.0, 60.0)
+        self.assertEqual(v["22"]["virtual_pos"], 1)
+        self.assertEqual(v["11"]["virtual_pos"], 2)
+        self.assertEqual(v["11"]["stops_owed"], 24)
+        self.assertAlmostEqual(v["11"]["debt_s"], 24 * 200.0)   # absolute, not relative
+        self.assertAlmostEqual(v["22"]["debt_s"], 20 * 200.0)
+        self.assertEqual(v["22"]["virtual_gap_s"], 0.0)          # the virtual leader
+        # P1 leads by 30s on the road but owes four more stops at 200s each.
+        self.assertAlmostEqual(v["11"]["virtual_gap_s"], 4 * 200.0 - 30.0)
+
+    def test_debt_is_never_negative(self):
+        v = self.app.virtual_positions(
+            self.teams([("11", 10, ""), ("22", 14, "30.0"), ("33", 34, "60.0")]),
+            34, 200.0, 60.0)
+        self.assertTrue(all(r["debt_s"] >= 0 for r in v.values()), v)
+
+    def test_the_virtual_leader_is_zero_and_the_rest_trail(self):
+        v = self.app.virtual_positions(
+            self.teams([("11", 10, ""), ("22", 14, "30.0")]), 34, 200.0, 60.0)
+        gaps = sorted(r["virtual_gap_s"] for r in v.values())
+        self.assertEqual(gaps[0], 0.0)
+        self.assertTrue(all(g >= 0 for g in gaps), gaps)
+
+    def test_equal_stops_keeps_the_road_order(self):
+        v = self.app.virtual_positions(
+            self.teams([("11", 12, ""), ("22", 12, "5.0"), ("33", 12, "9.0")]),
+            34, 200.0, 60.0)
+        self.assertEqual([v[k]["virtual_pos"] for k in ("11", "22", "33")], [1, 2, 3])
+
+    def test_a_team_whose_gap_cannot_be_read_is_left_out_not_guessed(self):
+        v = self.app.virtual_positions(
+            self.teams([("11", 12, ""), ("22", 12, "?")]), 34, 200.0, 60.0)
+        self.assertIn("11", v)
+        self.assertNotIn("22", v)
+
+    def test_stops_owed_never_goes_negative(self):
+        v = self.app.virtual_positions(
+            self.teams([("11", 40, "")]), 34, 200.0, 60.0)
+        self.assertEqual(v["11"]["stops_owed"], 0)
+
+    def test_an_empty_grid_is_not_a_crash(self):
+        self.assertEqual(self.app.virtual_positions([], 34, 200.0, 60.0), {})
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)

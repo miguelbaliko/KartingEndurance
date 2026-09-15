@@ -361,6 +361,9 @@ td{padding:7px 8px;white-space:nowrap}
 }
 .cfg-card h3{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--tx)}
 .cfg-lbl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.td-virt{font-weight:700;font-size:12px}
+.virt-up{color:#22c55e}
+.virt-down{color:#ef4444}
 .cfg-inp{
   width:100%;background:var(--bg3);border:1px solid var(--line2);
   border-radius:var(--r);color:var(--tx);padding:8px 12px;font-size:12px;margin-bottom:14px;
@@ -487,6 +490,7 @@ td{padding:7px 8px;white-space:nowrap}
         <thead id="timing-thead">
           <tr id="race-cols">
             <th style="width:32px"></th>
+            <th title="Position once every stop still owed has been taken">V</th>
             <th>#</th>
             <th>Cat</th>
             <th>Team</th>
@@ -502,7 +506,7 @@ td{padding:7px 8px;white-space:nowrap}
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="13" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
+          <tr><td colspan="14" style="text-align:center;color:var(--tx3);padding:36px;font-size:12px">
             Waiting for Apex Timing data — set URL in ⚙ Settings
           </td></tr>
         </tbody>
@@ -831,10 +835,14 @@ function renderTable(allTeams) {
     return;
   }
   tb.innerHTML = teams.map(t => {
+    // Virtual position: where a team really stands once the stops it still
+    // owes are taken. Only shown when it disagrees with the road — a column
+    // repeating the position beside it is noise on a wall screen.
     const pos   = parseInt(t.pos)||99;
     const posCls = pos===1 ? 'td-pos top1' : pos<=3 ? 'td-pos top3' : 'td-pos';
     return `<tr class="${t.is_my_team?'mine':''}">
       <td class="${posCls}${t.is_my_team?' td-mine':''}">${esc(t.pos)}</td>
+      <td class="td-virt td-r" title="${virtTitle(t)}">${virtCell(t, pos)}</td>
       <td>${esc(t.kart)}</td>
       <td class="td-cat">${esc(t.category||'')}</td>
       <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
@@ -851,6 +859,22 @@ function renderTable(allTeams) {
       <td class="td-muted td-r">${esc(t.gap)}</td>
     </tr>`;
   }).join('');
+}
+
+/** Virtual position, and the arrow showing which way it moves them. */
+function virtCell(t, pos) {
+  if (t.virtual_pos == null) return '<span class="td-dim">·</span>';
+  const d = pos - t.virtual_pos;
+  if (d === 0) return '<span class="td-dim">=</span>';
+  const cls = d > 0 ? 'virt-up' : 'virt-down';
+  return `<span class="${cls}">${t.virtual_pos}${d > 0 ? '▲' : '▼'}</span>`;
+}
+
+function virtTitle(t) {
+  if (t.virtual_pos == null) return 'Gap not readable yet';
+  const owed = t.stops_owed == null ? '?' : t.stops_owed;
+  const debt = t.debt_s == null ? '?' : Math.round(t.debt_s) + 's';
+  return `P${t.virtual_pos} after stops · ${owed} still owed · costs ${debt}`;
 }
 
 // ── Karts ────────────────────────────────────────────────────────────

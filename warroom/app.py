@@ -3,7 +3,7 @@
 
 from flask import Flask, render_template, jsonify, request, Response
 import threading, time, json, sqlite3, urllib.request, urllib.error, urllib.parse
-import html.parser, re, os, queue
+import html.parser, re, os, queue, math
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -40,6 +40,10 @@ def load_cfg() -> dict:
             "stint_min_minutes": 10,      # §3.10 a turn under this is penalised
             "pit_duration_seconds": 180,  # §3.9  3 minutes, timed electronically
             "no_pit_last_minutes": 30,    # §3.8  pit lane shuts at 24:30
+            # What a stop really costs against staying out: the 3 minutes in
+            # the box plus the pit lane itself.  Measure it in practice and set
+            # it — the minimum alone understates the loss.
+            "pit_loss_seconds": 200,
             "driver_min_minutes": 120,    # §3.14 every driver, over the event
             "pace_drop_warn": 0.30,
             "pace_drop_box": 0.50,
@@ -745,6 +749,99 @@ def worker():
                 _apex_ok = False
         time.sleep(CFG.get("refresh_interval", 5))
 
+# ── Penalties and virtual position ─────────────────────────────────────────────
+def penalty_for_shortfall(short_s: float) -> int:
+    """Seconds of penalty for being this many seconds short.
+
+    §15.1 (box under 3 minutes), §15.4 (over the stint limit) and §15.5 (under
+    a driver's required time) all use the same ladder: "até 10 segundos em
+    falta penaliza 20 segundos; 11 a 20 segundos em falta penaliza 40 segundos
+    e assim sucessivamente" — 20 seconds for every started block of ten.
+    """
+    if short_s <= 0:
+        return 0
+    return 20 * math.ceil(short_s / 10.0)
+
+
+_LAP_GAP = re.compile(r'^\s*(\d+)\s*(?:lap|laps|volta|voltas|t)\b', re.I)
+
+def gap_seconds(gap: str, lap_s: Optional[float]) -> Optional[float]:
+    """Apex writes a gap either as seconds behind, or as whole laps.
+
+    Laps only become a number of seconds once we know how long a lap takes, so
+    without a lap time a lapped gap is unknown rather than zero.
+    """
+    if not gap:
+        return None
+    g = str(gap).strip().lstrip('+')
+    if not g or g in ('-', '--'):
+        return None
+    m = _LAP_GAP.match(g)
+    if m:
+        return int(m.group(1)) * lap_s if lap_s else None
+    try:
+        if ':' in g:                     # m:ss.sss
+            mins, secs = g.rsplit(':', 1)
+            return int(mins) * 60 + float(secs)
+        return float(g)
+    except ValueError:
+        return None
+
+
+def virtual_positions(teams: list, mandatory_pits: int, pit_loss_s: float,
+                      lap_s: Optional[float]) -> dict:
+    """Where the order really stands once everyone's remaining stops are taken.
+
+    On the road a team that has skipped its stops leads; it does not really.
+    Each team still owes (mandatory - done) stops, and each stop costs about
+    pit_loss_s, so the honest comparison adds that debt to the gap.
+
+    Returns {kart: {"virtual_pos", "stops_owed", "debt_s", "virtual_gap_s"}}.
+    Teams whose gap cannot be read keep their track position rather than being
+    guessed at.
+    """
+    rows = []
+    for t in teams:
+        kart = str(t.get("kart", ""))
+        if not kart:
+            continue
+        try:
+            done = int(str(t.get("pits", "") or 0).strip() or 0)
+        except ValueError:
+            done = 0
+        owed = max(0, mandatory_pits - done)
+        gap = gap_seconds(t.get("gap", ""), lap_s)
+        try:
+            pos = int(str(t.get("pos", "") or 0).strip() or 0)
+        except ValueError:
+            pos = 0
+        rows.append({"kart": kart, "pos": pos, "owed": owed,
+                     "gap": 0.0 if pos == 1 else gap})
+
+    known = [r for r in rows if r["gap"] is not None]
+    if not known:
+        return {}
+    # Debt is the time a team still has to spend in the pits, whoever they are
+    # — an absolute number, not a comparison, so it reads the same for the
+    # leader as for the last car.  The order then falls out of where each team
+    # is on the road plus what it still owes.
+    for r in known:
+        r["debt"] = r["owed"] * pit_loss_s
+        r["virtual"] = r["gap"] + r["debt"]
+
+    ranked = sorted(known, key=lambda r: r["virtual"])
+    front = ranked[0]["virtual"]
+    out = {}
+    for i, r in enumerate(ranked, start=1):
+        out[r["kart"]] = {
+            "virtual_pos":   i,
+            "stops_owed":    r["owed"],
+            "debt_s":        round(r["debt"], 1),
+            # Measured off whoever actually leads once the stops are counted.
+            "virtual_gap_s": round(r["virtual"] - front, 1),
+        }
+    return out
+
 # ── Strategy engine ────────────────────────────────────────────────────────────
 def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
                      my_avg5: Optional[float], prev_avg5: Optional[float]) -> dict:
@@ -834,6 +931,9 @@ def make_snapshot() -> dict:
         pit_elapsed   = (now - datetime.fromisoformat(pit_start)).total_seconds()
         pit_remaining = max(0.0, CFG["race"]["pit_duration_seconds"] - pit_elapsed)
         pit_min_met   = pit_elapsed >= CFG["race"]["pit_duration_seconds"]
+    # §3.9 is timed electronically and §15.1 charges 20s per started 10s short,
+    # so the number worth showing is what leaving right now would cost.
+    pit_penalty_now = penalty_for_shortfall(pit_remaining)
 
     # Drivers
     driver_id = kv_get("driver_id")
@@ -891,13 +991,18 @@ def make_snapshot() -> dict:
     _prev_avg5 = my_avg5
 
     # Track-wide average of all avg5 values
-    all_avgs  = [t["avg5_s"] for t in teams_raw if t.get("avg5_s")]
-    track_avg = fmt_laptime(sum(all_avgs) / len(all_avgs)) if all_avgs else "-"
+    all_avgs    = [t["avg5_s"] for t in teams_raw if t.get("avg5_s")]
+    track_avg_s = sum(all_avgs) / len(all_avgs) if all_avgs else None
+    track_avg   = fmt_laptime(track_avg_s) if track_avg_s else "-"
 
     # Serialize teams (drop raw floats the frontend doesn't need)
     pool = POOL.snapshot()
     kart_of = pool["kart_of"]
     kart_card = {c["num"]: c for c in pool["fleet"]}
+    R = CFG["race"]
+    virt = virtual_positions(teams_raw, R["mandatory_pits"],
+                             R.get("pit_loss_seconds") or R["pit_duration_seconds"],
+                             track_avg_s)
     teams_out = []
     for t in teams_raw:
         held = kart_of.get(str(t.get("kart", "")))
@@ -920,6 +1025,9 @@ def make_snapshot() -> dict:
             "pits":       t.get("pits", "-"),
             "gap":        t.get("gap", "-"),
             "is_my_team": t.get("team", "") == my_name,
+            **(virt.get(str(t.get("kart", ""))) or
+               {"virtual_pos": None, "stops_owed": None,
+                "debt_s": None, "virtual_gap_s": None}),
         })
 
     stint_pct = min(100, (stint_s / (CFG["race"]["stint_max_minutes"] * 60)) * 100) if stint_s else 0
@@ -961,7 +1069,8 @@ def make_snapshot() -> dict:
         "stint_pct":        round(stint_pct, 1),
         "pit_remaining":    pit_remaining,
         "pit_remaining_fmt": fmt_mmss(pit_remaining),
-        "pit_min_met":      pit_min_met,
+        "pit_min_met":       pit_min_met,
+        "pit_penalty_now":   pit_penalty_now,
         "strategy":         strat,
         "current_driver":   current_driver,
         "drivers":          drivers,
