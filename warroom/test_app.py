@@ -523,9 +523,9 @@ class TestVirtualPosition(AppCase):
         self.assertEqual(v["11"]["stops_owed"], 24)
         self.assertAlmostEqual(v["11"]["debt_s"], 24 * 200.0)   # absolute, not relative
         self.assertAlmostEqual(v["22"]["debt_s"], 20 * 200.0)
-        self.assertEqual(v["22"]["virtual_gap_s"], 0.0)          # the virtual leader
-        # P1 leads by 30s on the road but owes four more stops at 200s each.
-        self.assertAlmostEqual(v["11"]["virtual_gap_s"], 4 * 200.0 - 30.0)
+        # P1 leads by 30s on the road but owes four more stops at 200s each,
+        # which is what puts it behind once the debt is counted.
+        self.assertGreater(v["11"]["debt_s"], v["22"]["debt_s"])
 
     def test_debt_is_never_negative(self):
         v = self.app.virtual_positions(
@@ -533,12 +533,11 @@ class TestVirtualPosition(AppCase):
             34, 200.0, 60.0)
         self.assertTrue(all(r["debt_s"] >= 0 for r in v.values()), v)
 
-    def test_the_virtual_leader_is_zero_and_the_rest_trail(self):
+    def test_the_positions_run_from_one_with_no_gaps(self):
         v = self.app.virtual_positions(
-            self.teams([("11", 10, ""), ("22", 14, "30.0")]), 34, 200.0, 60.0)
-        gaps = sorted(r["virtual_gap_s"] for r in v.values())
-        self.assertEqual(gaps[0], 0.0)
-        self.assertTrue(all(g >= 0 for g in gaps), gaps)
+            self.teams([("11", 10, ""), ("22", 14, "30.0"), ("33", 12, "45.0")]),
+            34, 200.0, 60.0)
+        self.assertEqual(sorted(r["virtual_pos"] for r in v.values()), [1, 2, 3])
 
     def test_equal_stops_keeps_the_road_order(self):
         v = self.app.virtual_positions(
@@ -717,8 +716,7 @@ class TestClassPositions(AppCase):
         v = self.app.class_positions(self.grid([
             ("11", "",      "PRO"), ("22", "10.0", "AM"),
             ("33", "15.0",  "PRO"), ("44", "25.0", "AM")]), 60.0)
-        self.assertEqual((v["22"]["class"], v["22"]["class_pos"], v["22"]["class_of"]),
-                         ("AM", 1, 2))
+        self.assertEqual((v["22"]["class"], v["22"]["class_pos"]), ("AM", 1))
         self.assertEqual(v["44"]["class_pos"], 2)
         self.assertEqual(v["11"]["class_pos"], 1)          # PRO has its own count
 
@@ -727,20 +725,17 @@ class TestClassPositions(AppCase):
             ("11", "",     "PRO"), ("22", "10.0", "AM"),
             ("33", "15.0", "PRO"), ("44", "25.0", "AM")]), 60.0)
         # 44 is 25s off the overall leader but only 15s off the AM team ahead.
-        self.assertEqual(v["44"]["ahead_kart"], "22")
         self.assertAlmostEqual(v["44"]["ahead_s"], 15.0)
-        self.assertAlmostEqual(v["44"]["class_gap_s"], 15.0)
 
     def test_the_class_leader_leads_by_nothing(self):
         v = self.app.class_positions(self.grid([
             ("11", "", "PRO"), ("22", "10.0", "AM")]), 60.0)
-        self.assertEqual(v["22"]["class_gap_s"], 0.0)
-        self.assertIsNone(v["22"]["ahead_s"])
+        self.assertIsNone(v["22"]["ahead_s"])   # nobody ahead in class
 
     def test_an_event_with_no_categories_is_one_class(self):
         v = self.app.class_positions(self.grid([
             ("11", "", ""), ("22", "10.0", ""), ("33", "20.0", "")]), 60.0)
-        self.assertEqual(v["33"]["class_of"], 3)
+        self.assertEqual(v["33"]["class_pos"], 3)
         self.assertAlmostEqual(v["33"]["ahead_s"], 10.0)
 
     def test_an_unreadable_gap_is_left_out(self):
@@ -871,10 +866,6 @@ class TestStrategyCalls(AppCase):
                    {"stint_s": self.app.CFG["race"]["stint_max_minutes"] * 60}):
             self.assertTrue(self.call(**kw)["why"], kw)
 
-    def test_every_call_carries_the_stops_still_owed(self):
-        self.assertEqual(self.call(pits_done=4)["stops_left"],
-                         self.app.CFG["race"]["mandatory_pits"] - 4)
-
 
 class TestKartLapHistory(AppCase):
     """Clicking a kart shows the evidence behind its score."""
@@ -972,15 +963,15 @@ class TestBoxTimeCalibration(AppCase):
         self.assertEqual(s["n"], 0)
         self.assertIn("estimate", s["note"])
 
-    def test_it_reports_the_median_and_the_spread(self):
+    def test_it_reports_the_median(self):
         s = self.app.box_time_summary(self.hist(185, 190, 240), 200.0, 180.0)
         self.assertEqual((s["n"], s["median_s"]), (3, 190.0))
-        self.assertEqual(s["fastest"], "3:05")
-        self.assertEqual(s["slowest"], "4:00")
 
-    def test_it_says_how_far_over_the_minimum_we_run(self):
+    def test_the_note_says_how_far_over_the_minimum_we_run(self):
+        # The note is what the pit log shows, so that is what is pinned.
         s = self.app.box_time_summary(self.hist(190, 190), 200.0, 180.0)
-        self.assertEqual(s["over_minimum_s"], 10.0)
+        self.assertIn("+10s", s["note"])
+        self.assertIn("3:10", s["note"])
 
     def test_stints_with_no_box_time_are_skipped(self):
         s = self.app.box_time_summary([{"box_s": None}, {"box_s": 190}], 200.0, 180.0)
@@ -996,6 +987,54 @@ class TestBoxTimeCalibration(AppCase):
         hist = self.snap()["pit_history"]
         self.assertTrue(hist, "no stint recorded")
         self.assertIsNotNone(hist[-1]["box_s"])
+
+
+class TestKartWatch(AppCase):
+    """Spotting a good kart by who is driving it unusually well."""
+
+    def grid(self):
+        return [{"kart": "7", "team": "MATRAX", "last_lap_s": 62.40},
+                {"kart": "31", "team": "LAST", "last_lap_s": 63.40},
+                {"kart": "19", "team": "MIDDLE", "last_lap_s": 64.90}]
+
+    LEVELS = {"MATRAX": 0.0, "LAST": 2.50, "MIDDLE": 1.10}
+
+    def test_the_surprising_kart_is_listed_first_not_the_fastest(self):
+        # MATRAX is quicker on the road, but that is just MATRAX being MATRAX.
+        # LAST a second off the reference, when they normally run 2.5s off,
+        # is the kart doing the work.
+        w = self.app.kart_watch(self.grid(), 62.40, 1.0, self.LEVELS)
+        self.assertEqual(w["karts"][0]["kart"], "31")
+        self.assertAlmostEqual(w["karts"][0]["beat_own_s"], 1.5)
+
+    def test_teams_outside_the_window_are_not_listed(self):
+        w = self.app.kart_watch(self.grid(), 62.40, 1.0, self.LEVELS)
+        self.assertNotIn("19", [k["kart"] for k in w["karts"]])
+
+    def test_the_reference_is_what_was_passed_not_the_race_best(self):
+        # Over 25 hours a race best becomes unreachable, and a rule anchored to
+        # it never fires again. The caller supplies a recent window.
+        # At 62.40 the midfield kart is 2.5s away and invisible; once the
+        # track slows and the reference moves to 64.00 it is only 0.9s off and
+        # belongs in the list. Same laps, different reference.
+        tight = self.app.kart_watch(self.grid(), 62.40, 1.0, self.LEVELS)
+        self.assertNotIn("19", [k["kart"] for k in tight["karts"]])
+        later = self.app.kart_watch(self.grid(), 64.00, 1.0, self.LEVELS)
+        self.assertEqual(later["reference_s"], 64.0)
+        self.assertIn("19", [k["kart"] for k in later["karts"]])
+
+    def test_without_a_reference_it_says_nothing(self):
+        w = self.app.kart_watch(self.grid(), None, 1.0, self.LEVELS)
+        self.assertEqual(w["karts"], [])
+
+    def test_without_levels_it_still_lists_who_is_close(self):
+        w = self.app.kart_watch(self.grid(), 62.40, 1.0, {})
+        self.assertEqual({k["kart"] for k in w["karts"]}, {"7", "31"})
+        self.assertIsNone(w["karts"][0]["beat_own_s"])
+
+    def test_a_team_with_no_lap_yet_is_skipped(self):
+        w = self.app.kart_watch([{"kart": "5", "team": "X"}], 62.4, 1.0, {})
+        self.assertEqual(w["karts"], [])
 
 
 class TestPages(AppCase):

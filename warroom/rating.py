@@ -28,6 +28,7 @@ model straightforward to test against a synthetic race whose kart truth is known
 """
 
 from collections import defaultdict
+from typing import Optional
 import bisect
 import statistics
 
@@ -47,6 +48,20 @@ DEFAULTS = {
     # the driving that measured it: a steady driver's lap times describe the
     # kart, an erratic one's describe their mistakes.
     "exclude_teams": [],      # teams whose laps are ignored entirely
+    # {team: how good a lap has to be before it counts}.  Two ways to write it:
+    #
+    #   "+1.0"      within a second of the field's pace *right now*
+    #   "1:03.500"  an absolute lap time
+    #
+    # Prefer the relative form.  Over twenty-five hours through a night an
+    # absolute number stops meaning anything by dawn, while "within a second of
+    # what the field is doing" holds all race.
+    #
+    # This is not for hiding a team.  Hiding one loses the very thing worth
+    # watching: when the last-placed team suddenly laps close to the reference,
+    # that is not talent, it is a very good kart, and it is about to come round
+    # to a lane.  A cap keeps those rare laps and drops the rest.
+    "team_lap_cap": {},
     "weight_by_consistency": True,
     "weight_floor": 0.35,     # the least an inconsistent driver can count
     "weight_ceiling": 2.0,    # the most a metronome can count
@@ -196,6 +211,42 @@ def team_of(pilot: str) -> str:
     return (pilot or "").rsplit("|", 1)[0] if "|" in (pilot or "") else (pilot or "")
 
 
+def lap_seconds(v) -> Optional[float]:
+    """Accept 63.5, "63.5" or "1:03.500" — people write lap times both ways."""
+    if v is None or v == "":
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    t = str(v).strip()
+    try:
+        if ":" in t:
+            m, sec = t.rsplit(":", 1)
+            return int(m) * 60 + float(sec)
+        return float(t)
+    except ValueError:
+        return None
+
+
+def _caps(cfg: dict) -> tuple:
+    """Split the caps into absolute lap times and deltas off the field's pace.
+
+    Returns ({team: seconds}, {team: delta}) keyed on the upper-cased name.
+    """
+    absolute, relative = {}, {}
+    for team, v in (cfg.get("team_lap_cap") or {}).items():
+        key = str(team).strip().upper()
+        raw = str(v).strip()
+        if raw.startswith("+"):
+            d = lap_seconds(raw[1:])
+            if d is not None:
+                relative[key] = d
+        else:
+            secs = lap_seconds(v)
+            if secs and secs > 0:
+                absolute[key] = secs
+    return absolute, relative
+
+
 def _excluded(pilot: str, exclude: list) -> bool:
     if not exclude:
         return False
@@ -297,6 +348,12 @@ def rate(samples: list, cfg: dict = None) -> dict:
     cfg = cfg_with_defaults(cfg)
     samples = [s for s in samples if s[3] and s[3] > 0]
     samples = [s for s in samples if not _excluded(s[1], cfg["exclude_teams"])]
+    # A team's slow laps say more about the driver than the kart, so a cap
+    # keeps their quick ones and drops the rest.
+    caps, rel_caps = _caps(cfg)
+    if caps:
+        samples = [s for s in samples
+                   if s[3] <= caps.get(team_of(s[1]).strip().upper(), s[3])]
     result = {"karts": {}, "pilots": {}, "n_laps": len(samples),
               "linked_karts": 0}
     if not samples:
@@ -316,8 +373,14 @@ def rate(samples: list, cfg: dict = None) -> dict:
     seg_res = defaultdict(list)
     for ts, pilot, kart, lap_s in samples:
         r = lap_s - base.at(ts)
-        if -cfg["trim_lo"] <= r <= cfg["trim_hi"]:
-            seg_res[(pilot_of[pilot], kart)].append(r)
+        if not (-cfg["trim_lo"] <= r <= cfg["trim_hi"]):
+            continue
+        # A relative cap is against what the field is doing at that moment, so
+        # it keeps meaning all race instead of going stale after the first hour.
+        limit = rel_caps.get(team_of(pilot).strip().upper())
+        if limit is not None and r > limit:
+            continue
+        seg_res[(pilot_of[pilot], kart)].append(r)
 
     trust = consistency_weights(seg_res, cfg)
     # Fade needs the laps in the order they were run, which seg_res has thrown

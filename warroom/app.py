@@ -46,6 +46,12 @@ def load_cfg() -> dict:
             # 20s penalty, so hold the kart this much longer than the minimum.
             "pit_safety_seconds": 5,
             "no_pit_last_minutes": 30,    # §3.8  pit lane shuts at 24:30
+            # Flag any team lapping this close to the current reference pace.
+            # Measured against the recent best, never the race best — over 25
+            # hours the race best stops being reachable and the rule goes quiet
+            # exactly when it would be most useful.
+            "watch_within_s": 1.0,
+            "watch_window_minutes": 20,
             # What a stop really costs against staying out: the 3 minutes in
             # the box plus the pit lane itself.  Measure it in practice and set
             # it — the minimum alone understates the loss.
@@ -867,7 +873,7 @@ def virtual_positions(teams: list, mandatory_pits: int, pit_loss_s: float,
     Each team still owes (mandatory - done) stops, and each stop costs about
     pit_loss_s, so the honest comparison adds that debt to the gap.
 
-    Returns {kart: {"virtual_pos", "stops_owed", "debt_s", "virtual_gap_s"}}.
+    Returns {kart: {"virtual_pos", "stops_owed", "debt_s"}}.
     Teams whose gap cannot be read keep their track position rather than being
     guessed at.
     """
@@ -900,16 +906,12 @@ def virtual_positions(teams: list, mandatory_pits: int, pit_loss_s: float,
         r["debt"] = r["owed"] * pit_loss_s
         r["virtual"] = r["gap"] + r["debt"]
 
-    ranked = sorted(known, key=lambda r: r["virtual"])
-    front = ranked[0]["virtual"]
     out = {}
-    for i, r in enumerate(ranked, start=1):
+    for i, r in enumerate(sorted(known, key=lambda r: r["virtual"]), start=1):
         out[r["kart"]] = {
-            "virtual_pos":   i,
-            "stops_owed":    r["owed"],
-            "debt_s":        round(r["debt"], 1),
-            # Measured off whoever actually leads once the stops are counted.
-            "virtual_gap_s": round(r["virtual"] - front, 1),
+            "virtual_pos": i,
+            "stops_owed":  r["owed"],
+            "debt_s":      round(r["debt"], 1),
         }
     return out
 
@@ -945,7 +947,7 @@ def box_now_verdict(candidates: list, current_delta: Optional[float]) -> dict:
     deltas = [c["delta"] for c in rated]
     best, worst = min(deltas), max(deltas)
     if current_delta is None:
-        return {"verdict": "unknown", "best": best, "worst": worst,
+        return {"verdict": "unknown",
                 "detail": f"waiting: {fmt_delta(best)} to {fmt_delta(worst)}"}
     # Lower delta is a quicker kart, so an improvement is a fall in delta.
     if worst < current_delta:
@@ -954,7 +956,7 @@ def box_now_verdict(candidates: list, current_delta: Optional[float]) -> dict:
         v = "worse"             # even the lucky draw is a downgrade
     else:
         v = "mixed"
-    return {"verdict": v, "best": best, "worst": worst,
+    return {"verdict": v,
             "detail": f"ours {fmt_delta(current_delta)} · "
                       f"waiting {fmt_delta(best)} to {fmt_delta(worst)}"}
 
@@ -982,16 +984,57 @@ def box_time_summary(history: list, configured_loss_s: float,
     return {
         "n": len(times),
         "median_s": round(med, 1),
-        "median": fmt_mmss(med),
-        "fastest": fmt_mmss(times[0]),
-        "slowest": fmt_mmss(times[-1]),
-        "over_minimum_s": round(over, 1),
-        "configured_s": configured_loss_s,
         "note": (f"{len(times)} stops, median {fmt_mmss(med)} in the box "
                  f"({over:+.0f}s on the {fmt_mmss(minimum_s)} minimum). "
                  f"Pit loss is set to {configured_loss_s:.0f}s; the box alone "
                  f"is {med:.0f}s, so the in and out lap make up the rest."),
     }
+
+
+def kart_watch(teams: list, window_best_s: Optional[float],
+               within_s: float, pilot_level: dict = None) -> dict:
+    """Karts in the field that are going better than their driver should.
+
+    The point is not our own kart, it is everyone else's.  If the last-placed
+    team is lapping within a second of the current reference at three in the
+    morning, that is not a sudden talent — it is a very good kart, and it will
+    come round to a lane eventually.
+
+    The reference is the quickest lap of the last little while, not the best of
+    the race: in twenty-five hours through a night the race best stops meaning
+    anything by dawn, and a rule measured against it would never fire again.
+
+    pilot_level, when the rater has one, is how far off that team normally
+    runs.  Beating their own normal level is the real signal — a quick team
+    lapping quickly says nothing.
+    """
+    if not window_best_s:
+        return {"reference_s": None, "karts": []}
+    pilot_level = pilot_level or {}
+    out = []
+    for t in teams:
+        last = t.get("last_lap_s") or t.get("avg5_s")
+        kart = str(t.get("kart", ""))
+        if not last or not kart:
+            continue
+        off = last - window_best_s
+        if off > within_s:
+            continue
+        usual = pilot_level.get((t.get("team") or "").strip())
+        out.append({
+            "kart": kart,
+            "team": t.get("team", ""),
+            "off_s": round(off, 2),
+            # How much better than that team's own normal level this is.
+            "beat_own_s": round(usual - off, 2) if usual is not None else None,
+            "usual_s": round(usual, 2) if usual is not None else None,
+        })
+    # The most surprising first: beating your own level matters more than being
+    # near the front, because the front is where the quick teams live anyway.
+    out.sort(key=lambda r: (-(r["beat_own_s"] or 0), r["off_s"]))
+    return {"reference_s": round(window_best_s, 3),
+            "reference": fmt_laptime(window_best_s),
+            "within_s": within_s, "karts": out[:8]}
 
 
 def class_positions(teams: list, lap_s: Optional[float]) -> dict:
@@ -1001,8 +1044,7 @@ def class_positions(teams: list, lap_s: Optional[float]) -> dict:
     team we are not classified against, so the overall gap is the wrong number
     to make a call on — what matters is the AM team directly ahead.
 
-    Returns {kart: {"class", "class_pos", "class_of", "class_gap_s",
-    "ahead_kart", "ahead_s"}}.  Teams whose gap cannot be read are left out
+    Returns {kart: {"class", "class_pos", "ahead_s"}}.  Teams whose gap cannot be read are left out
     rather than guessed at; an event with no category column is simply one
     class, which is the truth for it.
     """
@@ -1027,16 +1069,12 @@ def class_positions(teams: list, lap_s: Optional[float]) -> dict:
         by_cat[r["cat"]].append(r)
     for cat, group in by_cat.items():
         group.sort(key=lambda r: (r["pos"] or 10 ** 6, r["gap"]))
-        leader = group[0]["gap"]
         for i, r in enumerate(group):
             ahead = group[i - 1] if i else None
             out[r["kart"]] = {
-                "class":       cat,
-                "class_pos":   i + 1,
-                "class_of":    len(group),
-                "class_gap_s": round(r["gap"] - leader, 1),
-                "ahead_kart":  ahead["kart"] if ahead else "",
-                "ahead_s":     round(r["gap"] - ahead["gap"], 1) if ahead else None,
+                "class":     cat,
+                "class_pos": i + 1,
+                "ahead_s":   round(r["gap"] - ahead["gap"], 1) if ahead else None,
             }
     return out
 
@@ -1115,8 +1153,7 @@ def check_pit_plan(plan: list, race: dict, drivers: list) -> list:
 # ── Strategy engine ────────────────────────────────────────────────────────────
 def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
                      my_avg5: Optional[float], prev_avg5: Optional[float],
-                     light: str = "", box_now: dict = None,
-                     my_delta: Optional[float] = None) -> dict:
+                     light: str = "", box_now: dict = None) -> dict:
     """What to do about the pit lane, right now.
 
     Ordered by what actually overrules what.  A hard limit beats an
@@ -1132,8 +1169,7 @@ def compute_strategy(stint_s: float, race_elapsed_s: float, pits_done: int,
     stops_left = max(0, R["mandatory_pits"] - pits_done)
 
     def out(label, cls, detail, why=""):
-        return {"label": label, "cls": cls, "detail": detail, "why": why,
-                "stops_left": stops_left}
+        return {"label": label, "cls": cls, "detail": detail, "why": why}
 
     # 1. The lane is shut. Nothing else matters.
     if remaining <= no_pit_s:
@@ -1342,11 +1378,16 @@ def make_snapshot() -> dict:
     box_now = box_now_verdict(candidates, my_card["delta"] if my_card else None)
     # We are classified against our own category, not the overall leader.
     klass = class_positions(teams_raw, track_avg_s)
+    # The reference is the quickest lap of the recent window, so the rule keeps
+    # up with the track instead of chasing a best set hours ago.
+    R2 = CFG["race"]
+    window_best = POOL.recent_best(R2.get("watch_window_minutes", 20))
+    watch = kart_watch(teams_raw, window_best, R2.get("watch_within_s", 1.0),
+                       POOL.pilot_levels())
     # The call depends on the flag and on what is waiting in the lanes, so it
     # is made after both are known.
     strat = compute_strategy(stint_s, race_elapsed, pits_done, my_avg5, _prev_avg5,
-                             light=apex_session.get("light", ""), box_now=box_now,
-                             my_delta=my_card["delta"] if my_card else None)
+                             light=apex_session.get("light", ""), box_now=box_now)
     R = CFG["race"]
     virt = virtual_positions(teams_raw, R["mandatory_pits"],
                              R.get("pit_loss_seconds") or R["pit_duration_seconds"],
@@ -1374,11 +1415,9 @@ def make_snapshot() -> dict:
             "gap":        t.get("gap", "-"),
             "is_my_team": t.get("team", "") == my_name,
             **(virt.get(str(t.get("kart", ""))) or
-               {"virtual_pos": None, "stops_owed": None,
-                "debt_s": None, "virtual_gap_s": None}),
+               {"virtual_pos": None, "stops_owed": None, "debt_s": None}),
             **(klass.get(str(t.get("kart", ""))) or
-               {"class": "", "class_pos": None, "class_of": None,
-                "class_gap_s": None, "ahead_kart": "", "ahead_s": None}),
+               {"class": "", "class_pos": None, "ahead_s": None}),
         })
 
     stint_pct = min(100, (stint_s / (CFG["race"]["stint_max_minutes"] * 60)) * 100) if stint_s else 0
@@ -1430,6 +1469,7 @@ def make_snapshot() -> dict:
         "mandatory_pits":   CFG["race"]["mandatory_pits"],
         "stint_max_minutes": CFG["race"]["stint_max_minutes"],
         "next_karts":       candidates,
+        "kart_watch":       watch,
         "plan_problems":    check_pit_plan(get_pit_plan(), CFG["race"], drivers),
         "box_now":          box_now,
         "track_avg":        track_avg,

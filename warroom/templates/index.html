@@ -261,6 +261,8 @@ td{padding:7px 8px;white-space:nowrap}
 }
 .pit-wait {color:var(--org)}
 .pit-ready{color:var(--grn)}
+.pit-penalty{font-size:11px;font-weight:700;color:#ef4444;margin-top:4px}
+.pit-penalty.clear{color:#22c55e;font-weight:400}
 .pit-ok-tag{
   display:inline-block;background:#0a2a18;border:1px solid #1a5030;
   color:var(--grn);font-size:10px;font-weight:700;letter-spacing:.1em;
@@ -438,6 +440,12 @@ tr.clickable{cursor:pointer}
 .fade.holds{color:var(--tx3);border:1px solid var(--line)}
 .fade.drops{color:#f97316;background:rgba(249,115,22,.14)}
 .fade.builds{color:#22c55e;background:rgba(34,197,94,.14)}
+.wt-row{display:flex;gap:8px;align-items:baseline;padding:6px 2px;font-size:11px;
+  border-bottom:1px solid var(--line);cursor:pointer}
+.wt-row:last-of-type{border-bottom:none}
+.wt-k{font-weight:700;font-variant-numeric:tabular-nums;min-width:22px}
+.wt-team{color:var(--tx2)}
+.wt-beat{margin-left:auto;color:#22c55e;font-weight:700;font-size:10px}
 .cls-p{margin-left:5px;font-size:10px;color:var(--tx3);font-weight:700}
 .cls-gap{font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums}
 /* A plan that cannot be driven, said out loud before the race finds out. */
@@ -657,6 +665,7 @@ tr.clickable{cursor:pointer}
             <div id="pit-ok" style="display:none">
               <span class="pit-ok-tag">✓ MIN TIME MET</span>
             </div>
+            <div id="pit-penalty" class="pit-penalty"></div>
           </div>
           <div class="pit-drv-label">In pit: <span id="pit-current-drv" style="color:var(--tx2)">—</span></div>
           <div class="pit-drv-label" style="margin-top:8px">Next driver</div>
@@ -700,6 +709,13 @@ tr.clickable{cursor:pointer}
       <div class="card" id="plan-card" style="display:none">
         <div class="card-hd">Plan Check</div>
         <div id="plan-body"></div>
+      </div>
+
+      <!-- KART WATCH -->
+      <div class="card" id="watch-card" style="display:none">
+        <div class="card-hd">Kart Watch <span id="watch-ref"
+          style="color:var(--tx3);font-weight:400;font-size:10px"></span></div>
+        <div id="watch-body"></div>
       </div>
 
       <!-- RACE CONTROL -->
@@ -927,6 +943,7 @@ function render(s) {
   renderKarts(s);
   renderBoxNow(s);
   renderControl(s);
+  renderWatch(s);
   renderPlanCheck(s);
   renderMatrix(s);
   const bn = document.getElementById('box-note');
@@ -1079,6 +1096,28 @@ function closeLaps() { document.getElementById('laps-overlay').style.display = '
 const RC_FLAG = {green:'#22c55e', yellow:'#eab308', red:'#ef4444',
                  sc:'#f97316', safetycar:'#f97316', black:'#111',
                  blue:'#3b82f6', white:'#e5e7eb', chequered:'#e5e7eb'};
+
+/** Karts in the field going better than their driver should.
+ *  A slow team suddenly on the pace is not talent, it is a good kart. */
+function renderWatch(s) {
+  const card = document.getElementById('watch-card');
+  if (!card) return;
+  const w = s.kart_watch || {};
+  const rows = (w.karts || []).filter(k => k.beat_own_s != null && k.beat_own_s > 0.3);
+  card.style.display = rows.length ? 'block' : 'none';
+  if (!rows.length) return;
+  document.getElementById('watch-ref').textContent =
+    `· reference ${esc(w.reference||'')} · within ${w.within_s}s`;
+  document.getElementById('watch-body').innerHTML = rows.map(k => `
+    <div class="wt-row" onclick="showKart('${esc(k.kart)}')"
+         title="Click for this kart's laps">
+      <span class="wt-k">${esc(k.kart)}</span>
+      <span class="wt-team">${esc(k.team)}</span>
+      <span class="wt-beat">+${k.beat_own_s.toFixed(2)}s better than usual</span>
+    </div>`).join('') +
+    `<div class="bn-note">Normally these teams run further off. On the pace
+     tonight means the kart, not the driver — worth wanting.</div>`;
+}
 
 /** Race control's messages. A safety car is the cheapest stop of the race. */
 function renderControl(s) {
@@ -1492,6 +1531,15 @@ async function showKart(num) {
 // ── Pit ─────────────────────────────────────────────────────────
 function renderPit(s) {
   const p = s.status === 'pitting';
+  // §15.1 charges 20s for every started block of ten seconds short, so the
+  // number that matters while the clock runs is what leaving now would cost.
+  const pen = document.getElementById('pit-penalty');
+  if (pen) {
+    pen.className = 'pit-penalty' + (s.pit_penalty_now ? '' : ' clear');
+    pen.textContent = s.pit_penalty_now
+      ? `Leaving now: +${s.pit_penalty_now}s penalty`
+      : 'No penalty if released now';
+  }
   document.getElementById('pit-racing').style.display  = p ? 'none' : 'block';
   document.getElementById('pit-pitting').style.display = p ? 'block' : 'none';
 

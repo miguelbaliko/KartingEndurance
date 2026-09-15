@@ -373,5 +373,71 @@ class TestFade(unittest.TestCase):
         self.assertTrue(all(len(r) == 10 for _k, r in runs))
 
 
+
+class TestASlowDriverDoesNotCondemnTheKart(unittest.TestCase):
+    """The worry: a novice or a heavy driver from the last-placed team takes a
+    good kart, posts poor laps, and the app calls the kart bad.
+
+    It does not, and these pin why.  The model fits a per-driver effect, so it
+    learns the team is slow instead of blaming the kart; and where it cannot
+    tell the two apart it says Unknown rather than guessing.  The lap cap is
+    there for the residue, not as the defence.
+    """
+
+    def race(self, cfg, shared=True, novice_off=3.0):
+        import random
+        rng = random.Random(11)
+        karts = {"GOOD": -0.6, "MID": 0.0, "POOR": 0.7}
+        fast = [("FAST1", -0.3), ("FAST2", -0.1), ("FAST3", 0.1)]
+        samples, t = [], 0.0
+        for block in range(8):
+            for team, pace in fast:
+                pool = list(karts) if shared else ["MID", "POOR"]
+                kart = pool[(block + hash(team) % len(pool)) % len(pool)]
+                for _ in range(12):
+                    t += 3
+                    samples.append((t, team, kart,
+                                    62.0 + karts[kart] + pace + rng.gauss(0, 0.1)))
+            for _ in range(12):      # the novice, always in the good kart
+                t += 3
+                samples.append((t, "LAST", "GOOD",
+                                62.0 + karts["GOOD"] + novice_off + rng.gauss(0, 0.5)))
+        return rating.rate(samples, dict(cfg, min_laps=5))["karts"]
+
+    def test_the_good_kart_is_still_the_good_kart(self):
+        k = self.race({})
+        self.assertEqual(k["GOOD"]["label"], "Rocket")
+        self.assertEqual(k["GOOD"]["delta"], 0.0)
+
+    def test_the_slowness_lands_on_the_driver_not_the_kart(self):
+        k = self.race({})
+        self.assertLess(k["GOOD"]["delta"], k["POOR"]["delta"])
+
+    def test_a_kart_only_one_team_has_driven_is_not_judged_at_all(self):
+        # Here the driver and the kart genuinely cannot be told apart, so the
+        # honest answer is to decline rather than to label it bad.
+        k = self.race({}, shared=False)
+        self.assertIsNone(k["GOOD"]["delta"])
+        self.assertIn("shared", k["GOOD"]["reason"])
+
+    def test_a_cap_keeps_the_teams_quick_laps_and_drops_the_rest(self):
+        k = self.race({"team_lap_cap": {"LAST": "1:04.000"}})
+        self.assertEqual(k["GOOD"]["label"], "Rocket")
+
+    def test_the_cap_is_matched_loosely_on_the_team_name(self):
+        k = self.race({"team_lap_cap": {"  last ": 64.0}})
+        self.assertEqual(k["GOOD"]["label"], "Rocket")
+
+    def test_lap_times_may_be_written_either_way(self):
+        self.assertAlmostEqual(rating.lap_seconds("1:03.500"), 63.5)
+        self.assertAlmostEqual(rating.lap_seconds("63.5"), 63.5)
+        self.assertAlmostEqual(rating.lap_seconds(63.5), 63.5)
+        for junk in (None, "", "abc", "1:aa"):
+            self.assertIsNone(rating.lap_seconds(junk))
+
+    def test_a_cap_nobody_set_changes_nothing(self):
+        self.assertEqual(self.race({})["GOOD"], self.race({"team_lap_cap": {}})["GOOD"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

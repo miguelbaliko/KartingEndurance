@@ -38,7 +38,7 @@ import rating
 # good a kart is — red bad, green good — so colouring a lane red made it look
 # like the lane full of bad karts.  A lane is a place: left, right, or a number.
 LANE_NAMES = ["Left", "Right"]
-LANE_COLORS = ["#64748b"] * 6      # one neutral slate, kept so the UI has a key
+LANE_COLOR = "#64748b"             # one neutral slate; lanes are told apart by name
 MAX_LANES = 6
 
 def lane_name(i: int, total: int) -> str:
@@ -188,7 +188,7 @@ class KartPool:
                     con.execute(
                         "INSERT INTO kart_lane(lane,name,color,queue) VALUES(?,?,?,'[]')",
                         (i, lane_name(i, self.cfg["lanes"]),
-                         LANE_COLORS[(i - 1) % len(LANE_COLORS)]))
+                         LANE_COLOR))
             for lane, row in have.items():
                 if lane > self.cfg["lanes"] and not json.loads(row["queue"] or "[]"):
                     con.execute("DELETE FROM kart_lane WHERE lane=?", (lane,))
@@ -665,6 +665,32 @@ class KartPool:
         self._rating_at = time.time()
         self._rating_dirty = False
         return self._rating
+
+    def recent_best(self, window_minutes: float = 20.0) -> float:
+        """The quickest lap anyone has turned lately.
+
+        The reference a call is made against has to move with the track: a best
+        set in the second hour is unreachable by four in the morning, and a
+        rule anchored to it would simply stop firing.
+        """
+        cutoff = time.time() - window_minutes * 60.0
+        with self._lock, self._con() as con:
+            row = con.execute("SELECT MIN(lap_s) AS b FROM kart_lap WHERE ts>=?",
+                              (cutoff,)).fetchone()
+        return row["b"] if row and row["b"] else None
+
+    def pilot_levels(self) -> dict:
+        """How far off the field each team normally runs, by team name.
+
+        Keyed on the team rather than team+driver: the war room is watching
+        other teams on the board, and that is the name it can see.
+        """
+        out = {}
+        for pilot, effect in (self.ratings().get("pilots") or {}).items():
+            team = rating.team_of(pilot).strip()
+            if team:
+                out[team] = min(out[team], effect) if team in out else effect
+        return out
 
     # ── views ─────────────────────────────────────────────────────────────────
     def kart_of(self) -> dict:
