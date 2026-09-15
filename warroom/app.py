@@ -3,7 +3,7 @@
 
 from flask import Flask, render_template, jsonify, request, Response
 import threading, time, json, sqlite3, urllib.request, urllib.error, urllib.parse
-import html.parser, re, os, queue, math
+import html.parser, re, os, queue, math, statistics
 from datetime import datetime, timedelta
 from typing import Optional
 from collections import defaultdict
@@ -127,6 +127,17 @@ def init_db():
             INSERT OR IGNORE INTO kv VALUES ('session_mode', 'race');
             INSERT OR IGNORE INTO kv VALUES ('next_driver_id', '');
                 """)
+        # How long the box stop after this stint actually took. Without it
+        # pit_loss_seconds can only ever be a guess.
+        _add_column(con, "stints", "box_seconds", "REAL")
+
+def _add_column(con, table: str, col: str, decl: str):
+    """Add a column to an existing database, once. SQLite has no IF NOT EXISTS
+    for columns, so the existing ones are read first."""
+    have = {r[1] for r in con.execute(f"PRAGMA table_info({table})")}
+    if col not in have:
+        con.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
+
 
 def get_db():
     con = sqlite3.connect(DB)
@@ -939,6 +950,36 @@ def fmt_delta(d: Optional[float]) -> str:
         return "?"
     return f"{d:+.2f}s"
 
+def box_time_summary(history: list, configured_loss_s: float,
+                     minimum_s: float) -> dict:
+    """What our stops have actually cost, against what we assumed.
+
+    pit_loss_seconds starts life as a guess.  Every stop we serve measures the
+    box half of it exactly, so after a handful the guess can be replaced with
+    a number.  The remainder — the in and out lap, which no box clock sees —
+    stays unmeasured, so the suggestion is explicitly a floor, not the answer.
+    """
+    times = sorted(h["box_s"] for h in history if h.get("box_s"))
+    if not times:
+        return {"n": 0, "note": "No stop served yet — pit loss is still the "
+                                "configured estimate."}
+    med = statistics.median(times)
+    over = med - minimum_s
+    return {
+        "n": len(times),
+        "median_s": round(med, 1),
+        "median": fmt_mmss(med),
+        "fastest": fmt_mmss(times[0]),
+        "slowest": fmt_mmss(times[-1]),
+        "over_minimum_s": round(over, 1),
+        "configured_s": configured_loss_s,
+        "note": (f"{len(times)} stops, median {fmt_mmss(med)} in the box "
+                 f"({over:+.0f}s on the {fmt_mmss(minimum_s)} minimum). "
+                 f"Pit loss is set to {configured_loss_s:.0f}s; the box alone "
+                 f"is {med:.0f}s, so the in and out lap make up the rest."),
+    }
+
+
 def class_positions(teams: list, lap_s: Optional[float]) -> dict:
     """Position and gaps within a team's own category.
 
@@ -1237,7 +1278,7 @@ def make_snapshot() -> dict:
 
         for i, row in enumerate(con.execute("""
             SELECT s.id, s.driver_id, s.start_ts, s.end_ts, s.duration_seconds,
-                   d.name as driver_name
+                   d.name as driver_name, s.box_seconds
             FROM stints s
             LEFT JOIN drivers d ON d.id = s.driver_id
             ORDER BY s.id
@@ -1249,6 +1290,8 @@ def make_snapshot() -> dict:
                 "start":    row["start_ts"][:19].replace("T", " ") if row["start_ts"] else "-",
                 "end":      row["end_ts"][:19].replace("T", " ")   if row["end_ts"]   else "-",
                 "dur_s":    row["duration_seconds"] or 0,
+                "box":      fmt_mmss(row["box_seconds"]) if row["box_seconds"] else "",
+                "box_s":    row["box_seconds"],
             })
 
     # My team
@@ -1377,6 +1420,11 @@ def make_snapshot() -> dict:
         "box_now":          box_now,
         "track_avg":        track_avg,
         "pit_history":      pit_history,
+        "box_times":        box_time_summary(
+                                pit_history,
+                                CFG["race"].get("pit_loss_seconds")
+                                or CFG["race"]["pit_duration_seconds"],
+                                CFG["race"]["pit_duration_seconds"]),
         "team_name":        my_name,
         "apex_url":         CFG.get("apex_url", ""),
         "teams":            teams_out,
@@ -1594,6 +1642,10 @@ def _do_pit_done(new_did, source: str = "button"):
     with get_db() as con:
         row = con.execute("SELECT name FROM drivers WHERE id=?", (new_did,)).fetchone()
         new_name = row["name"] if row else new_did
+        # Against the stint that just ended — that is the stop it belongs to.
+        if pit_elapsed > 0:
+            con.execute("UPDATE stints SET box_seconds=? WHERE id="
+                        "(SELECT MAX(id) FROM stints)", (pit_elapsed,))
     log("PIT DONE", f"driver={new_name}  pit_time={fmt_mmss(pit_elapsed)}  [{source}]")
     broadcast()
 
@@ -1736,6 +1788,20 @@ def api_driver_laps(did):
 @app.get("/api/karts")
 def api_karts():
     return jsonify(POOL.snapshot())
+
+@app.post("/api/kart/retire")
+def api_kart_retire():
+    """A kart out of service — broken, stored, withdrawn by the organisers."""
+    d = request.json or {}
+    kart = str(d.get("kart", "")).strip()
+    if not kart:
+        return jsonify(ok=False, error="no kart"), 400
+    if d.get("back"):
+        POOL.unretire_kart(kart)
+    else:
+        POOL.retire_kart(kart, str(d.get("reason", "")))
+    broadcast()
+    return jsonify(ok=True)
 
 @app.post("/api/karts/reset")
 def api_karts_reset():

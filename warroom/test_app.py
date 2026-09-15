@@ -961,6 +961,43 @@ class TestDriverDetail(AppCase):
         self.assertEqual(self.client.get("/api/driver/9999/laps").status_code, 404)
 
 
+class TestBoxTimeCalibration(AppCase):
+    """pit_loss_seconds starts as a guess; every stop measures part of it."""
+
+    def hist(self, *box):
+        return [{"box_s": b} for b in box]
+
+    def test_nothing_served_yet_says_so(self):
+        s = self.app.box_time_summary([], 200.0, 180.0)
+        self.assertEqual(s["n"], 0)
+        self.assertIn("estimate", s["note"])
+
+    def test_it_reports_the_median_and_the_spread(self):
+        s = self.app.box_time_summary(self.hist(185, 190, 240), 200.0, 180.0)
+        self.assertEqual((s["n"], s["median_s"]), (3, 190.0))
+        self.assertEqual(s["fastest"], "3:05")
+        self.assertEqual(s["slowest"], "4:00")
+
+    def test_it_says_how_far_over_the_minimum_we_run(self):
+        s = self.app.box_time_summary(self.hist(190, 190), 200.0, 180.0)
+        self.assertEqual(s["over_minimum_s"], 10.0)
+
+    def test_stints_with_no_box_time_are_skipped(self):
+        s = self.app.box_time_summary([{"box_s": None}, {"box_s": 190}], 200.0, 180.0)
+        self.assertEqual(s["n"], 1)
+
+    def test_a_stop_records_its_box_time_against_the_stint(self):
+        self.client.post("/api/driver/add", json={"name": "Dinis"})
+        did = self.snap()["drivers"][0]["id"]
+        self.client.post("/api/driver/set", json={"driver_id": did})
+        self.client.post("/api/race/start")
+        self.client.post("/api/pit/box", json={"offset_seconds": 0})
+        self.client.post("/api/pit/done", json={"driver_id": did})
+        hist = self.snap()["pit_history"]
+        self.assertTrue(hist, "no stint recorded")
+        self.assertIsNotNone(hist[-1]["box_s"])
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)

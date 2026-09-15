@@ -324,5 +324,54 @@ class TestWhoseLapsCount(unittest.TestCase):
         self.assertEqual(rating.consistency_weights({}, cfg), {})
 
 
+
+class TestFade(unittest.TestCase):
+    """A kart's average cannot say whether it holds pace across a stint."""
+
+    def race(self, fade_per_lap, laps=15, runs=6, seed=3):
+        import random
+        rng = random.Random(seed)
+        samples, t = [], 0.0
+        for _ in range(runs):
+            for team in ("A", "B", "C"):
+                for kart, f in (("STEADY", 0.0), ("FADER", fade_per_lap)):
+                    for lap in range(laps):
+                        t += 3
+                        samples.append((t, team, kart,
+                                        62.0 - (0.6 if kart == "FADER" else 0)
+                                        + lap * f + rng.gauss(0, 0.08)))
+        return rating.rate(samples, {"min_laps": 5})["karts"]
+
+    def test_a_kart_that_goes_off_is_caught(self):
+        k = self.race(0.08)
+        self.assertGreater(k["FADER"]["fade_s"], 0.5)
+        self.assertLess(abs(k["STEADY"]["fade_s"]), 0.15)
+
+    def test_the_average_alone_would_not_have_shown_it(self):
+        # Both karts are set up to rate the same overall; only fade separates
+        # them, which is the whole reason the number exists.
+        k = self.race(0.08)
+        self.assertLess(abs(k["FADER"]["delta"] - k["STEADY"]["delta"]), 0.15)
+
+    def test_a_steady_fleet_shows_no_fade(self):
+        k = self.race(0.0)
+        self.assertLess(abs(k["FADER"]["fade_s"]), 0.15)
+
+    def test_short_runs_say_nothing_rather_than_guessing(self):
+        k = self.race(0.08, laps=5)
+        self.assertIsNone(k["FADER"]["fade_s"])
+        self.assertEqual(k["FADER"]["fade_runs"], 0)
+
+    def test_a_run_ends_when_the_kart_or_the_driver_changes(self):
+        cfg = rating.cfg_with_defaults({})
+        samples = ([(i, "A", "K1", 62.0) for i in range(1, 11)]
+                   + [(i, "A", "K2", 62.0) for i in range(11, 21)]
+                   + [(i, "B", "K2", 62.0) for i in range(21, 31)])
+        base = rating.Baseline(samples, cfg["bucket_minutes"] * 60.0, 1)
+        runs = rating.runs_from(samples, base, cfg)
+        self.assertEqual([k for k, _ in runs], ["K1", "K2", "K2"])
+        self.assertTrue(all(len(r) == 10 for _k, r in runs))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

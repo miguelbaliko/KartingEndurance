@@ -235,6 +235,52 @@ def consistency_weights(seg_res: dict, cfg: dict) -> dict:
             for p, m in per_pilot.items()}
 
 
+def runs_from(samples: list, base, cfg: dict) -> list:
+    """Split the lap stream into runs: one kart, one driver, no break.
+
+    A run ends when the driver or the kart changes, which is exactly what a pit
+    stop does.  Residuals are against the field baseline, so track evolution is
+    already out of them and what is left is how the kart behaved while it was
+    out there.
+    """
+    runs, cur, key = [], [], None
+    for ts, pilot, kart, lap_s in samples:
+        k = (pilot, kart)
+        if k != key:
+            if cur:
+                runs.append((key[1], cur))
+            cur, key = [], k
+        r = lap_s - base.at(ts)
+        if -cfg["trim_lo"] <= r <= cfg["trim_hi"]:
+            cur.append(r)
+    if cur and key:
+        runs.append((key[1], cur))
+    return runs
+
+
+def fade_by_kart(runs: list, min_laps: int = 9) -> dict:
+    """Does a kart go off over a stint, or hold its pace?
+
+    A kart's average hides this: one that is quick for ten laps and then falls
+    away rates the same as one that is steady all stint, and at hour twenty
+    they are not the same kart to be handed.
+
+    Each run is split in three and its last third compared with its first.
+    Positive means it slows down as the stint goes on.  Runs shorter than
+    min_laps say nothing and are skipped; a kart with no long run reports None
+    rather than a number nobody should act on.
+    """
+    per_kart = defaultdict(list)
+    for kart, res in runs:
+        if len(res) < min_laps:
+            continue
+        third = max(1, len(res) // 3)
+        per_kart[kart].append(statistics.median(res[-third:])
+                              - statistics.median(res[:third]))
+    return {k: {"fade_s": round(statistics.median(v), 3), "runs": len(v)}
+            for k, v in per_kart.items()}
+
+
 def rate(samples: list, cfg: dict = None) -> dict:
     """Score every kart from lap samples ``(ts, pilot, kart, lap_s)``.
 
@@ -274,6 +320,9 @@ def rate(samples: list, cfg: dict = None) -> dict:
             seg_res[(pilot_of[pilot], kart)].append(r)
 
     trust = consistency_weights(seg_res, cfg)
+    # Fade needs the laps in the order they were run, which seg_res has thrown
+    # away — it pools every lap a driver ever did in a kart.
+    fade = fade_by_kart(runs_from(samples, base, cfg))
 
     obs = []
     kart_laps = defaultdict(int)
@@ -346,6 +395,9 @@ def rate(samples: list, cfg: dict = None) -> dict:
             "weak": len(kart_pilots.get(kart, ())) < cfg["min_pilots"],
             "label": label_for(delta, cfg) if is_rated else cfg["unknown_label"],
             "reason": reason,
+            # How it behaves across a stint, which the average cannot show.
+            "fade_s": (fade.get(kart) or {}).get("fade_s"),
+            "fade_runs": (fade.get(kart) or {}).get("runs", 0),
         }
 
     return result

@@ -409,7 +409,13 @@ tr.clickable{cursor:pointer}
   justify-content:space-between}
 .mx-k{display:flex;align-items:center;gap:5px;padding:4px 6px;margin-bottom:3px;
   border-radius:6px;background:var(--bg2);border:1px solid var(--line);
-  cursor:pointer;font-size:11px}
+  border-left-width:3px;cursor:pointer;font-size:11px}
+.mx-k.grade-rocket{border-left-color:#c084fc}
+.mx-k.grade-verygood{border-left-color:#22c55e}
+.mx-k.grade-good{border-left-color:#a3e635}
+.mx-k.grade-ok{border-left-color:#64748b}
+.mx-k.grade-bad{border-left-color:#ef4444}
+.mx-k.grade-unknown{border-left-color:#2a3340}
 .mx-k:hover{border-color:var(--line2)}
 .mx-k.next{border-color:var(--blue);background:#0d1725}
 .mx-n{font-weight:700;font-variant-numeric:tabular-nums;min-width:20px}
@@ -419,6 +425,21 @@ tr.clickable{cursor:pointer}
 .kd-drv{display:flex;gap:10px;padding:4px 8px;font-size:11px;
   border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 .kd-drv .who{min-width:90px;color:var(--tx2)}
+/* Grade colour on the whole row, not just the chip: the list should read at a
+   glance from across the garage. */
+.fleet-row{border-left:3px solid transparent}
+.fleet-row.grade-rocket{border-left-color:#c084fc}
+.fleet-row.grade-verygood{border-left-color:#22c55e}
+.fleet-row.grade-good{border-left-color:#a3e635}
+.fleet-row.grade-ok{border-left-color:#64748b}
+.fleet-row.grade-bad{border-left-color:#ef4444}
+.fleet-row.grade-unknown{border-left-color:#2a3340}
+.fleet-row.gone{opacity:.45}
+.fleet-row.gone .fleet-num{text-decoration:line-through}
+.fade{font-size:9px;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.fade.holds{color:var(--tx3);border:1px solid var(--line)}
+.fade.drops{color:#f97316;background:rgba(249,115,22,.14)}
+.fade.builds{color:#22c55e;background:rgba(34,197,94,.14)}
 .cls-p{margin-left:5px;font-size:10px;color:var(--tx3);font-weight:700}
 .cls-gap{font-size:11px;color:var(--tx2);font-variant-numeric:tabular-nums}
 /* A plan that cannot be driven, said out loud before the race finds out. */
@@ -693,7 +714,8 @@ tr.clickable{cursor:pointer}
 
       <!-- PIT LOG -->
       <div class="card">
-        <div class="card-hd">Pit Stop Log</div>
+        <div class="card-hd">Pit Stop Log <span id="box-note"
+          style="color:var(--tx3);font-weight:400;font-size:10px"></span></div>
         <div id="pit-log"></div>
       </div>
 
@@ -910,6 +932,8 @@ function render(s) {
   renderControl(s);
   renderPlanCheck(s);
   renderMatrix(s);
+  const bn = document.getElementById('box-note');
+  if (bn) bn.textContent = (s.box_times||{}).n ? '· ' + s.box_times.note : '';
   renderMyTeam(s);
   renderStrategy(s);
   renderPit(s);
@@ -977,6 +1001,22 @@ function renderTable(allTeams) {
                                : '<span class="td-dim">·</span>')}</td>
     </tr>`;
   }).join('');
+}
+
+/** Does it hold pace across a stint? Only shown once runs back it. */
+function fadeChip(k) {
+  if (k.fade_s == null || !k.fade_runs) return '';
+  const f = k.fade_s;
+  if (Math.abs(f) < 0.15) return '<span class="fade holds" title="Holds its pace across a stint">steady</span>';
+  const cls = f > 0 ? 'drops' : 'builds';
+  const txt = f > 0 ? `fades ${f.toFixed(2)}` : `gains ${Math.abs(f).toFixed(2)}`;
+  return `<span class="fade ${cls}" title="Last third of a stint vs the first, over ${k.fade_runs} runs">${txt}</span>`;
+}
+
+async function retireKart(num, back) {
+  if (!back && !confirm(`Take kart ${num} out of service? It leaves both lanes.`)) return;
+  const reason = back ? '' : (prompt('Why? (engine, chassis, tyre…)', '') || '');
+  await post('kart/retire', {kart: num, reason: reason, back: back});
 }
 
 const BN_TEXT = {better: 'BOTH BETTER THAN OURS', worse: 'BOTH WORSE THAN OURS',
@@ -1209,15 +1249,21 @@ function renderFleet(pool, s) {
   document.getElementById('fleet-count').textContent =
     fleet.length ? `· ${fleet.length - pool.unrated} rated of ${fleet.length}` : '';
   document.getElementById('fleet-body').innerHTML = fleet.length ? fleet.map(k => `
-    <div class="fleet-row ${k.num===myKart?'mine':''}" style="cursor:pointer"
-         onclick="showKart('${esc(k.num)}')" title="Click for this kart's laps">
+    <div class="fleet-row grade-${CHIP_CLS[k.label]||'unknown'} ${k.retired?'gone':''} ${k.num===myKart?'mine':''}"
+         style="cursor:pointer" onclick="showKart('${esc(k.num)}')"
+         title="Click for this kart's laps">
       <span class="fleet-num">${esc(k.num)}</span>
       <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}
         ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
+      ${fadeChip(k)}
       <span class="fleet-where" title="${esc([k.holder||k.reason,
             k.weak && k.laps ? 'only one team has driven it' : ''].filter(Boolean).join(' · '))
-        }">${esc(k.holder||'')}</span>
+        }">${k.retired ? 'OUT'+(k.retired_reason?' · '+esc(k.retired_reason):'')
+                       : esc(k.holder||'')}</span>
       <span class="fleet-laps">${k.laps||0}L</span>
+      <button class="i-btn" title="${k.retired?'Put back in service':'Out of service — broken or stored'}"
+        onclick="event.stopPropagation();retireKart('${esc(k.num)}',${k.retired?'true':'false'})"
+        >${k.retired?'↩':'✕'}</button>
     </div>`).join('')
     : '<div class="lane-empty">No karts tracked yet — assign one per team, or fill the lanes.</div>';
 
@@ -1348,7 +1394,8 @@ function renderMatrix(s) {
       <div class="mx-nm"><span>${esc(l.name||('Lane '+l.lane))}</span>
         <span>${l.karts.length}</span></div>
       ${l.karts.length ? l.karts.map((k, i) => `
-        <div class="mx-k ${i===0?'next':''}" onclick="showKart('${esc(k.num)}')"
+        <div class="mx-k grade-${CHIP_CLS[k.label]||'unknown'} ${i===0?'next':''}"
+             onclick="showKart('${esc(k.num)}')"
              title="${esc(k.label)}${k.delta!=null?' '+fmtDelta(k.delta):''} — click for its laps">
           <span class="mx-n">${esc(k.num)}</span>
           <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}</span>

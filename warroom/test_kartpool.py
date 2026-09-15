@@ -243,6 +243,61 @@ class TestRatingNeverTakesTheScreenDown(PoolCase):
         self.assertIn("fleet", snap)
 
 
+class TestRetiringAKart(PoolCase):
+    """Karts break. One that is stored must never be handed to anybody."""
+
+    def test_a_retired_kart_leaves_the_lanes(self):
+        self.pool.retire_kart("22", "engine")
+        queues = [[k["num"] for k in l["karts"]]
+                  for l in self.pool.snapshot()["lanes"]]
+        self.assertNotIn("22", [n for q in queues for n in q])
+
+    def test_it_is_marked_with_its_reason(self):
+        self.pool.retire_kart("22", "engine")
+        card = next(c for c in self.pool.snapshot()["fleet"] if c["num"] == "22")
+        self.assertTrue(card["retired"])
+        self.assertEqual(card["retired_reason"], "engine")
+
+    def test_it_cannot_be_queued_again_by_mistake(self):
+        self.pool.retire_kart("22", "chassis")
+        self.pool.lane_add(1, "22")
+        queues = [[k["num"] for k in l["karts"]]
+                  for l in self.pool.snapshot()["lanes"]]
+        self.assertNotIn("22", [n for q in queues for n in q])
+
+    def test_its_laps_are_kept(self):
+        # They are still evidence about every other kart; deleting them would
+        # quietly move the rest of the fleet's scores.
+        self.pool.observe([row("1", "ALPHA", laps=1)])
+        self.pool.observe([row("1", "ALPHA", laps=2)])
+        with self.pool._con() as con:
+            before = con.execute("SELECT COUNT(*) FROM kart_lap").fetchone()[0]
+        self.pool.retire_kart("10", "engine")
+        with self.pool._con() as con:
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM kart_lap")
+                             .fetchone()[0], before)
+
+    def test_it_can_come_back(self):
+        # Coming back does not put it anywhere — it left its lane when it broke
+        # and somebody has to say where it is now.
+        self.pool.retire_kart("22", "tyre")
+        self.pool.unretire_kart("22")
+        self.assertEqual(self.pool.snapshot()["retired"], [])
+        self.pool.lane_add(1, "22")
+        queues = [[k["num"] for k in l["karts"]]
+                  for l in self.pool.snapshot()["lanes"]]
+        self.assertIn("22", [n for q in queues for n in q])
+
+    def test_a_retired_kart_stays_visible_so_it_can_be_brought_back(self):
+        self.pool.retire_kart("22", "tyre")
+        nums = [c["num"] for c in self.pool.snapshot()["fleet"]]
+        self.assertIn("22", nums)
+
+    def test_retiring_nothing_is_not_a_crash(self):
+        self.pool.retire_kart("", "")
+        self.assertEqual(self.pool.snapshot()["retired"], [])
+
+
 class TestFullPitCycle(PoolCase):
     """Three teams, two lanes, karts round-tripping the way they do in a race."""
 

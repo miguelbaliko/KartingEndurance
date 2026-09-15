@@ -65,6 +65,11 @@ CREATE TABLE IF NOT EXISTS kart_assign (
     team_no  TEXT, team TEXT, kart TEXT,
     start_ts TEXT, end_ts TEXT
 );
+CREATE TABLE IF NOT EXISTS kart_out (
+    kart   TEXT PRIMARY KEY,
+    ts     TEXT,
+    reason TEXT
+);
 CREATE TABLE IF NOT EXISTS kart_lap (
     id      INTEGER PRIMARY KEY AUTOINCREMENT,
     ts      REAL, team_no TEXT, pilot TEXT, kart TEXT, lap_s REAL
@@ -271,6 +276,11 @@ class KartPool:
             lanes = self._lanes(con)
             if lane not in lanes:
                 return
+            if con.execute("SELECT 1 FROM kart_out WHERE kart=?",
+                           (str(kart),)).fetchone():
+                self._note(f"kart {kart} is out of service — not queued",
+                           tag="warn")
+                return
             queue = [k for k in lanes[lane]["queue"] if k != str(kart)] + [str(kart)]
             # A kart parked in a lane is not with a team any more.
             con.execute("UPDATE kart_assign SET end_ts=? WHERE kart=? AND end_ts IS NULL",
@@ -291,6 +301,44 @@ class KartPool:
                                  [k for k in lanes[lane]["queue"] if k != str(kart)])
                 self._note(f"kart {kart} taken out of lane {lane}", tag="lane")
         self._mutate(f"remove kart {kart} from lane {lane}", go)
+
+    # ── karts out of service ──────────────────────────────────────────────────
+    def retire_kart(self, kart: str, reason: str = ""):
+        """Take a kart out of service — broken, stored, withdrawn by the pit.
+
+        It leaves both lanes so it can never be offered as the next kart, but
+        its laps stay: they are still evidence about the rest of the fleet, and
+        deleting them would quietly change every other kart's score.
+        """
+        kart = str(kart).strip()
+        if not kart:
+            return
+
+        def go(con):
+            con.execute("INSERT OR REPLACE INTO kart_out(kart,ts,reason) "
+                        "VALUES(?,?,?)", (kart, _now_iso(), reason.strip()))
+            for lane, info in self._lanes(con).items():
+                if kart in info["queue"]:
+                    self._save_queue(con, lane,
+                                     [k for k in info["queue"] if k != kart])
+            self._note(f"kart {kart} out of service"
+                       + (f" — {reason.strip()}" if reason.strip() else ""),
+                       tag="warn")
+        self._mutate(f"retire kart {kart}", go)
+
+    def unretire_kart(self, kart: str):
+        """Back in service. It still has to be put into a lane by hand."""
+        kart = str(kart).strip()
+
+        def go(con):
+            con.execute("DELETE FROM kart_out WHERE kart=?", (kart,))
+            self._note(f"kart {kart} back in service", tag="")
+        self._mutate(f"return kart {kart}", go)
+
+    def retired(self) -> dict:
+        with self._lock, self._con() as con:
+            return {r["kart"]: {"ts": r["ts"], "reason": r["reason"] or ""}
+                    for r in con.execute("SELECT * FROM kart_out")}
 
     # ── stops ─────────────────────────────────────────────────────────────────
     def _open_stop(self, con, team_no: str, team: str, source: str,
@@ -615,6 +663,7 @@ class KartPool:
 
     def snapshot(self) -> dict:
         rated = self.ratings()["karts"]
+        gone = self.retired()
         with self._lock, self._con() as con:
             lanes = self._lanes(con)
             holders = {r["kart"]: r["team"] or r["team_no"] for r in con.execute(
@@ -635,6 +684,10 @@ class KartPool:
                 "reason": info.get("reason", "no laps yet"),
                 "best_s": best.get(num),
                 "holder": holders.get(num, ""),
+                "fade_s": info.get("fade_s"),
+                "fade_runs": info.get("fade_runs", 0),
+                "retired": num in gone,
+                "retired_reason": (gone.get(num) or {}).get("reason", ""),
             }
 
         in_lane = set()
@@ -644,7 +697,10 @@ class KartPool:
             in_lane.update(queue)
             lane_out.append({**lanes[lane], "karts": [card(k) for k in queue]})
 
-        known = set(rated) | set(holders) | in_lane
+        # A kart out of service has left the lanes and holds nothing, so
+        # without this it would vanish from the fleet — no way to see it is
+        # out, and no way to put it back.
+        known = set(rated) | set(holders) | in_lane | set(gone)
         fleet = sorted(
             (card(k) for k in known),
             key=lambda c: (c["delta"] is None, c["delta"] if c["delta"] is not None else 0,
@@ -659,12 +715,14 @@ class KartPool:
             "log": list(self._log)[:40],
             "stops_seen": stops_seen,
             "unrated": sum(1 for c in fleet if c["delta"] is None),
+            "retired": sorted(gone),
             "swap_every_stop": self.cfg["swap_every_stop"],
         }
 
     def reset(self):
         with self._lock, self._con() as con:
-            for table in ("kart_lap", "kart_assign", "kart_stop", "kart_undo"):
+            for table in ("kart_lap", "kart_assign", "kart_stop", "kart_undo",
+                          "kart_out"):
                 con.execute(f"DELETE FROM {table}")
             for lane in self._lanes(con):
                 self._save_queue(con, lane, [])
