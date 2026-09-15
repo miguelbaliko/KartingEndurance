@@ -190,11 +190,16 @@ class ApexParser(html.parser.HTMLParser):
                     if cls in _CELL_MAP:
                         self._col = _CELL_MAP[cls]
                         break
-                # Fallback: use cell data-id to look up column field
+                # Fallback: the cell's data-id ends in the header's column id,
+                # so "r93c8" is whatever column c8 was declared to be.  Prefer
+                # the header in this very frame — the module-level map is only
+                # updated once the whole frame is parsed, so on the first frame
+                # (the one that carries the header) it is still empty.
                 if self._col is None and did:
                     col_m = re.search(r'(c\d+)$', did)
                     if col_m:
-                        self._col = _global_col_types.get(col_m.group(1))
+                        col = col_m.group(1)
+                        self._col = self.col_types.get(col) or _global_col_types.get(col)
 
     def handle_data(self, data):
         v = data.strip()
