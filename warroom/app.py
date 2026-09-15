@@ -39,6 +39,11 @@ def load_cfg() -> dict:
             "stint_max_minutes": 60,      # §3.10 PRO 80, AM 60
             "stint_min_minutes": 10,      # §3.10 a turn under this is penalised
             "pit_duration_seconds": 180,  # §3.9  3 minutes, timed electronically
+            # Their clock starts at the pit entry beam; ours starts when the
+            # feed notices or someone presses. Being a few seconds late to
+            # start means our countdown finishes early, and leaving then is a
+            # 20s penalty, so hold the kart this much longer than the minimum.
+            "pit_safety_seconds": 5,
             "no_pit_last_minutes": 30,    # §3.8  pit lane shuts at 24:30
             # What a stop really costs against staying out: the 3 minutes in
             # the box plus the pit lane itself.  Measure it in practice and set
@@ -266,7 +271,8 @@ _lock = threading.Lock()
 _teams: list = []
 _lap_hist: dict = {}   # team_key -> [float, ...]
 _apex_ok = False
-_apex_session: dict = {"name": "", "light": "", "dyn1": "", "dyn2": ""}
+_apex_session: dict = {"name": "", "light": "", "dyn1": "", "dyn2": "",
+                       "weather": [], "control": []}
 _ws_msg_count = 0
 _sse_queues: list = []
 
@@ -276,6 +282,10 @@ def _process_meta(meta: dict):
     global _apex_session
 
     def _val(v):
+        # Weather and the control log arrive already structured; everything
+        # else is a cell that may be {"text":..,"cls":..} or a bare string.
+        if isinstance(v, (list, tuple)):
+            return list(v)
         return (v.get("text", "") or v.get("cls", "")) if isinstance(v, dict) else str(v)
 
     updated = {}
@@ -284,6 +294,8 @@ def _process_meta(meta: dict):
         ("light", "light"),
         ("dyn1", "dyn1"), ("dyn2", "dyn2"),
         ("track", "track"),
+        ("weather", "weather"),
+        ("control", "control"),
     ]:
         if key in meta and field not in updated:
             v = _val(meta[key])
@@ -593,7 +605,40 @@ def _parse_apex_pipe(msg: str) -> tuple:
         elif cmd == 'track' and val.strip():
             meta['track'] = val.strip()
 
+        elif cmd == 'com' and val.strip():
+            # Race control's own log, which Apex has been sending all along:
+            # "<p><b>21:05</b><span data-flag="green"></span>Start</p>".
+            meta['control'] = parse_control_log(val)
+
+        elif cmd in ('wth1', 'wth2', 'wth3') and val.strip():
+            meta.setdefault('weather', []).append(re.sub(r'<[^>]+>', '', val).strip())
+
     return rows, cell_updates, meta
+
+
+_CONTROL_ENTRY = re.compile(r'<p\b[^>]*>(.*?)</p>', re.I | re.S)
+_CONTROL_TIME  = re.compile(r'<b[^>]*>(.*?)</b>', re.I | re.S)
+_CONTROL_FLAG  = re.compile(r'data-flag="([^"]*)"', re.I)
+
+def parse_control_log(html_s: str) -> list:
+    """Race control's messages, newest first.
+
+    Safety car and red flag periods are the cheapest stops of the race — a stop
+    taken under a neutralisation costs a fraction of one taken under green — so
+    this is worth reading rather than discarding.
+    """
+    out = []
+    for block in _CONTROL_ENTRY.findall(html_s) or ([html_s] if html_s.strip() else []):
+        t = _CONTROL_TIME.search(block)
+        f = _CONTROL_FLAG.search(block)
+        text = re.sub(r'<[^>]+>', ' ', _CONTROL_TIME.sub('', block))
+        text = re.sub(r'\s+', ' ', text).strip()
+        if not (text or f):
+            continue
+        out.append({"at": (t.group(1).strip() if t else ""),
+                    "flag": (f.group(1).strip().lower() if f else ""),
+                    "text": text})
+    return out
 
 def _ws_run(ws_url: str, done_evt: threading.Event):
     """Connect to Apex Timing WebSocket, push rows on every message."""
@@ -980,11 +1025,17 @@ def make_snapshot() -> dict:
     pit_min_met   = False
     if pit_start and status == "pitting":
         pit_elapsed   = (now - datetime.fromisoformat(pit_start)).total_seconds()
-        pit_remaining = max(0.0, CFG["race"]["pit_duration_seconds"] - pit_elapsed)
-        pit_min_met   = pit_elapsed >= CFG["race"]["pit_duration_seconds"]
+        # Count against the minimum plus our safety margin, never against the
+        # bare minimum: the clock we are running is not the one that scores us.
+        safe_target   = (CFG["race"]["pit_duration_seconds"]
+                         + CFG["race"].get("pit_safety_seconds", 0))
+        pit_remaining = max(0.0, safe_target - pit_elapsed)
+        pit_min_met   = pit_elapsed >= safe_target
     # §3.9 is timed electronically and §15.1 charges 20s per started 10s short,
     # so the number worth showing is what leaving right now would cost.
-    pit_penalty_now = penalty_for_shortfall(pit_remaining)
+    # The penalty is charged against the regulation minimum, not our margin.
+    pit_penalty_now = penalty_for_shortfall(
+        CFG["race"]["pit_duration_seconds"] - pit_elapsed)
 
     # Drivers
     driver_id = kv_get("driver_id")

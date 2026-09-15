@@ -392,6 +392,13 @@ td{padding:7px 8px;white-space:nowrap}
 .lap-k{color:var(--tx3)}
 .lap-p{color:var(--tx2);margin-left:auto}
 tr.clickable{cursor:pointer}
+/* Race control's own log, which the feed sends and we used to throw away. */
+.rc-row{display:flex;gap:8px;align-items:baseline;padding:5px 2px;font-size:11px;
+  border-bottom:1px solid var(--line)}
+.rc-row:last-child{border-bottom:none}
+.rc-at{color:var(--tx3);font-variant-numeric:tabular-nums;min-width:38px}
+.rc-flag{width:9px;height:9px;border-radius:2px;flex:none;align-self:center}
+.rc-txt{color:var(--tx2)}
 .td-virt{font-weight:700;font-size:12px}
 .virt-up{color:#22c55e}
 .virt-down{color:#ef4444}
@@ -637,6 +644,13 @@ tr.clickable{cursor:pointer}
         <div class="kart-note" id="fleet-note"></div>
       </div>
 
+      <!-- RACE CONTROL -->
+      <div class="card" id="rc-card" style="display:none">
+        <div class="card-hd">Race Control <span id="rc-weather"
+          style="color:var(--tx3);font-weight:400;font-size:11px"></span></div>
+        <div id="rc-body"></div>
+      </div>
+
       <!-- PIT LOG -->
       <div class="card">
         <div class="card-hd">Pit Stop Log</div>
@@ -846,6 +860,7 @@ function render(s) {
   renderTable(s.teams);
   renderKarts(s);
   renderBoxNow(s);
+  renderControl(s);
   renderMyTeam(s);
   renderStrategy(s);
   renderPit(s);
@@ -970,6 +985,27 @@ async function showLaps(kart, team) {
 }
 
 function closeLaps() { document.getElementById('laps-overlay').style.display = 'none'; }
+
+const RC_FLAG = {green:'#22c55e', yellow:'#eab308', red:'#ef4444',
+                 sc:'#f97316', safetycar:'#f97316', black:'#111',
+                 blue:'#3b82f6', white:'#e5e7eb', chequered:'#e5e7eb'};
+
+/** Race control's messages. A safety car is the cheapest stop of the race. */
+function renderControl(s) {
+  const sess = s.apex_session || {};
+  const log = sess.control || [];
+  const wx  = (sess.weather || []).filter(Boolean);
+  const card = document.getElementById('rc-card');
+  if (!card) return;
+  card.style.display = (log.length || wx.length) ? 'block' : 'none';
+  document.getElementById('rc-weather').textContent = wx.length ? '· ' + wx.join(' · ') : '';
+  document.getElementById('rc-body').innerHTML = log.slice().reverse().slice(0, 12).map(e => `
+    <div class="rc-row">
+      <span class="rc-at">${esc(e.at||'')}</span>
+      ${e.flag ? `<span class="rc-flag" style="background:${RC_FLAG[e.flag]||'#888'}"></span>` : ''}
+      <span class="rc-txt">${esc(e.text||'')}</span>
+    </div>`).join('');
+}
 
 /** Virtual position, and the arrow showing which way it moves them. */
 function virtCell(t, pos) {

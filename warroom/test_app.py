@@ -621,6 +621,76 @@ class TestBoxNowVerdict(AppCase):
         self.assertEqual(self.app.box_now_verdict(out, None)["verdict"], "unknown")
 
 
+class TestPitClockIsOurOwnStopwatch(AppCase):
+    """Apex times the box electronically; we only run a stopwatch beside it.
+
+    Ours starts when the feed notices the stop or someone presses the button,
+    which is always a little after the pit entry beam that scores us.  So the
+    countdown holds the kart past the minimum, while the penalty shown is still
+    measured against the regulation minimum itself.
+    """
+
+    def test_the_countdown_targets_the_minimum_plus_the_margin(self):
+        R = self.app.CFG["race"]
+        self.client.post("/api/pit/box", json={"offset_seconds": 0})
+        s = self.snap()
+        self.assertAlmostEqual(
+            s["pit_remaining"],
+            R["pit_duration_seconds"] + R["pit_safety_seconds"], delta=2)
+
+    def test_the_minimum_is_not_called_met_at_the_bare_minimum(self):
+        R = self.app.CFG["race"]
+        # Entered the box exactly the regulation minimum ago: their clock may
+        # not agree with ours, so we do not wave the kart out yet.
+        self.client.post("/api/pit/box",
+                         json={"offset_seconds": R["pit_duration_seconds"]})
+        self.assertFalse(self.snap()["pit_min_met"])
+
+    def test_it_is_met_once_the_margin_is_served(self):
+        R = self.app.CFG["race"]
+        self.client.post("/api/pit/box", json={"offset_seconds":
+                         R["pit_duration_seconds"] + R["pit_safety_seconds"] + 1})
+        self.assertTrue(self.snap()["pit_min_met"])
+
+    def test_the_penalty_is_charged_against_the_rule_not_our_margin(self):
+        R = self.app.CFG["race"]
+        # Served the regulation minimum but not our margin: nothing is owed.
+        self.client.post("/api/pit/box",
+                         json={"offset_seconds": R["pit_duration_seconds"] + 1})
+        self.assertEqual(self.snap()["pit_penalty_now"], 0)
+
+
+class TestRaceControlLog(AppCase):
+    """Apex sends race control's own messages; they used to be discarded."""
+
+    def test_a_flagged_entry_is_read(self):
+        got = self.app.parse_control_log(
+            '<p><b>21:05</b><span data-flag="green"></span>Start</p>')
+        self.assertEqual(got, [{"at": "21:05", "flag": "green", "text": "Start"}])
+
+    def test_several_entries_keep_their_order(self):
+        got = self.app.parse_control_log(
+            '<p><b>21:05</b><span data-flag="green"></span>Start</p>'
+            '<p><b>22:10</b><span data-flag="yellow"></span>SC deployed</p>')
+        self.assertEqual([e["flag"] for e in got], ["green", "yellow"])
+        self.assertEqual(got[1]["text"], "SC deployed")
+
+    def test_an_entry_with_no_flag_still_counts(self):
+        got = self.app.parse_control_log('<p><b>23:00</b>Kart 12 black flag</p>')
+        self.assertEqual(got[0]["text"], "Kart 12 black flag")
+        self.assertEqual(got[0]["flag"], "")
+
+    def test_nothing_useful_is_nothing(self):
+        self.assertEqual(self.app.parse_control_log(""), [])
+        self.assertEqual(self.app.parse_control_log("<p></p>"), [])
+
+    def test_it_reaches_the_session_state(self):
+        self.app._process_meta({"com": None} if False else
+                               {"control": [{"at": "21:05", "flag": "green",
+                                             "text": "Start"}]})
+        self.assertEqual(self.snap()["apex_session"]["control"][0]["text"], "Start")
+
+
 class TestPages(AppCase):
     def test_war_room_renders(self):
         self.assertEqual(self.client.get("/").status_code, 200)
