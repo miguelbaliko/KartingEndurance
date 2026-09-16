@@ -258,8 +258,16 @@ def _clock_reads(samples: list) -> bool:
                for i, v in enumerate(samples))
 
 
-def find(slugs: list, seconds: float):
-    """Probe each event and say which ones have karts on track."""
+def find(slugs: list, seconds: float, retry: bool = True):
+    """Probe each event and say which ones have karts on track.
+
+    An event that cannot be answered is probed again at the end.  Measured on
+    this connection, a sweep of eighteen loses a third to dropped handshakes,
+    and a third of the field unseen is the difference between finding the one
+    endurance race running and reporting a quiet evening.  The retry is a
+    second pass over the failures only, so the events that answered first time
+    are not slowed down for it.
+    """
     print(f"\nProbing {len(slugs)} event(s), {seconds:g}s each\n")
     live, unreachable = [], []
     for slug in slugs:
@@ -308,6 +316,12 @@ def find(slugs: list, seconds: float):
         if s["karts"] >= 15:
             print(f"  {'':<22}** {s['karts']} karts — a real field, worth recording **")
 
+    if unreachable and retry:
+        print(f"\n  {len(unreachable)} did not answer — going round again\n")
+        again_live, still_dark = find(unreachable, seconds, retry=False)
+        live.extend(again_live)
+        unreachable = still_dark
+
     if live:
         print("\n  Record one with:\n")
         for url, _s in live:
@@ -317,7 +331,7 @@ def find(slugs: list, seconds: float):
         # the whole point of the watch is to notice a live session, and this is
         # the shape of a failure that looks exactly like success.
         print(f"\n  Reached nothing: {len(unreachable)} of {len(slugs)} events "
-              f"failed to answer ({', '.join(unreachable[:6])}"
+              f"failed to answer twice ({', '.join(unreachable[:6])}"
               f"{'…' if len(unreachable) > 6 else ''}).")
         print("  This is a network result, not a verdict on what is running.")
     else:
@@ -325,6 +339,7 @@ def find(slugs: list, seconds: float):
     if live and unreachable:
         print(f"  ({len(unreachable)} other event(s) could not be reached.)")
     print()
+    return live, unreachable
 
 
 def record(url: str, seconds: float, out_dir: str):

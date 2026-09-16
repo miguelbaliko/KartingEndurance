@@ -119,6 +119,46 @@ class TestASweepThatCannotReachAnythingSaysSo(unittest.TestCase):
         self.assertNotIn("Nothing running", out)
         self.assertIn("network result", out)
 
+    def test_an_event_that_answers_on_the_second_try_is_not_lost(self):
+        """A third of a sweep drops handshakes on this connection.
+
+        A third of the field unseen is the difference between finding the one
+        endurance race running and reporting a quiet evening, so the failures
+        get a second pass.
+        """
+        self.warroom._find_apex_endpoints = lambda url: {"ws": "wss://x/"}
+        self.addCleanup(setattr, self.warroom, "_find_apex_endpoints",
+                        self._find_ep)
+        seen = set()
+
+        def flaky(url, seconds):
+            if url in seen:                       # answers the second time
+                return ["grid||<tr data-id='r1'><td data-type='no'>7</td>"
+                        "<td data-type='llp'>1:02.000</td></tr>",
+                        "r1c2|tn|1:02.100\n"]
+            seen.add(url)
+            self.warroom._ajax_state["errors"] = \
+                self.warroom._ajax_state.get("errors", 0) + 1
+            return []
+
+        out = self.sweep(flaky)
+        self.assertIn("going round again", out)
+        self.assertNotIn("Nothing running", out)
+
+    def test_something_unreachable_twice_is_still_not_called_quiet(self):
+        self.warroom._find_apex_endpoints = lambda url: {"ws": "wss://x/"}
+        self.addCleanup(setattr, self.warroom, "_find_apex_endpoints",
+                        self._find_ep)
+
+        def always_failing(url, seconds):
+            self.warroom._ajax_state["errors"] = \
+                self.warroom._ajax_state.get("errors", 0) + 1
+            return []
+        out = self.sweep(always_failing)
+        self.assertIn("failed to answer twice", out)
+        self.assertIn("network result", out)
+        self.assertNotIn("Nothing running", out)
+
     def test_discovery_failing_is_not_a_quiet_track_either(self):
         """Without endpoints we never reached the feed, so we heard nothing."""
         self.warroom._find_apex_endpoints = lambda url: {}
