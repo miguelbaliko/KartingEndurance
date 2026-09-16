@@ -288,5 +288,69 @@ class TestSprintWithoutLapCount(RealFeedCase):
         self.assertEqual(virtual["17"]["virtual_pos"], 1)
 
 
+RKC = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                   "testdata", "apex-rkc-endurance-pitcount.raw")
+
+
+class TestEnduranceWithPitCounter(RealFeedCase):
+    """RKC mid-session, captured 2026-09-16: 25 karts, teams of three.
+
+    The closest thing we have to our own race, and the only fixture that
+    carries a pit counter or an interval column — both of which the wall reads
+    and neither of which any other real frame had ever exercised.  It also
+    names a whole crew in the driver cell and writes its control log in
+    French, which is what a Portuguese event will look like in September too.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.app._global_col_types.clear()
+        self.rows, self.meta = [], {}
+        with open(RKC, encoding="utf-8") as f:
+            for frame in f.read().split("\n\x00\n"):
+                parsed, _c, m = self.app._parse_apex_pipe(frame)
+                self.rows.extend(parsed)
+                self.meta.update({k: v for k, v in m.items() if v})
+
+    def test_the_whole_grid_parses(self):
+        self.assertEqual(len(self.rows), 25)
+
+    def test_the_pit_counter_is_read(self):
+        """It decides stops owed, so a feed that has one must be believed."""
+        pits = [r["pits"] for r in self.rows if r.get("pits")]
+        self.assertTrue(pits, "this is the fixture with a pit counter")
+        self.assertTrue(all(p.isdigit() for p in pits))
+
+    def test_the_interval_column_is_read(self):
+        """GAP is to the leader, INT is to the kart in front — not the same."""
+        row = next(r for r in self.rows if r.get("interval"))
+        self.assertNotEqual(row["interval"], row.get("gap"))
+
+    def test_a_whole_crew_in_the_driver_cell_is_left_alone(self):
+        """Three names with slashes is a driver cell, not something to split."""
+        crew = [r["driver"] for r in self.rows if "/" in (r.get("driver") or "")]
+        self.assertTrue(crew)
+        self.assertIn("/", crew[0])
+
+    def test_an_accented_name_survives_the_parser(self):
+        self.assertTrue(any("É" in (r.get("driver") or "") or
+                            "Ã" in (r.get("driver") or "") for r in self.rows))
+
+    def test_the_control_log_is_read_in_french(self):
+        self.assertEqual(self.meta["control"][0]["flag"], "green")
+        self.assertEqual(self.meta["control"][0]["text"], "Départ")
+
+    def test_otr_is_a_column_we_looked_at_and_chose_to_skip(self):
+        """"En piste" — the rival's stint clock, or "in" while they are boxed.
+
+        Useful, but our own track does not send it, so it stays unparsed and
+        the watch must not keep reporting it as an unknown layout.
+        """
+        import apex_dump
+        self.assertIn("otr", apex_dump.KNOWN_SKIPPED)
+        with open(RKC, encoding="utf-8") as f:
+            self.assertIn('data-type="otr"', f.read())
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

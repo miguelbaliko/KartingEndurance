@@ -77,12 +77,18 @@ def event_url(slug: str) -> str:
 # Apex's light command: lr red, lg green, ly yellow, lsc safety car, lf the
 # chequered flag.  Without lf a finished session reports its raw code and reads
 # as if it were still running.
-# Columns we see everywhere and deliberately do not read, so that a recording
-# carrying them is not reported as a layout we cannot parse.  "sta" is Apex's
-# on-track status flag; every fixture we have carries it and reads "sr" for
-# every kart, and we already take pit state from the row class.  Teaching the
-# parser its other values needs a recording that actually contains one.
-KNOWN_SKIPPED = frozenset({"sta"})
+# Columns we have looked at and deliberately do not read, so that a recording
+# carrying them is not reported as a layout we cannot parse.
+#
+#   sta  Apex's on-track status flag.  Every fixture carries it and it reads
+#        "sr" for every kart; pit state comes from the row class.  Teaching it
+#        other values needs a recording that actually contains one.
+#   otr  "En piste" at RKC: how long this kart's current run has been, as
+#        m:ss, or the literal "in" while it is in the pits.  Genuinely useful
+#        — it is every rival's stint clock — but KIP Palmela does not send the
+#        column, so parsing it would be building for a track we do not race
+#        at.  Revisit if a feed we actually use starts carrying it.
+KNOWN_SKIPPED = frozenset({"sta", "otr"})
 
 LIGHTS = {"lg": "GREEN", "ly": "YELLOW", "lr": "RED", "lsc": "SAFETY CAR",
           "lf": "CHEQUERED"}

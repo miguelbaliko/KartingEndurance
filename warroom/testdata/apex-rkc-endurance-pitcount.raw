@@ -1,0 +1,237 @@
+init|p|
+best|hide|
+css|no8|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no1|border-bottom-color:#FF8000 !important; color:#FFFFFF !important;
+css|no10|border-bottom-color:#00FFFF !important; color:#000000 !important;
+css|no11|border-bottom-color:#0080FF !important; color:#FFFFFF !important;
+css|no16|border-bottom-color:#FF80C0 !important; color:#000000 !important;
+css|no14|border-bottom-color:#4AFFA5 !important; color:#000000 !important;
+css|no12|border-bottom-color:#408080 !important; color:#FFFFFF !important;
+css|no13|border-bottom-color:#00FF00 !important; color:#000000 !important;
+css|no17|border-bottom-color:#00FF40 !important; color:#000000 !important;
+css|no15|border-bottom-color:#FFFF80 !important; color:#000000 !important;
+css|no18|border-bottom-color:#FF0080 !important; color:#FFFFFF !important;
+css|no19|border-bottom-color:#000000 !important; color:#FFFFFF !important;
+css|no20|border-bottom-color:#000000 !important; color:#FFFFFF !important;
+css|no21|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no24|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no25|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no27|border-bottom-color:#00FF00 !important; color:#000000 !important;
+css|no28|border-bottom-color:#00FF00 !important; color:#000000 !important;
+css|no5|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no22|border-bottom-color:#CE0000 !important; color:#FFFFFF !important;
+css|no23|border-bottom-color:#FF80C0 !important; color:#000000 !important;
+css|no26|border-bottom-color:#0080C0 !important; color:#FFFFFF !important;
+css|pena1|color:#f00; font-size:11px; font-weight: bold; text-align:center;
+effects||Effets
+comments||Commentaires
+title1||4 - 1200M GP EQUIPE RACING
+title2||ESSAIS CHRONOS
+dyn1|countdown|928012
+light|lg|
+wth1||
+wth2||
+wth3||
+track||Piste 1200m
+com||<p><b>14:22</b><span data-flag="green"></span>Départ</p>
+grid||<tbody><tr data-id="r0" class="head" data-pos="0"><td data-id="c1" data-type="sta" data-pr="1"></td><td data-id="c2" data-type="rk" data-pr="1">Clt</td><td data-id="c3" data-type="no" data-pr="1">Kart</td><td data-id="c4" data-type="dr" data-pr="1" data-width="12" data-min="16">Equipe</td><td data-id="c5" data-type="s1" data-pr="3" data-width="10" data-min="6">S1</td><td data-id="c6" data-type="s2" data-pr="3" data-width="10" data-min="6">S2</td><td data-id="c7" data-type="s3" data-pr="3" data-width="10" data-min="6">S3</td><td data-id="c8" data-type="llp" data-pr="2" data-width="10" data-min="7">Dernier T.</td><td data-id="c9" data-type="blp" data-pr="1" data-width="10" data-min="7">Meilleur T.</td><td data-id="c10" data-type="gap" data-pr="4" data-width="8" data-min="7">Ecart</td><td data-id="c11" data-type="int" data-pr="5" data-width="8" data-min="7">Interv.</td><td data-id="c12" data-type="tlp" data-pr="5" data-width="5" data-min="4">Tours</td><td data-id="c13" data-type="otr" data-pr="2" data-width="8" data-min="4">En piste</td><td data-id="c14" data-type="pit" data-pr="2" data-width="6" data-min="7">Stands</td></tr><tr data-id="r161921" data-pos="16"><td data-id="r161921c1" class="in"></td><td class="rk"><div><p data-id="r161921c2" class="">16</p></div></td><td class="no"><div data-id="r161921c3" class="no11">1</div></td><td data-id="r161921c4" class="dr">SEBASTIEN G / TONY H / VINCENT V</td><td data-id="r161921c5" class="tn">28.59</td><td data-id="r161921c6" class=""></td><td data-id="r161921c7" class=""></td><td data-id="r161921c8" class="tn">1:23.378</td><td data-id="r161921c9" class="ib">1:14.045</td><td data-id="r161921c10" class="in">6.048</td><td data-id="r161921c11" class="in">0.444</td><td data-id="r161921c12" class="in">10</td><td data-id="r161921c13" class="in">0:03</td><td data-id="r161921c14" class="in">1</td></tr><tr data-id="r161922" data-pos="8"><td data-id="r161922c1" class="in"></td><td class="rk"><div><p data-id="r161922c2" class="">8</p></div></td><td class="no"><div data-id="r161922c3" class="no11">2</div></td><td data-id="r161922c4" class="dr">SYLVAIN C / CÉDRI C / AMAURY G</td><td data-id="r161922c5" class="tn">25.67</td><td data-id="r161922c6" class="tn">22.03</td><td data-id="r161922c7" class=""></td><td data-id="r161922c8" class="tn">1:13.568</td><td data-id="r161922c9" class="ib">1:11.355</td><td data-id="r161922c10" class="in">3.358</td><td data-id="r161922c11" class="in">0.471</td><td data-id="r161922c12" class="in">10</td><td data-id="r161922c13" class="in">0:04</td><td data-id="r161922c14" class="in">1</td></tr><tr data-id="r161923" data-pos="9"><td data-id="r161923c1" class="sr"></td><td class="rk"><div><p data-id="r161923c2" class="">9</p></div></td><td class="no"><div data-id="r161923c3" class="no11">3</div></td><td data-id="r161923c4" class="dr">PEDRO C  / MICKAEL G  / NICOLAS F </td><td data-id="r161923c5" class="tn">26.39</td><td data-id="r161923c6" class="tn">21.58</td><td data-id="r161923c7" class="tn">24.42</td><td data-id="r161923c8" class="tn">1:12.405</td><td data-id="r161923c9" class="ib">1:11.469</td><td data-id="r161923c10" class="in">3.472</td><td data-id="r161923c11" class="in">0.114</td><td data-id="r161923c12" class="in">11</td><td data-id="r161923c13" class="in">0:03</td><td data-id="r161923c14" class="in">1</td></tr><tr data-id="r161924" data-pos="15"><td data-id="r161924c1" class="in"></td><td class="rk"><div><p data-id="r161924c2" class="">15</p></div></td><td class="no"><div data-id="r161924c3" class="no11">4</div></td><td data-id="r161924c4" class="dr">FRED E  / DAVID K / CHRISTOPHE T</td><td data-id="r161924c5" class="tn">28.02</td><td data-id="r161924c6" class=""></td><td data-id="r161924c7" class=""></td><td data-id="r161924c8" class="tn">1:16.167</td><td data-id="r161924c9" class="ib">1:13.601</td><td data-id="r161924c10" class="in">5.604</td><td data-id="r161924c11" class="in">0.018</td><td data-id="r161924c12" class="in">10</td><td data-id="r161924c13" class="in">0:02</td><td data-id="r161924c14" class="in">1</td></tr><tr data-id="r161925" data-pos="1"><td data-id="r161925c1" class="in"></td><td class="rk"><div><p data-id="r161925c2" class="">1</p></div></td><td class="no"><div data-id="r161925c3" class="no11">5</div></td><td data-id="r161925c4" class="dr">ROMAIN / FISSON 2 / ERIC G</td><td data-id="r161925c5" class="tn">25.74</td><td data-id="r161925c6" class=""></td><td data-id="r161925c7" class=""></td><td data-id="r161925c8" class="tn">1:13.181</td><td data-id="r161925c9" class="ib">1:07.997</td><td data-id="r161925c10" class="in"></td><td data-id="r161925c11" class="in"></td><td data-id="r161925c12" class="in">11</td><td data-id="r161925c13" class="in">0:02</td><td data-id="r161925c14" class="in">1</td></tr><tr data-id="r161926" data-pos="24"><td data-id="r161926c1" class="in"></td><td class="rk"><div><p data-id="r161926c2" class="">24</p></div></td><td class="no"><div data-id="r161926c3" class="no11">6</div></td><td data-id="r161926c4" class="dr">ESTEBAN / HERVÉ B / DANY D</td><td data-id="r161926c5" class="ti">29.59</td><td data-id="r161926c6" class=""></td><td data-id="r161926c7" class=""></td><td data-id="r161926c8" class="tn">2:42.517</td><td data-id="r161926c9" class="ib">1:29.787</td><td data-id="r161926c10" class="in">21.790</td><td data-id="r161926c11" class="in">3.888</td><td data-id="r161926c12" class="in">8</td><td data-id="r161926c13" class="in">0:01</td><td data-id="r161926c14" class="in">1</td></tr><tr data-id="r161927" data-pos="25"><td data-id="r161927c1" class="in"></td><td class="rk"><div><p data-id="r161927c2" class="">25</p></div></td><td class="no"><div data-id="r161927c3" class="no11">7</div></td><td data-id="r161927c4" class="dr">GUILLAUME V  / SEKOU D / OUISSAB</td><td data-id="r161927c5" class="ti">31.22</td><td data-id="r161927c6" class=""></td><td data-id="r161927c7" class=""></td><td data-id="r161927c8" class="ti">1:29.865</td><td data-id="r161927c9" class="ib">1:29.865</td><td data-id="r161927c10" class="in">21.868</td><td data-id="r161927c11" class="in">0.078</td><td data-id="r161927c12" class="in">7</td><td data-id="r161927c13" class="in">0:03</td><td data-id="r161927c14" class="in">1</td></tr><tr data-id="r161928" data-pos="17"><td data-id="r161928c1" class="in"></td><td class="rk"><div><p data-id="r161928c2" class="">17</p></div></td><td class="no"><div data-id="r161928c3" class="no11">8</div></td><td data-id="r161928c4" class="dr">CLAUDE  / ERIC M / VINCENTB</td><td data-id="r161928c5" class="tn">31.84</td><td data-id="r161928c6" class="tn">25.91</td><td data-id="r161928c7" class=""></td><td data-id="r161928c8" class="tn">3:20.775</td><td data-id="r161928c9" class="ib">1:14.223</td><td data-id="r161928c10" class="in">6.226</td><td data-id="r161928c11" class="in">0.178</td><td data-id="r161928c12" class="in">9</td><td data-id="r161928c13" class="in">0:02</td><td data-id="r161928c14" class="in">1</td></tr><tr data-id="r161929" data-pos="6"><td data-id="r161929c1" class="in"></td><td class="rk"><div><p data-id="r161929c2" class="">6</p></div></td><td class="no"><div data-id="r161929c3" class="no11">9</div></td><td data-id="r161929c4" class="dr">OLIVIER C / GUILLAUME V / PASCAL B</td><td data-id="r161929c5" class="tn">26.31</td><td data-id="r161929c6" class="tn">22.58</td><td data-id="r161929c7" class=""></td><td data-id="r161929c8" class="tn">1:16.329</td><td data-id="r161929c9" class="ib">1:10.883</td><td data-id="r161929c10" class="in">2.886</td><td data-id="r161929c11" class="in">0.239</td><td data-id="r161929c12" class="in">10</td><td data-id="r161929c13" class="in">0:03</td><td data-id="r161929c14" class="in">1</td></tr><tr data-id="r161930" data-pos="7"><td data-id="r161930c1" class="in"></td><td class="rk"><div><p data-id="r161930c2" class="">7</p></div></td><td class="no"><div data-id="r161930c3" class="no11">10</div></td><td data-id="r161930c4" class="dr">THIBAUD D / AYMERIC J / BRIEUC D</td><td data-id="r161930c5" class="tn">29.08</td><td data-id="r161930c6" class=""></td><td data-id="r161930c7" class=""></td><td data-id="r161930c8" class="tn">1:24.214</td><td data-id="r161930c9" class="ib">1:10.884</td><td data-id="r161930c10" class="in">2.887</td><td data-id="r161930c11" class="in">0.001</td><td data-id="r161930c12" class="in">10</td><td data-id="r161930c13" class="in">0:03</td><td data-id="r161930c14" class="in">1</td></tr><tr data-id="r161931" data-pos="11"><td data-id="r161931c1" class="in"></td><td class="rk"><div><p data-id="r161931c2" class="">11</p></div></td><td class="no"><div data-id="r161931c3" class="no11">11</div></td><td data-id="r161931c4" class="dr">BENJAMIN L / JEAN-LUC / JÉROME D</td><td data-id="r161931c5" class="tn">27.00</td><td data-id="r161931c6" class=""></td><td data-id="r161931c7" class=""></td><td data-id="r161931c8" class="tn">1:16.190</td><td data-id="r161931c9" class="ib">1:12.358</td><td data-id="r161931c10" class="in">4.361</td><td data-id="r161931c11" class="in">0.495</td><td data-id="r161931c12" class="in">10</td><td data-id="r161931c13" class="in">0:02</td><td data-id="r161931c14" class="in">1</td></tr><tr data-id="r161932" data-pos="3"><td data-id="r161932c1" class="sr"></td><td class="rk"><div><p data-id="r161932c2" class="">3</p></div></td><td class="no"><div data-id="r161932c3" class="no11">12</div></td><td data-id="r161932c4" class="dr">THOMAS D / DZ 2 / DIMITRI M</td><td data-id="r161932c5" class="tn">26.85</td><td data-id="r161932c6" class="tn">23.19</td><td data-id="r161932c7" class="tn">26.16</td><td data-id="r161932c8" class="tn">1:16.219</td><td data-id="r161932c9" class="ib">1:08.948</td><td data-id="r161932c10" class="in">0.951</td><td data-id="r161932c11" class="in">0.851</td><td data-id="r161932c12" class="in">11</td><td data-id="r161932c13" class="in">0:03</td><td data-id="r161932c14" class="in">1</td></tr><tr data-id="r161933" data-pos="12"><td data-id="r161933c1" class="in"></td><td class="rk"><div><p data-id="r161933c2" class="">12</p></div></td><td class="no"><div data-id="r161933c3" class="no11">13</div></td><td data-id="r161933c4" class="dr">JUDES / GAETAN P / XAVIER M</td><td data-id="r161933c5" class="tn">27.07</td><td data-id="r161933c6" class=""></td><td data-id="r161933c7" class=""></td><td data-id="r161933c8" class="tn">1:18.594</td><td data-id="r161933c9" class="ib">1:12.532</td><td data-id="r161933c10" class="in">4.535</td><td data-id="r161933c11" class="in">0.174</td><td data-id="r161933c12" class="in">10</td><td data-id="r161933c13" class="in">0:03</td><td data-id="r161933c14" class="in">1</td></tr><tr data-id="r161934" data-pos="5"><td data-id="r161934c1" class="in"></td><td class="rk"><div><p data-id="r161934c2" class="">5</p></div></td><td class="no"><div data-id="r161934c3" class="no11">14</div></td><td data-id="r161934c4" class="dr">ALEXANDRE M / EMMANUEL D / ALEXANDRE C</td><td data-id="r161934c5" class="tn">25.33</td><td data-id="r161934c6" class=""></td><td data-id="r161934c7" class=""></td><td data-id="r161934c8" class="ti">1:10.644</td><td data-id="r161934c9" class="ib">1:10.644</td><td data-id="r161934c10" class="in">2.647</td><td data-id="r161934c11" class="in">1.666</td><td data-id="r161934c12" class="in">10</td><td data-id="r161934c13" class="in">0:04</td><td data-id="r161934c14" class="in">1</td></tr><tr data-id="r161935" data-pos="22"><td data-id="r161935c1" class="in"></td><td class="rk"><div><p data-id="r161935c2" class="">22</p></div></td><td class="no"><div data-id="r161935c3" class="no11">15</div></td><td data-id="r161935c4" class="dr">VALERIO / HERMAN / LOIC O</td><td data-id="r161935c5" class="tn">31.39</td><td data-id="r161935c6" class=""></td><td data-id="r161935c7" class=""></td><td data-id="r161935c8" class="tn">1:24.997</td><td data-id="r161935c9" class="ib">1:23.674</td><td data-id="r161935c10" class="in">15.677</td><td data-id="r161935c11" class="in">7.100</td><td data-id="r161935c12" class="in">9</td><td data-id="r161935c13" class="in">0:14</td><td data-id="r161935c14" class="in"></td></tr><tr data-id="r161936" data-pos="2"><td data-id="r161936c1" class="in"></td><td class="rk"><div><p data-id="r161936c2" class="">2</p></div></td><td class="no"><div data-id="r161936c3" class="no11">16</div></td><td data-id="r161936c4" class="dr">STÉPHANE / GREG </td><td data-id="r161936c5" class="tn">24.66</td><td data-id="r161936c6" class=""></td><td data-id="r161936c7" class=""></td><td data-id="r161936c8" class="tn">1:08.807</td><td data-id="r161936c9" class="ib">1:08.097</td><td data-id="r161936c10" class="in">0.100</td><td data-id="r161936c11" class="in">0.100</td><td data-id="r161936c12" class="in">12</td><td data-id="r161936c13" class="in">0:14</td><td data-id="r161936c14" class="in"></td></tr><tr data-id="r161937" data-pos="23"><td data-id="r161937c1" class="in"></td><td class="rk"><div><p data-id="r161937c2" class="">23</p></div></td><td class="no"><div data-id="r161937c3" class="no11">17</div></td><td data-id="r161937c4" class="dr">RAMI / CÉLINE / RADICA</td><td data-id="r161937c5" class="tn">35.30</td><td data-id="r161937c6" class=""></td><td data-id="r161937c7" class=""></td><td data-id="r161937c8" class="tn">2:52.759</td><td data-id="r161937c9" class="ib">1:25.899</td><td data-id="r161937c10" class="in">17.902</td><td data-id="r161937c11" class="in">2.225</td><td data-id="r161937c12" class="in">8</td><td data-id="r161937c13" class="in">0:02</td><td data-id="r161937c14" class="in">1</td></tr><tr data-id="r161938" data-pos="20"><td data-id="r161938c1" class="su"></td><td class="rk"><div><p data-id="r161938c2" class="">20</p></div></td><td class="no"><div data-id="r161938c3" class="no11">18</div></td><td data-id="r161938c4" class="dr">PÉDRO M / DANIEL C / NIZAR</td><td data-id="r161938c5" class="ti">27.24</td><td data-id="r161938c6" class="ti">23.18</td><td data-id="r161938c7" class="ti">26.10</td><td data-id="r161938c8" class="ti">1:16.529</td><td data-id="r161938c9" class="ib">1:16.529</td><td data-id="r161938c10" class="in">8.532</td><td data-id="r161938c11" class="in">1.526</td><td data-id="r161938c12" class="in">9</td><td data-id="r161938c13" class="in">0:02</td><td data-id="r161938c14" class="in">1</td></tr><tr data-id="r161939" data-pos="21"><td data-id="r161939c1" class="in"></td><td class="rk"><div><p data-id="r161939c2" class="">21</p></div></td><td class="no"><div data-id="r161939c3" class="no11">19</div></td><td data-id="r161939c4" class="dr">SACHA / CHRISTOPHE F</td><td data-id="r161939c5" class="tn">26.91</td><td data-id="r161939c6" class="tn">22.70</td><td data-id="r161939c7" class=""></td><td data-id="r161939c8" class="tn">1:18.096</td><td data-id="r161939c9" class="ib">1:16.574</td><td data-id="r161939c10" class="in">8.577</td><td data-id="r161939c11" class="in">0.045</td><td data-id="r161939c12" class="in">10</td><td data-id="r161939c13" class="in">0:14</td><td data-id="r161939c14" class="in"></td></tr><tr data-id="r161940" data-pos="13"><td data-id="r161940c1" class="sr"></td><td class="rk"><div><p data-id="r161940c2" class="">13</p></div></td><td class="no"><div data-id="r161940c3" class="no11">20</div></td><td data-id="r161940c4" class="dr">ARMINDO / YOUSSEF / STÉPHANE B</td><td data-id="r161940c5" class="tn">118.73</td><td data-id="r161940c6" class="tn">27.40</td><td data-id="r161940c7" class="tn">28.23</td><td data-id="r161940c8" class="tn">2:54.372</td><td data-id="r161940c9" class="ib">1:12.667</td><td data-id="r161940c10" class="in">4.670</td><td data-id="r161940c11" class="in">0.135</td><td data-id="r161940c12" class="in">10</td><td data-id="r161940c13" class="in">0:01</td><td data-id="r161940c14" class="in">1</td></tr><tr data-id="r161941" data-pos="14"><td data-id="r161941c1" class="in"></td><td class="rk"><div><p data-id="r161941c2" class="">14</p></div></td><td class="no"><div data-id="r161941c3" class="no11">21</div></td><td data-id="r161941c4" class="dr">ZOHIR / FREDÉRIC M / OLIVIER H </td><td data-id="r161941c5" class="tn">26.74</td><td data-id="r161941c6" class=""></td><td data-id="r161941c7" class=""></td><td data-id="r161941c8" class="ti">1:13.583</td><td data-id="r161941c9" class="ib">1:13.583</td><td data-id="r161941c10" class="in">5.586</td><td data-id="r161941c11" class="in">0.916</td><td data-id="r161941c12" class="in">9</td><td data-id="r161941c13" class="in">0:02</td><td data-id="r161941c14" class="in">1</td></tr><tr data-id="r161942" data-pos="4"><td data-id="r161942c1" class="in"></td><td class="rk"><div><p data-id="r161942c2" class="">4</p></div></td><td class="no"><div data-id="r161942c3" class="no11">22</div></td><td data-id="r161942c4" class="dr">SEBASTIEN B / MERIEM A / SANDRINE D</td><td data-id="r161942c5" class="tn">30.92</td><td data-id="r161942c6" class="tn">25.56</td><td data-id="r161942c7" class="tn">30.55</td><td data-id="r161942c8" class="tn">1:27.038</td><td data-id="r161942c9" class="ib">1:08.978</td><td data-id="r161942c10" class="in">0.981</td><td data-id="r161942c11" class="in">0.030</td><td data-id="r161942c12" class="in">10</td><td data-id="r161942c13" class="in">0:02</td><td data-id="r161942c14" class="in">1</td></tr><tr data-id="r161943" data-pos="18"><td data-id="r161943c1" class="su"></td><td class="rk"><div><p data-id="r161943c2" class="">18</p></div></td><td class="no"><div data-id="r161943c3" class="no11">23</div></td><td data-id="r161943c4" class="dr">DAVID B / EMILINE C / ANAS P </td><td data-id="r161943c5" class="ti">26.77</td><td data-id="r161943c6" class="tn">22.21</td><td data-id="r161943c7" class="tn">25.90</td><td data-id="r161943c8" class="ti">1:14.882</td><td data-id="r161943c9" class="ib">1:14.882</td><td data-id="r161943c10" class="in">6.885</td><td data-id="r161943c11" class="in">0.659</td><td data-id="r161943c12" class="in">11</td><td data-id="r161943c13" class="in">0:13</td><td data-id="r161943c14" class="in"></td></tr><tr data-id="r161944" data-pos="19"><td data-id="r161944c1" class="in"></td><td class="rk"><div><p data-id="r161944c2" class="">19</p></div></td><td class="no"><div data-id="r161944c3" class="no11">24</div></td><td data-id="r161944c4" class="dr">MOHAMED D / FABIEN / MATHIEU H</td><td data-id="r161944c5" class="tn">26.98</td><td data-id="r161944c6" class=""></td><td data-id="r161944c7" class=""></td><td data-id="r161944c8" class="ti">1:15.003</td><td data-id="r161944c9" class="ib">1:15.003</td><td data-id="r161944c10" class="in">7.006</td><td data-id="r161944c11" class="in">0.121</td><td data-id="r161944c12" class="in">10</td><td data-id="r161944c13" class="in">0:13</td><td data-id="r161944c14" class="in"></td></tr><tr data-id="r161945" data-pos="10"><td data-id="r161945c1" class="in"></td><td class="rk"><div><p data-id="r161945c2" class="">10</p></div></td><td class="no"><div data-id="r161945c3" class="no11">25</div></td><td data-id="r161945c4" class="dr">GREORGY / ABEL / LUIGI</td><td data-id="r161945c5" class="tn">91.92</td><td data-id="r161945c6" class="tn">25.04</td><td data-id="r161945c7" class="tn">29.81</td><td data-id="r161945c8" class="tn">2:26.781</td><td data-id="r161945c9" class="ib">1:11.863</td><td data-id="r161945c10" class="in">3.866</td><td data-id="r161945c11" class="in">0.394</td><td data-id="r161945c12" class="in">10</td><td data-id="r161945c13" class="in">0:01</td><td data-id="r161945c14" class="in">1</td></tr></tbody>
+msg||
+
+ 
+r161934c1|sr|
+r161934c7|ti|23.78
+r161934c8|tn|1:11.431
+r161934c12|in|11
+r161934|*|70644|25209
+r161937c6|tn|30.61
+r161937|*i2|30769
+r161943c13|to|14.
+r161943c13|to|15.
+r161923c5|tn|26.34
+r161923c6||
+r161923c7||
+r161923|*i1|21413
+r161943c13|to|16.
+r161943c13|to|17.
+dyn1|countdown|897863
+r161928c1|sr|
+r161928c7|tn|30.62
+r161928c8|tn|1:28.377
+r161928c12|in|10
+r161928|*|81478|29196
+r161927c13|in|0:04
+r161943c13|to|18.
+r161943c13|to|19.
+r161926c1|su|
+r161926c2||22
+r161926c7|ti|26.78
+r161926c8|ti|1:20.494
+r161926c9|ib|1:20.494
+r161926c10|in|12.497
+r161926c11|in|3.965
+r161926c12|in|9
+r161935c2||23
+r161935c11|in|3.180
+r161937c2||24
+r161927c11|in|3.966
+r161926|*|80494|29590
+r161926|#|22
+r161935|#|23
+r161937|#|24
+r161933c1|sr|
+r161933c7|tn|27.73
+r161933c8|tn|1:22.977
+r161933c12|in|11
+r161933|*|76896|26896
+r161943c13|to|20.
+r161943c13|to|21.
+r161938c13|in|0:03
+r161929c13|in|0:04
+r161943c13|to|22.
+r161929c5|tn|26.61
+r161929c6||
+r161929c7||
+r161929|*i1|22260
+r161939c1|in|
+r161941c1|sr|
+r161941c7|ti|25.68
+r161941c8|tn|1:16.363
+r161941c12|in|10
+r161941|*|73583|25684
+r161922c13|in|0:05
+r161943c13|to|23.
+r161934c1|in|
+r161923c13|in|0:04
+r161930c1|sr|
+r161930c7|tn|28.09
+r161930c8|tn|1:22.369
+r161930c12|in|11
+r161930|*|79202|28116
+r161943c13|to|24.
+r161939c1|si|
+r161939c5|ib|26.91
+r161939c6|ib|22.70
+r161939c7|ib|25.55
+r161939c13|to|00.
+r161939c14|in|1
+r161939|*in|0
+r161945c6|tn|22.59
+r161945|*i2|24477
+r161943c13|to|25.
+r161936c1|sr|
+r161936c7|tn|24.03
+r161936c8|tn|1:09.563
+r161936c12|in|13
+r161936|*|68765|24663
+r161939c13|to|01.
+r161927c1|su|
+r161927c2||24
+r161927c7|ti|28.48
+r161927c8|ti|1:25.412
+r161927c9|ib|1:25.412
+r161927c10|in|17.415
+r161927c11|in|1.738
+r161927c12|in|8
+r161937c2||25
+r161937c11|in|0.487
+r161927|*|85412|31228
+r161927|#|24
+r161937|#|25
+r161930c13|in|0:04
+r161943c13|to|26.
+r161921c1|sr|
+r161921c7|tn|28.34
+r161921c8|tn|1:22.587
+r161921c12|in|11
+r161921|*|80486|28141
+r161939c13|to|02.
+r161922c5|tn|25.74
+r161922c6||
+r161922c7||
+r161922|*i1|21805
+r161943c13|to|27.
+r161928c1|in|
+r161939c13|to|03.
+r161931c1|sr|
+r161931c7|tn|27.56
+r161931c8|tn|1:19.402
+r161931c12|in|11
+r161931|*|75276|26833
+r161943c13|to|28.
+r161935c1|sr|
+r161935c7|tn|28.32
+r161935c8|tn|1:25.107
+r161935c12|in|10
+r161935|*|84340|29899
+r161939c13|to|04.
+r161943c13|to|29.
+r161926c1|in|
+r161939c13|to|05.
+r161933c1|in|
+r161943c13|to|30.
+r161940c6|tn|23.10
+r161940|*i2|24678
+r161942c6|tn|25.27
+r161939c13|to|06.
+r161942|*i2|27097
+r161924c1|sr|
+r161924c7|tn|26.21
+r161924c8|tn|1:16.506
+r161924c12|in|11
+r161924|*|76167|27535
+r161938c6|ti|22.85
+r161938|*i2|26105
+r161943c13|to|31.
+r161928c13|in|0:03
+r161939c13|to|07.
+r161943c13|to|32.
+r161939c13|to|08.
+r161945c13|in|0:02
+r161941c1|in|
+r161932c6|tn|23.42
+r161943c13|to|33.
+r161932|*i2|25401
+r161939c13|to|09.
+r161944c1|sr|
+r161944c7|tn|26.35
+r161944c8|tn|1:16.298
+r161944c12|in|11
+r161944|*|75003|26941
+r161930c1|in|
+r161943c13|to|34.
+r161939c13|to|10.
+r161925c1|sr|
+r161925c7|tn|34.81
+r161925c8|tn|1:23.221
+r161925c12|in|12
+r161925|*|71729|25518
+r161943c13|to|35.
+r161936c1|in|
+r161939c13|to|11.
+r161921c13|in|0:04
+r161927c1|in|
+r161943c13|to|36.
+r161921c1|in|
+r161939c13|to|12.
+r161937c13|in|0:03
+
+ 
+r161943c13|to|47.
+r161935c13|to|02.
+r161939c13|to|23.
+r161944c1|si|
+r161944c5|ib|26.94
+r161944c6|ib|22.14
+r161944c7|ib|25.91
+r161944c13|to|00.
+r161944c14|in|1
+r161944|*in|0
+dyn1|countdown|867412
+r161943c13|to|48.
+r161935c13|to|03.
+r161934c13|in|0:05
+r161944c13|to|01.
+r161939c13|to|24.
+r161943c13|to|49.
+r161935c13|to|04.
+r161937c1|sr|
