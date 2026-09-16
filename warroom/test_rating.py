@@ -355,6 +355,56 @@ class TestRate(unittest.TestCase):
         self.assertEqual(got["tow_laps"], 0, "1.2s back is not a tow")
         self.assertTrue(got["rated"])
 
+    def test_a_shove_from_behind_is_counted(self):
+        """The other half of the interval: who is close behind, not in front."""
+        base = [(t, p, k, s, None, None) for t, p, k, s in
+                simulate(self.KARTS, self.PILOTS, self._rotating())]
+        shoved = [(300_000.0 + i * 65, p, "K9", 63.4, 5.0, 0.2)
+                  for i, p in enumerate(["PRO-A", "PRO-B", "MID-C"] * 12)]
+        got = rate(base + shoved)["karts"]["K9"]
+        self.assertEqual(got["push_laps"], 36)
+        self.assertEqual(got["tow_laps"], 0, "nobody was in front of them")
+
+    def test_a_shove_never_moves_the_grade(self):
+        """Counted and shown, never scored.
+
+        A shove does make a lap quicker, but we have no measurement of by how
+        much — so discounting those laps would be a guess, and it would cost
+        clean evidence to make it.  The number is there to be read; the grade
+        comes out of the same laps either way.
+        """
+        base = [(t, p, k, s, None, None) for t, p, k, s in
+                simulate(self.KARTS, self.PILOTS, self._rotating())]
+        laps = [(300_000.0 + i * 65, p, "K9", 63.4, 5.0)
+                for i, p in enumerate(["PRO-A", "PRO-B", "MID-C"] * 12)]
+        alone = rate(base + [(t, p, k, s, a, 9.0) for t, p, k, s, a in laps])
+        shoved = rate(base + [(t, p, k, s, a, 0.2) for t, p, k, s, a in laps])
+        self.assertEqual(alone["karts"]["K9"]["effect"],
+                         shoved["karts"]["K9"]["effect"])
+        self.assertEqual(alone["karts"]["K9"]["laps"],
+                         shoved["karts"]["K9"]["laps"])
+
+    def test_a_lap_can_be_towed_and_shoved_at_once(self):
+        """The middle of a train is both, and each is counted on its own."""
+        base = [(t, p, k, s, None, None) for t, p, k, s in
+                simulate(self.KARTS, self.PILOTS, self._rotating())]
+        train = [(300_000.0 + i * 65, p, "K9", 63.0, 0.3, 0.2)
+                 for i, p in enumerate(["PRO-A", "PRO-B", "MID-C"] * 12)]
+        got = rate(base + train)["karts"]["K9"]
+        self.assertEqual(got["tow_laps"], 36)
+        self.assertEqual(got["push_laps"], 36)
+
+    def test_a_feed_that_sends_neither_gap_still_rates(self):
+        base = simulate(self.KARTS, self.PILOTS, self._rotating())
+        got = rate(base)["karts"]["K1"]
+        self.assertTrue(got["rated"])
+        self.assertEqual((got["tow_laps"], got["push_laps"]), (0, 0))
+
+    def test_the_shove_threshold_is_closer_than_a_tow(self):
+        """Contact, not air: a kart two lengths back is touching you."""
+        from rating import DEFAULTS
+        self.assertLess(DEFAULTS["push_gap_s"], DEFAULTS["tow_gap_s"])
+
     def test_empty_input(self):
         res = rate([])
         self.assertEqual(res["karts"], {})

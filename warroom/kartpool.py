@@ -91,7 +91,11 @@ CREATE TABLE IF NOT EXISTS kart_lap (
     -- The three sector times for this lap, in seconds.  A lap time says a
     -- driver lost four tenths; the sectors say where, which is the only part
     -- of a debrief a driver can act on.  NULL where the feed did not send one.
-    s1 REAL, s2 REAL, s3 REAL
+    s1 REAL, s2 REAL, s3 REAL,
+    -- Gap to the kart chasing this one.  Close behind in a rental kart is a
+    -- shove, not a slipstream: it makes the lap quicker and says nothing about
+    -- the kart, so it is recorded the same way the tow is.
+    behind_s REAL
 );
 CREATE TABLE IF NOT EXISTS kart_stop (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -201,7 +205,7 @@ class KartPool:
             # Databases written before the gap column exists: the laps already
             # in them were recorded without it, and read back as clean.
             cols = {r["name"] for r in con.execute("PRAGMA table_info(kart_lap)")}
-            for col in ("ahead_s", "s1", "s2", "s3"):
+            for col in ("ahead_s", "s1", "s2", "s3", "behind_s"):
                 if col not in cols:
                     con.execute(f"ALTER TABLE kart_lap ADD COLUMN {col} REAL")
         self._sync_lanes()
@@ -560,6 +564,7 @@ class KartPool:
             return
         now = now or time.time()
         ahead = self.gaps_ahead(rows)
+        behind = self.gaps_behind(rows)
         new_stops, released = [], []
         entered_box, left_box = [], []
 
@@ -623,7 +628,8 @@ class KartPool:
                 # The lap that ends in the pit lane says nothing about the kart.
                 if fresh_lap and not stopped:
                     self._record_lap(con, team_no, team, row, lap_s, now,
-                                     ahead.get(str(row.get("kart", ""))))
+                                     ahead.get(str(row.get("kart", ""))),
+                                     behind.get(str(row.get("kart", ""))))
                 # Bank the sectors after the lap is written, never before: what
                 # is on the board now belongs to the lap being run, so banking
                 # first would file the new lap's splits under the old one.  A
@@ -672,12 +678,12 @@ class KartPool:
         return lap_s > ref + self.cfg["pit_lap_spike_s"]
 
     @staticmethod
-    def gaps_ahead(rows: list) -> dict:
-        """Gap from each kart to the one in front, from the gap-to-leader column.
+    def road_order(rows: list) -> list:
+        """The field in race order as ``(kart, gap to the leader)``.
 
-        Apex sends the gap to the leader, so the interval is the difference
-        between neighbours once the field is in order.  The leader is ahead of
-        nobody and gets None rather than nought.
+        Apex sends the gap to the leader, so every interval between neighbours
+        comes out of this one list.  A kart whose gap cannot be read — blank, a
+        dash, or a number of whole laps — is left out rather than guessed at.
         """
         placed = []
         for r in rows:
@@ -688,22 +694,41 @@ class KartPool:
             if pos:
                 placed.append((pos, str(r.get("kart", "")), r.get("gap")))
         placed.sort()
-        order = []
-        for i, (pos, kart, raw) in enumerate(placed):
+        out = []
+        for i, (_pos, kart, raw) in enumerate(placed):
             # The leader's gap cell is blank on every Apex board: they are
             # ahead of the field by nought, not by an unknown amount.  Reading
             # that as missing drops them out of the order and hands the leader's
             # place to the kart behind.
             g = 0.0 if i == 0 else _lap_or_none(raw)
             if g is not None:
-                order.append((pos, kart, g))
-        out = {}
-        for i, (_pos, kart, g) in enumerate(order):
-            out[kart] = None if i == 0 else round(g - order[i - 1][2], 3)
+                out.append((kart, g))
         return out
 
+    @staticmethod
+    def gaps_ahead(rows: list) -> dict:
+        """Gap from each kart to the one in front.  The leader gets None."""
+        order = KartPool.road_order(rows)
+        return {kart: (None if i == 0 else round(g - order[i - 1][1], 3))
+                for i, (kart, g) in enumerate(order)}
+
+    @staticmethod
+    def gaps_behind(rows: list) -> dict:
+        """Gap from each kart to the one chasing it.  The last kart gets None.
+
+        The same interval read the other way round: whoever is behind you is
+        close enough to be pushing, and in rental karting that is a shove, not
+        a slipstream — it makes a lap quicker without saying anything about the
+        kart.
+        """
+        order = KartPool.road_order(rows)
+        return {kart: (None if i == len(order) - 1
+                       else round(order[i + 1][1] - g, 3))
+                for i, (kart, g) in enumerate(order)}
+
     def _record_lap(self, con, team_no: str, team: str, row: dict,
-                    lap_s: float, now: float, ahead_s: float = None):
+                    lap_s: float, now: float, ahead_s: float = None,
+                    behind_s: float = None):
         """Store one lap against the kart we believe the team is holding."""
         # The sector buffer is emptied whether or not the lap is kept, because
         # those sectors belong to the lap that has just ended either way.
@@ -727,9 +752,10 @@ class KartPool:
         driver = (row.get("driver") or "").strip()
         pilot = f"{team or team_no}|{driver}" if driver else (team or team_no)
         con.execute("INSERT INTO kart_lap(ts,team_no,pilot,kart,lap_s,ahead_s,"
-                    "s1,s2,s3) VALUES(?,?,?,?,?,?,?,?,?)",
+                    "s1,s2,s3,behind_s) VALUES(?,?,?,?,?,?,?,?,?,?)",
                     (now, team_no, pilot, kart, float(lap_s), ahead_s,
-                     sectors.get("s1"), sectors.get("s2"), sectors.get("s3")))
+                     sectors.get("s1"), sectors.get("s2"), sectors.get("s3"),
+                     behind_s))
         self._rating_dirty = True
 
     def _note_sectors(self, team_no: str, row: dict):
@@ -756,15 +782,21 @@ class KartPool:
         """
         return rating.cfg_with_defaults(self.cfg.get("rating"))["tow_gap_s"]
 
+    @property
+    def push_gap_s(self) -> float:
+        """How close behind counts as a shove — the model's setting, not a copy."""
+        return rating.cfg_with_defaults(self.cfg.get("rating"))["push_gap_s"]
+
     def ratings(self, force: bool = False) -> dict:
         """Kart scores, recomputed at most every few seconds."""
         if not (force or self._rating_dirty) or \
                 (not force and time.time() - self._rating_at < self.cfg["rating_refresh_s"]):
             return self._rating
         with self._lock, self._con() as con:
-            samples = [(r["ts"], r["pilot"], r["kart"], r["lap_s"], r["ahead_s"])
-                       for r in con.execute(
-                           "SELECT ts,pilot,kart,lap_s,ahead_s FROM kart_lap")]
+            samples = [(r["ts"], r["pilot"], r["kart"], r["lap_s"], r["ahead_s"],
+                        r["behind_s"]) for r in con.execute(
+                           "SELECT ts,pilot,kart,lap_s,ahead_s,behind_s "
+                           "FROM kart_lap")]
         try:
             self._rating = rating.rate(samples, self.cfg.get("rating"))
         except Exception as e:
@@ -852,6 +884,7 @@ class KartPool:
                 # seen in traffic has not really been read.
                 "clean_laps": info.get("clean_laps", 0),
                 "tow_laps": info.get("tow_laps", 0),
+                "push_laps": info.get("push_laps", 0),
                 "retired": num in gone,
                 "retired_reason": (gone.get(num) or {}).get("reason", ""),
             }

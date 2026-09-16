@@ -79,6 +79,9 @@ DEFAULTS = {
     # discards 60% of the field's laps for an effect that is already zero
     # there; under 0.5 a kart seen only in traffic gets graded anyway.
     "tow_gap_s": 0.8,
+    # Where a kart behind is close enough to be shoving.  Contact, not air, so
+    # it is nearer than a tow: a kart two lengths back is touching you.
+    "push_gap_s": 0.4,
     "tow_weight": 0.35,
     "weight_by_consistency": True,
     "weight_floor": 0.35,     # the least an inconsistent driver can count
@@ -368,12 +371,15 @@ def fade_by_kart(runs: list, min_laps: int = 9) -> dict:
 
 
 def split_sample(s: tuple) -> tuple:
-    """Accept ``(ts, pilot, kart, lap_s)`` or the same with a trailing gap.
+    """Normalise ``(ts, pilot, kart, lap_s[, ahead_s[, behind_s]])``.
 
     Older recordings and the tests carry four fields; the live feed now carries
-    the gap to the kart ahead as a fifth.
+    the gap to the kart ahead as a fifth and the gap to the kart behind as a
+    sixth.  A field that was never recorded is missing, not nought.
     """
-    return (s[0], s[1], s[2], s[3], s[4] if len(s) > 4 else None)
+    return (s[0], s[1], s[2], s[3],
+            s[4] if len(s) > 4 else None,
+            s[5] if len(s) > 5 else None)
 
 
 def rate(samples: list, cfg: dict = None) -> dict:
@@ -411,16 +417,22 @@ def rate(samples: list, cfg: dict = None) -> dict:
     # is still listed rather than silently dropped.
     raw_laps = defaultdict(int)
     tow_laps = defaultdict(int)
-    for _ts, _pilot, kart, _lap_s, ahead in samples:
+    push_laps = defaultdict(int)
+    for _ts, _pilot, kart, _lap_s, ahead, behind in samples:
         raw_laps[kart] += 1
         if ahead is not None and ahead <= cfg["tow_gap_s"]:
             tow_laps[kart] += 1
+        # Counted and shown, never used to move a grade.  A shove from behind
+        # does make a lap quicker, but we have no measurement of by how much,
+        # and discounting laps on a guess costs clean evidence for nothing.
+        if behind is not None and behind <= cfg["push_gap_s"]:
+            push_laps[kart] += 1
 
     # Residual per lap, then one robust observation per (pilot, kart) segment.
     pilot_of = _pilot_keys(samples, cfg["min_pilot_laps"])
     seg_res = defaultdict(list)
     seg_clean = defaultdict(list)
-    for ts, pilot, kart, lap_s, ahead in samples:
+    for ts, pilot, kart, lap_s, ahead, _behind in samples:
         r = lap_s - base.at(ts)
         if not (-cfg["trim_lo"] <= r <= cfg["trim_hi"]):
             continue
@@ -541,6 +553,8 @@ def rate(samples: list, cfg: dict = None) -> dict:
             "fade_runs": (fade.get(kart) or {}).get("runs", 0),
             # How much of what we know about this kart came from traffic.
             "tow_laps": tow_laps.get(kart, 0),
+            # Shown beside the tow, but it never moves the grade — see above.
+            "push_laps": push_laps.get(kart, 0),
             "clean_laps": max(0, n_raw - tow_laps.get(kart, 0)),
         }
 

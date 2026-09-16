@@ -566,6 +566,49 @@ class TestKnowingWhereWeStandBeforeTheLightsGoOut(PoolCase):
         self.assertIsNone(fleet["30"]["best_delta_s"])
 
 
+class TestTheGapBehind(PoolCase):
+    """The same interval read the other way: who is close enough to shove."""
+
+    @staticmethod
+    def grid(*pairs):
+        return [{"pos": str(p), "kart": k, "gap": g} for p, k, g in pairs]
+
+    def test_it_is_the_interval_to_the_kart_chasing(self):
+        got = KartPool.gaps_behind(self.grid((1, "10", "0.0"),
+                                             (2, "11", "0.4"),
+                                             (3, "12", "6.9")))
+        self.assertAlmostEqual(got["10"], 0.4)
+        self.assertAlmostEqual(got["11"], 6.5)
+        self.assertIsNone(got["12"], "nobody is chasing the last kart")
+
+    def test_ahead_and_behind_are_the_same_interval(self):
+        grid = self.grid((1, "10", "0.0"), (2, "11", "0.4"), (3, "12", "6.9"))
+        ahead, behind = KartPool.gaps_ahead(grid), KartPool.gaps_behind(grid)
+        self.assertAlmostEqual(behind["10"], ahead["11"])
+        self.assertAlmostEqual(behind["11"], ahead["12"])
+
+    def test_a_lapped_kart_drops_out_of_both(self):
+        grid = self.grid((1, "10", "0.0"), (2, "11", "2 laps"), (3, "12", "8.0"))
+        self.assertNotIn("11", KartPool.gaps_behind(grid))
+        self.assertNotIn("11", KartPool.gaps_ahead(grid))
+
+    def test_an_empty_grid_is_not_a_crash(self):
+        self.assertEqual(KartPool.gaps_behind([]), {})
+        self.assertEqual(KartPool.gaps_behind([{"kart": "10"}]), {})
+
+    def test_the_shove_is_stored_against_the_lap(self):
+        import sqlite3
+        self.seed([("1", "ALPHA", "10"), ("2", "BRAVO", "11")])
+        for n in (1, 2):
+            self.pool.observe([
+                dict(row("1", "ALPHA", laps=n), pos="1", gap="0.0"),
+                dict(row("2", "BRAVO", laps=n), pos="2", gap="0.3")])
+        con = sqlite3.connect(self.db)
+        got = dict(con.execute("SELECT kart, behind_s FROM kart_lap"))
+        self.assertAlmostEqual(got["10"], 0.3, msg="11 is right behind 10")
+        self.assertIsNone(got["11"], "nobody behind the last kart")
+
+
 class TestPersistence(PoolCase):
     def test_state_survives_a_restart(self):
         self.seed([("1", "ALPHA", "10")])
