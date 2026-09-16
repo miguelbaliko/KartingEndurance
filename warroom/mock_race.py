@@ -9,14 +9,21 @@ speed you ask for.
     python3 mock_race.py                 # 60× real time, port 8080
     python3 mock_race.py --speed 200     # a 24h race in about seven minutes
     python3 mock_race.py --lanes 1       # fully automatic counting, no taps
+    python3 mock_race.py --no-taps       # you answer the lanes, from the phone
 
 The simulator knows which kart every team is really in.  The war room has to
-work that out from the stops you resolve, so ``/mock/truth`` shows both side by
-side and scores how many the war room has right — that is the number to watch
-while rehearsing.
+work that out from the lane each stop used, so ``/mock/truth`` shows both side
+by side and scores how many the war room has right — that is the number to
+watch while rehearsing.
+
+Somebody has to tap those lanes or the war room never learns anything, so the
+simulator plays that part too, tapping only the lane, which is all a person
+standing in the pit lane can actually see.  ``--no-taps`` hands the phone back
+to you.
 """
 
 import argparse
+import collections
 import os
 import random
 import sys
@@ -53,7 +60,10 @@ class Team:
         self.driver = 0
         self.kart = None
         self.laps = 0
-        self.last_lane = None
+        # What the person in the pit lane saw, oldest first: one (lane, kart)
+        # per stop.  The war room asks about a stop a frame or two after it
+        # happens, which can be after the next one, so the answers queue.
+        self.taps = collections.deque()
         self.pits = 0
         self.best = None
         self.last = None
@@ -91,7 +101,8 @@ class MockRace:
             team.kart = karts.pop()
             team.next_stop_at = self.rng.uniform(0.55, 1.0) * self.stint_s
         # Whatever is left over waits in the lanes.
-        self.pit_order = []
+        self.read_off = 0   # stops the crew had to settle by reading the kart
+        self.tap_seq = 0    # stops in the order they really happened
         self.queues = {i + 1: [] for i in range(lanes)}
         for i, kart in enumerate(karts):
             self.queues[i % lanes + 1].append(kart)
@@ -125,19 +136,18 @@ class MockRace:
     def pit(self, team):
         """A stop: hand the kart to a lane, take the one at the front."""
         team.pits += 1
-        self.pit_order.append(team.number)
         team.driver = (team.driver + 1) % len(team.drivers)
         team.in_pit_until = self.t + self.rng.uniform(150, 200)
         team.next_stop_at = self.t + self.rng.uniform(0.8, 1.05) * self.stint_s
         team.last = self.lap_time(team) + self.rng.uniform(25, 40)   # the in-lap
         lane = self.rng.randint(1, self.lanes)
-        # What the person in the pit lane would see and tap on the phone.
-        team.last_lane = lane
         queue = self.queues[lane]
         taken = queue.pop(0) if queue else team.kart
         if taken != team.kart:
             queue.append(team.kart)
         team.kart = taken
+        self.tap_seq += 1
+        team.taps.append((self.tap_seq, lane, taken))
 
     # ── the feed ──────────────────────────────────────────────────────────────
     def rows(self) -> list:
@@ -167,6 +177,46 @@ class MockRace:
     def truth(self) -> dict:
         return {t.number: t.kart for t in self.teams}
 
+    # ── the person with the phone ─────────────────────────────────────────────
+    def answer(self, pool, fumble: int = 0) -> tuple:
+        """Tap the lane for every stop the war room is still asking about.
+
+        Only the lane: that is all someone standing in the pit lane can
+        honestly see, and working out which kart came out of it is the war
+        room's job — the whole thing /mock/truth scores.  The exception is a
+        stop the war room has given up on ("asks": "kart"), where our side of
+        the lane came up empty; there a real crew walks over and reads the
+        number off the kart, so we do too, and count it.
+
+        ``fumble`` names this many of the taps to the wrong lane, which is the
+        mistake a tired person actually makes.  Returns (tapped, fumbled).
+        """
+        by_team = {t.number: t for t in self.teams}
+        ready = []
+        for q in pool.pending():
+            team = by_team.get(str(q["team_no"]))
+            if team is None or not team.taps:
+                continue
+            ready.append((team.taps.popleft(), q))
+        tapped = fumbled = 0
+        # In the order the karts really left the lane, not the order the feed
+        # noticed.  Two teams taking from the same lane in the same minute come
+        # through as one question then the other, and answering them the wrong
+        # way round hands each of them the other's kart — which is precisely
+        # what someone standing there tapping as it happens never does.
+        for (_seq, lane, kart), q in sorted(ready, key=lambda r: r[0][0]):
+            if q["asks"] == "kart":
+                self.read_off += 1
+                pool.resolve(q["id"], kart_out=kart)
+                continue
+            if fumbled < fumble and self.lanes > 1:
+                fumbled += 1
+                pool.resolve(q["id"], lane=lane % self.lanes + 1)
+                continue
+            tapped += 1
+            pool.resolve(q["id"], lane=lane)
+        return tapped, fumbled
+
 
 def fmt(secs):
     if not secs:
@@ -194,6 +244,9 @@ def main():
     ap.add_argument("--seed-karts", action="store_true",
                     help="tell the war room the starting allocation, as you would "
                          "type it in before the start")
+    ap.add_argument("--no-taps", action="store_true",
+                    help="do not answer the lane questions — you do it, from the "
+                         "pit phone, which is the point of a rehearsal")
     args = ap.parse_args()
 
     os.environ.setdefault("WARROOM_DB", os.path.join(
@@ -227,6 +280,9 @@ def main():
         right = sum(1 for r in rows if r["ok"])
         return app.jsonify({
             "counted_right": right, "of": len(rows),
+            # Stops the war room could not work out from the lanes, where the
+            # crew had to read the number off the kart.  Worked out beats read.
+            "read_off_the_kart": race.read_off,
             "kart_quality": race.kart_quality,
             "race_time": hms(race.t), "teams": rows,
         })
@@ -238,12 +294,15 @@ def main():
             app._process_meta({"dyn1": race.header(total_s),
                                "title1": f"{args.hours:g}h mock · Palmela (mock)"})
             app._process_rows(race.rows())
+            if not args.no_taps:
+                race.answer(app.POOL)
             time.sleep(tick)
 
     threading.Thread(target=drive, daemon=True).start()
     print(f"\n  MOCK RACE  ->  http://localhost:{args.port}"
           f"   (pit phone: /pit, truth: /mock/truth)")
-    print(f"  {args.speed:g}× speed · {args.lanes} lane(s) · {args.karts} karts\n")
+    print(f"  {args.speed:g}× speed · {args.lanes} lane(s) · {args.karts} karts"
+          f" · lane taps: {'you' if args.no_taps else 'simulated'}\n")
     app.app.run(host="0.0.0.0", port=args.port, debug=False, use_reloader=False)
 
 
