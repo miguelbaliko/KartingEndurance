@@ -159,6 +159,19 @@ class TestASweepThatCannotReachAnythingSaysSo(unittest.TestCase):
         self.assertIn("network result", out)
         self.assertNotIn("Nothing running", out)
 
+    def test_the_verdict_is_printed_once_not_once_per_pass(self):
+        """"2 of 6" above the real "2 of 18" invites reading the wrong one."""
+        self.warroom._find_apex_endpoints = lambda url: {"ws": "wss://x/"}
+        self.addCleanup(setattr, self.warroom, "_find_apex_endpoints",
+                        self._find_ep)
+
+        def always_failing(url, seconds):
+            self.warroom._ajax_state["errors"] = \
+                self.warroom._ajax_state.get("errors", 0) + 1
+            return []
+        out = self.sweep(always_failing)
+        self.assertEqual(out.count("Reached nothing"), 1, out)
+
     def test_discovery_failing_is_not_a_quiet_track_either(self):
         """Without endpoints we never reached the feed, so we heard nothing."""
         self.warroom._find_apex_endpoints = lambda url: {}

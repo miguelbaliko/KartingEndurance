@@ -322,6 +322,12 @@ def find(slugs: list, seconds: float, retry: bool = True):
         live.extend(again_live)
         unreachable = still_dark
 
+    if not retry:
+        # The second pass is half a sweep, not a sweep: its own verdict would
+        # print "2 of 6" right above the real "2 of 18" and invite someone at
+        # 3am to read the wrong number.  The caller reports for both.
+        return live, unreachable
+
     if live:
         print("\n  Record one with:\n")
         for url, _s in live:
