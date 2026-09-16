@@ -460,6 +460,10 @@ td{padding:7px 8px;white-space:nowrap}
 .lap-p{color:var(--tx2);margin-left:auto}
 tr.clickable{cursor:pointer}
 /* Race control's own log, which the feed sends and we used to throw away. */
+.pits-split{
+  display:block;font-size:10px;font-weight:700;color:#f97316;
+  letter-spacing:.04em;margin-top:2px;
+}
 .rc-row.rc-us{
   background:rgba(249,115,22,.14);border-left:2px solid #f97316;
   padding-left:6px;margin-left:-8px;
@@ -1647,8 +1651,15 @@ function renderStrategy(s) {
   document.getElementById('dec-detail').textContent = st.detail;
   document.getElementById('dec-why').textContent = st.why || '';
   const pd = s.pits_done, pt = s.mandatory_pits;
+  // The feed's count is the one the stewards use, so it is the one shown —
+  // but if our own log disagrees, one of the two is wrong and both matter.
+  const split = s.stop_count_split;
   document.getElementById('pits-val').innerHTML =
-    `${pd} <span>/ ${pt}</span>`;
+    `${pd} <span>/ ${pt}</span>` + (split
+      ? `<span class="pits-split" title="The feed counts ${split.feed} stops,
+          our own log has ${split.ours}. The feed is what §3.8 is judged on;
+          the gap means a stop we never logged, or a feed counting something
+          else.">⚠ we logged ${split.ours}</span>` : '');
 }
 
 /** Every kart waiting in the lanes, both queues side by side, in the order

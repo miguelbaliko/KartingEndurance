@@ -378,6 +378,53 @@ class TestPracticeMode(AppCase):
         self.assertNotIn("bucket_minutes", self.app.POOL.rating_cfg())
 
 
+class TestStopCountDisagreement(AppCase):
+    """The feed's stop count and our own log must agree, or we must be told.
+
+    §3.8 is judged on the organiser's count, so the feed's number is the one
+    acted on.  A gap means either a stop we never logged — in which case our
+    box times and driver totals are wrong too — or a feed counting something
+    we are not, in which case the number steering the endgame is not ours.
+    """
+
+    def setUp(self):
+        super().setUp()
+        with self.app.get_db() as con:
+            con.execute("INSERT INTO drivers(name) VALUES('Miguel')")
+            for _ in range(3):
+                con.execute("INSERT INTO stints(driver_id,start_ts,end_ts,"
+                            "duration_seconds) VALUES(1,'2026-09-19T10:00:00',"
+                            "'2026-09-19T11:00:00',3600)")
+        self.app.kv_set("status", "racing")
+
+    def feed_says(self, pits):
+        self.app._process_rows([{
+            "pos": "1", "kart": "30", "team": self.app.CFG["team_name"],
+            "driver": "Miguel", "last_lap": "1:02.500", "last_lap_s": 62.5,
+            "best_lap": "1:02.000", "total_laps": "300", "pits": pits,
+            "gap": "", "in_pit": False, "row_cls": ""}])
+        return self.snap()
+
+    def test_agreement_says_nothing(self):
+        self.assertIsNone(self.feed_says("3")["stop_count_split"])
+
+    def test_the_feed_counting_more_is_reported(self):
+        s = self.feed_says("9")
+        self.assertEqual(s["stop_count_split"], {"feed": 9, "ours": 3})
+        self.assertEqual(s["pits_done"], 9, "the stewards' count still wins")
+
+    def test_the_feed_counting_fewer_is_reported(self):
+        s = self.feed_says("1")
+        self.assertEqual(s["stop_count_split"], {"feed": 1, "ours": 3})
+        self.assertEqual(s["pits_done"], 1)
+
+    def test_a_feed_with_no_counter_falls_back_to_our_log_quietly(self):
+        """Nothing to disagree with — our log is all there is."""
+        s = self.feed_says("")
+        self.assertIsNone(s["stop_count_split"])
+        self.assertEqual(s["pits_done"], 3)
+
+
 class TestWhoAControlMessageIsAbout(AppCase):
     """Race control addresses one competitor by opening with their number."""
 

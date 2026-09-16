@@ -1857,12 +1857,22 @@ def make_snapshot() -> dict:
 
     # The timekeepers' pit count is the one that settles a protest, so use it
     # when the feed carries it and fall back to our own stint log when it does not.
+    # The feed's counter wins: it is the organiser's count, and §3.8 is judged
+    # on their records, not ours.  But the two disagreeing is worth saying out
+    # loud — it means either we have missed logging a stop, in which case our
+    # box times and driver totals are wrong too, or the feed is counting
+    # something we are not, in which case the number steering the whole endgame
+    # is not the one we think.  Silence on this was the expensive option.
     pits_done = stints_done
+    stop_count_split = None
     if my_team:
         try:
             pits_done = int(str(my_team.get("pits", "")).strip())
         except (TypeError, ValueError):
             pass
+        else:
+            if pits_done != stints_done:
+                stop_count_split = {"feed": pits_done, "ours": stints_done}
 
     # Is the driver on track dropping off?  Their own laps from this stint,
     # in the order they were run — nobody else's pace comes into it.
@@ -2009,6 +2019,7 @@ def make_snapshot() -> dict:
         "fatigue":          fatigue,
         "pits_done":        pits_done,
         "stints_done":      stints_done,
+        "stop_count_split": stop_count_split,
         "mandatory_pits":   CFG["race"]["mandatory_pits"],
         "stint_max_minutes": CFG["race"]["stint_max_minutes"],
         "next_karts":       candidates,
