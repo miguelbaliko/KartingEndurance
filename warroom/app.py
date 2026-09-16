@@ -738,6 +738,10 @@ def apex_session_result(page_url: str, sid: str) -> dict:
 def _reset_ajax_state():
     _ajax_state.update({"init": "1", "index": "0", "counter": 0, "errors": 0})
 
+# An incremental cell arrives as its own command, not under "C": KIP sends
+# "r56c9|tn|1:12.502" — row 56, column 9, the CSS class, then the text.
+_PIPE_CELL = re.compile(r'^(r\w+?)(c\d+)$')
+
 def _parse_apex_pipe(msg: str) -> tuple:
     """Parse Apex Timing pipe-delimited WebSocket protocol.
     Returns (rows, cell_updates, meta).
@@ -777,6 +781,24 @@ def _parse_apex_pipe(msg: str) -> tuple:
             if hp.row_kart_map:
                 _row_kart_map.update(hp.row_kart_map)
             rows.extend(hp.rows)
+
+        elif _PIPE_CELL.match(cmd):
+            # The live form.  Apex only sends the grid once; everything after
+            # it — every lap time, lap count, position and gap — comes through
+            # here.  Dropping these left the board frozen on the opening grid
+            # for the whole session, refreshing only when a dropped poll forced
+            # a full resend.
+            m = _PIPE_CELL.match(cmd)
+            row_id, col_id = m.group(1), m.group(2)
+            kart = _row_kart_map.get(row_id)
+            # The header is the authority on what a column holds; the CSS class
+            # is only a fallback, for the same reason a sector time once got
+            # read as a lap time.
+            field = _global_col_types.get(col_id) or _CELL_MAP.get(mod)
+            if kart and field:
+                text = re.sub(r'<[^>]+>', '', val).strip()
+                if text:
+                    cell_updates.setdefault(kart, {})[field] = text
 
         elif cmd == 'C' and mod:
             # Incremental cell update: mod="r14915c6", val="<td ...>0:52.3</td>"

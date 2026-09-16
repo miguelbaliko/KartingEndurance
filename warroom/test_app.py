@@ -649,6 +649,66 @@ class TestAClippedTeamNameStillFindsUs(AppCase):
         self.assertEqual(s["teams"][0]["category"], "AM")
 
 
+class TestTheBoardKeepsMoving(AppCase):
+    """Apex sends the grid once; everything after it is incremental cells.
+
+    Captured live from KIP, Session 33, 2026-09-16.  The parser only knew the
+    "C|r14915c6|<td>..</td>" form, and KIP sends the cell id as the command
+    itself — so every lap time, lap count, position and gap after the opening
+    grid was dropped.  The board froze on the first frame for the whole
+    session and only refreshed when a dropped poll forced a full resend, which
+    is why it ever appeared to work.
+    """
+
+    LIVE = ("r56c3||1\n"
+            "r56c8|tb|29.246\n"
+            "r56c9|tb|1:10.617\n"
+            "r56c10|ib|1:10.617\n"
+            "r56c11|in|9\n"
+            "r58c9|ti|1:11.035\n"
+            "r58c12|in|0.418\n"
+            "dyn1|countdown|208009\n")
+
+    def setUp(self):
+        super().setUp()
+        self.app._global_col_types.update(
+            {"c3": "pos", "c8": "s3", "c9": "last_lap",
+             "c10": "best_lap", "c11": "total_laps", "c12": "gap"})
+        self.app._row_kart_map.update({"r56": "202", "r58": "204"})
+
+    def test_a_live_cell_update_is_read(self):
+        _rows, cells, _meta = self.app._parse_apex_pipe(self.LIVE)
+        self.assertEqual(cells["202"]["last_lap"], "1:10.617")
+        self.assertEqual(cells["202"]["total_laps"], "9")
+        self.assertEqual(cells["202"]["pos"], "1")
+        self.assertEqual(cells["204"]["gap"], "0.418")
+
+    def test_the_header_beats_the_css_class(self):
+        """c9 is the lap column; "tb" only says the lap was a best."""
+        _r, cells, _m = self.app._parse_apex_pipe("r56c9|tb|1:10.617\n")
+        self.assertEqual(cells["202"], {"last_lap": "1:10.617"})
+
+    def test_a_cell_for_an_unknown_row_is_ignored(self):
+        _r, cells, _m = self.app._parse_apex_pipe("r99c9|tn|1:20.000\n")
+        self.assertEqual(cells, {})
+
+    def test_the_clock_still_comes_through_beside_them(self):
+        _r, _c, meta = self.app._parse_apex_pipe(self.LIVE)
+        self.assertEqual(meta["dyn1"], "208009")
+
+    def test_the_update_reaches_the_board(self):
+        self.app._process_rows([{
+            "pos": "1", "kart": "202", "team": "T202", "driver": "ULISSES R.",
+            "last_lap": "1:14.573", "last_lap_s": 74.573, "best_lap": "1:11.636",
+            "total_laps": "4", "gap": "", "in_pit": False, "row_cls": ""}])
+        self.assertEqual(self.snap()["teams"][0]["last_lap"], "1:14.573")
+        _r, cells, _m = self.app._parse_apex_pipe(self.LIVE)
+        self.app._apply_cell_updates(cells)
+        ours = self.snap()["teams"][0]
+        self.assertEqual(ours["last_lap"], "1:10.617")
+        self.assertEqual(ours["total_laps"], "9")
+
+
 class TestFindingOurRowByItsNumber(AppCase):
     """KIP's own sessions carry no team column at all.
 
