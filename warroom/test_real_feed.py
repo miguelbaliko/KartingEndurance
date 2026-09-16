@@ -397,5 +397,95 @@ class TestControlLogPenalties(RealFeedCase):
         self.assertIn("chequered", flags)
 
 
+BIGKIP = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      "testdata", "apex-kip-13karts-lapcount.raw")
+
+
+class TestTheBiggestKipFieldWeHaveSeen(RealFeedCase):
+    """KIP Session 46, 2026-09-16: thirteen karts, and a lap counter.
+
+    Every other KIP capture is two to ten karts, and the ten-kart one sends no
+    "tlp" at all.  This one does, so it is the closest thing to the event's
+    own configuration we have been able to record — and the only KIP fixture
+    where the live cell updates carry enough for the whole board to fill.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.app._global_col_types.clear()
+        self.app._row_kart_map.clear()
+        self.app._reset_sector_best()
+        self.cells = 0
+        with open(BIGKIP, encoding="utf-8") as f:
+            for frame in f.read().split("\n\x00\n"):
+                r, c, m = self.app._parse_apex_pipe(frame)
+                if m: self.app._process_meta(m)
+                if c:
+                    self.cells += len(c)
+                    self.app._apply_cell_updates(c)
+                if r: self.app._process_rows(r)
+        # Straight off the parsed rows, not through make_snapshot: the other
+        # cases here never touch the database, and borrowing whichever one the
+        # last test module left behind is how this passed alone and failed in
+        # the suite.
+        self.teams = sorted(self.app._teams,
+                            key=lambda t: int(t.get("pos") or 99))
+
+    def test_the_whole_field_arrives(self):
+        self.assertEqual(len(self.teams), 13)
+        self.assertEqual([t["pos"] for t in self.teams[:3]], ["1", "2", "3"])
+
+    def test_this_one_does_carry_a_lap_counter(self):
+        """The distinction from the sprint fixture, which carries none."""
+        laps = [t["total_laps"] for t in self.teams if t.get("total_laps")]
+        self.assertEqual(len(laps), 13)
+        self.assertEqual(laps[0], "7")
+
+    def test_the_live_cell_updates_were_read(self):
+        """Forty of them across twelve frames — the board filled from these."""
+        self.assertGreater(self.cells, 20)
+
+    def test_every_kart_has_all_three_sectors_marked(self):
+        for t in self.teams:
+            self.assertEqual(sorted(t["sectors"]), ["s1", "s2", "s3"], t["kart"])
+
+    def test_the_three_mark_states_all_appear(self):
+        """Purple for the session's best, green for a personal best, yellow
+        for a sector slower than that driver's own."""
+        marks = {v["mark"] for t in self.teams for v in t["sectors"].values()}
+        self.assertEqual(marks, {"sb", "pb", "slow"})
+
+    def test_a_purple_is_never_shared_and_may_be_absent(self):
+        """The column shows the driver's LAST sector, coloured for what it was.
+
+        So the purple sits on a kart only while its most recent sector is
+        still the session's best — once that driver posts a slower one it
+        leaves the table entirely, which is what F1 does and what stops a
+        purple sticking to a kart that has long since dropped off.  In this
+        capture the best S1 is 22.699 and the quickest current one is 23.010,
+        so S1 has no purple at all and that is correct.
+        """
+        for sector in ("s1", "s2", "s3"):
+            best = [t["kart"] for t in self.teams
+                    if t["sectors"].get(sector, {}).get("mark") == "sb"]
+            self.assertLessEqual(len(best), 1, f"{sector}: {best}")
+        held = sum(1 for sector in ("s1", "s2", "s3")
+                   for t in self.teams
+                   if t["sectors"].get(sector, {}).get("mark") == "sb")
+        self.assertGreater(held, 0, "no purple anywhere means it never marks one")
+
+    def test_a_purple_belongs_to_the_quickest_current_sector(self):
+        for sector in ("s1", "s2", "s3"):
+            times = {t["kart"]: float(t["sectors"][sector]["t"]) for t in self.teams}
+            marked = [t["kart"] for t in self.teams
+                      if t["sectors"][sector]["mark"] == "sb"]
+            if marked:
+                self.assertEqual(marked[0], min(times, key=times.get), sector)
+
+    def test_the_race_clock_is_readable_from_it(self):
+        import apex_dump
+        self.assertTrue(apex_dump._clock_reads(["136781", "106729", "76725"]))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
