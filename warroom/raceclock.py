@@ -20,6 +20,14 @@ import time
 # digits and colons around the match.
 _CLOCK = re.compile(r'(?<![\d:.])(\d{1,3}):([0-5]\d)(?::([0-5]\d))?(?![\d:.])')
 
+# Both Apex installs we have sampled — KIP Palmela and RKC — send the clock as
+# a bare millisecond counter rather than as h:mm:ss, so the colon pattern above
+# never sees it.  A bare number on its own could be anything, though, so it only
+# becomes a clock once it has been watched moving at about a thousand a second.
+_MS_PER_S = 1000.0
+_MS_SLACK = 0.25            # how far off that rate a reading may sit
+_MS_MAX_DIGITS = 12
+
 # Words the timing feeds put next to a countdown, in the languages Apex ships.
 _REMAINING_WORDS = ("remain", "restant", "restante", "left", "to go", "rest")
 _ELAPSED_WORDS = ("elapsed", "écoulé", "ecoule", "decorrido", "run")
@@ -46,6 +54,8 @@ class ApexClock:
         self.at = 0.0
         self.stale_after = stale_after
         self._prev_single = None
+        self._ms_prev = None        # (value, when) of the last bare number
+        self._ms_confirmed = False  # this feed has proved it counts in millis
 
     # ── ingest ────────────────────────────────────────────────────────────────
     def update(self, text: str, now: float = None) -> bool:
@@ -53,7 +63,10 @@ class ApexClock:
         now = now or time.time()
         values = parse_clocks(text)
         if not values:
-            return False
+            secs = self._millis_as_seconds(text, now)
+            if secs is None:
+                return False
+            values = [secs]
         low = (text or "").lower()
 
         if len(values) >= 2:
@@ -88,6 +101,38 @@ class ApexClock:
                 self._set(elapsed=value, now=now)
         self._prev_single = value
         return True
+
+    def _millis_as_seconds(self, text, now: float):
+        """A bare millisecond counter, in seconds — or None if it is not one.
+
+        The first sighting proves nothing: a lap count, a temperature and a
+        distance are all bare numbers too.  What a clock does and they do not
+        is move at a thousand a second, so that is what is waited for.  Once a
+        feed has shown it, it keeps the benefit of the doubt — otherwise the
+        clock would be dropped exactly when it stops under a red flag, which is
+        the moment it is worth most.
+        """
+        t = (text or "").strip()
+        if not t.isdigit() or len(t) > _MS_MAX_DIGITS:
+            self._ms_prev = None
+            return None
+        value = int(t)
+        prev, self._ms_prev = self._ms_prev, (value, now)
+        if self._ms_confirmed:
+            return value / _MS_PER_S
+        if prev is None or now <= prev[1]:
+            return None
+        rate = abs(value - prev[0]) / (now - prev[1])
+        if abs(rate - _MS_PER_S) > _MS_PER_S * _MS_SLACK:
+            return None
+        self._ms_confirmed = True
+        # The reading that proved the rate also showed the direction, so hand
+        # it on: without it the first good value is assumed to count up and the
+        # wall reports fifteen minutes elapsed in a twenty-five hour race until
+        # the next frame corrects it.
+        if self._prev_single is None:
+            self._prev_single = prev[0] / _MS_PER_S
+        return value / _MS_PER_S
 
     def _set(self, elapsed=None, remaining=None, now=0.0):
         self.at = now

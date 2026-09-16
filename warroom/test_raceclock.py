@@ -83,3 +83,60 @@ class TestClock(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestABareMillisecondCounter(unittest.TestCase):
+    """KIP sends the clock as a bare number of milliseconds, not h:mm:ss.
+
+    Both Apex installs we have sampled do it — KIP Palmela's dyn1 went
+    928012 -> 897863 -> 867412 thirty seconds apart, which is a thousand a
+    second counting down.  Before this the colon pattern saw nothing there and
+    we ran the whole race on our own clock, which drifts and knows nothing
+    about a red flag stopping the countdown.
+    """
+
+    def feed(self, values, step=30.0, clock=None):
+        c, t = clock or ApexClock(), 1000.0
+        reads = []
+        for v in values:
+            reads.append(c.update(v, now=t))
+            t += step
+        return c, reads
+
+    def test_kips_real_sequence_reads_as_time_remaining(self):
+        c, reads = self.feed(["928012", "897863", "867412"])
+        self.assertEqual(reads, [False, True, True],
+                         "the first sighting proves nothing on its own")
+        self.assertAlmostEqual(c.remaining, 867.412, places=3)
+        self.assertIsNone(c.elapsed)
+
+    def test_a_counter_going_up_is_elapsed(self):
+        c, _ = self.feed(["60000", "90000", "120000"])
+        self.assertAlmostEqual(c.elapsed, 120.0, places=3)
+
+    def test_a_lap_count_is_not_a_clock(self):
+        """It moves, but nowhere near a thousand a second."""
+        c, reads = self.feed(["118", "119", "120", "121"])
+        self.assertEqual(reads, [False] * 4)
+        self.assertIsNone(c.remaining)
+        self.assertIsNone(c.elapsed)
+
+    def test_a_big_number_at_the_wrong_rate_is_not_a_clock(self):
+        c, reads = self.feed(["152400", "156210", "160020"])
+        self.assertEqual(reads, [False] * 3)
+        self.assertIsNone(c.elapsed)
+
+    def test_a_red_flag_freezing_it_does_not_lose_the_clock(self):
+        """Confirmed once, kept — a stopped clock is when it matters most."""
+        c, _ = self.feed(["928012", "897863", "897863", "897863"])
+        self.assertAlmostEqual(c.remaining, 897.863, places=3)
+
+    def test_the_written_out_form_is_untouched(self):
+        c = ApexClock()
+        self.assertTrue(c.update("0:45:00 / 25:00:00", now=1000.0))
+        self.assertEqual(c.total, 90000)
+        self.assertAlmostEqual(c.elapsed, 2700.0)
+
+    def test_a_lap_time_is_still_never_a_race_clock(self):
+        c = ApexClock()
+        self.assertFalse(c.update("Best lap 1:02.478", now=1000.0))
