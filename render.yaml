@@ -4,7 +4,12 @@ services:
     runtime: python
     rootDir: warroom
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --worker-class gevent --workers 2 --timeout 0
+    # One worker, deliberately.  The live state (the teams table, the kart
+    # pool, the sector bests) lives in the process, and the Apex poller is a
+    # thread started at import with a resumable cursor.  A second worker is a
+    # second poller stealing frames from the first, and a second copy of the
+    # race.
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 0
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

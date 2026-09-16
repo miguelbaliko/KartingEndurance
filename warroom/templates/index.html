@@ -98,19 +98,6 @@ html,body{height:100%;background:var(--bg0);color:var(--tx);
 .tb-btn.go:hover{background:#0a2a18}
 .tb-btn.warn {border-color:var(--red);color:var(--red)}
 .tb-btn.warn:hover{background:#2a0a0a}
-.tb-btn.active-mode{background:var(--bg4);border-color:var(--cyan);color:var(--cyan)}
-
-/* ── Mode toggle ── */
-.mode-toggle{
-  display:flex;background:var(--bg3);border:1px solid var(--line2);
-  border-radius:var(--r);overflow:hidden;margin-left:10px;
-}
-.mode-btn{
-  padding:4px 10px;background:none;border:none;color:var(--tx3);
-  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  cursor:pointer;transition:all .15s;
-}
-.mode-btn.active{background:var(--bg4);color:var(--cyan)}
 
 /* ── Main split ── */
 #main{display:flex;flex:1;overflow:hidden;gap:0}
@@ -451,10 +438,6 @@ td{padding:7px 8px;white-space:nowrap}
 .bn-lane{font-size:10px;color:var(--tx3);margin-left:auto}
 .bn-verdict{font-size:12px;font-weight:700;text-align:center;padding:8px;border-radius:8px;
   margin-bottom:8px}
-.bn-better{background:rgba(34,197,94,.15);color:#22c55e}
-.bn-worse{background:rgba(239,68,68,.15);color:#ef4444}
-.bn-mixed{background:rgba(234,179,8,.15);color:#eab308}
-.bn-unknown{background:var(--bg2);color:var(--tx3)}
 .bn-note{font-size:10px;color:var(--tx3);text-align:center}
 .pit-manual{background:none;border:1px solid var(--line);color:var(--tx3);
   border-radius:6px;padding:4px 9px;font-size:10px;cursor:pointer}
@@ -534,8 +517,6 @@ tr.clickable{cursor:pointer}
   border-bottom:1px solid var(--line)}
 .pp-row:last-child{border-bottom:none}
 .pp-tag{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;flex:none}
-.pp-blocker{background:rgba(239,68,68,.18);color:#ef4444}
-.pp-warn{background:rgba(234,179,8,.18);color:#eab308}
 .pp-ok{color:#22c55e;font-size:11px;padding:6px 2px}
 .td-virt{font-weight:700;font-size:12px}
 .virt-up{color:#22c55e}
@@ -1566,15 +1547,6 @@ async function setTeamKart(teamNo, team, current) {
   const v = prompt(`Kart number for ${team || '#' + teamNo}`, current || '');
   if (v === null) return;
   await api('kart/assign', {team_no: teamNo, kart: v.trim()});
-}
-
-function parseLapS(s) {
-  if (!s || s === '-') return null;
-  if (s.includes(':')) {
-    const p = s.split(':');
-    return parseFloat(p[0]) * 60 + parseFloat(p[1]);
-  }
-  return parseFloat(s) || null;
 }
 
 // ── My Team ──────────────────────────────────────────────────────

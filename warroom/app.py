@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """TPC War Room — Karting Endurance Strategy Tool"""
 
-from flask import Flask, render_template, jsonify, request, Response
+from flask import Flask, render_template, jsonify, request
 import threading, time, json, sqlite3, urllib.request, urllib.error, urllib.parse
-import html.parser, re, os, queue, math, statistics, unicodedata
+import html.parser, re, os, math, statistics, unicodedata
 from datetime import datetime, timedelta
 from typing import Optional
 from collections import defaultdict
@@ -14,7 +14,6 @@ from raceclock import ApexClock
 
 try:
     import websocket as _ws_mod
-    import ssl as _ssl
     _HAS_WS = True
 except ImportError:
     _HAS_WS = False
@@ -69,15 +68,21 @@ def load_cfg() -> dict:
         },
         "karts": dict(kartpool.DEFAULTS),
     }
+    race = karts = {}
     if os.path.exists(_CFG_PATH):
         with open(_CFG_PATH) as f:
             saved = json.load(f)
+        # The two nested sections are merged, not replaced: a saved file that
+        # is missing a key should fall back to the default for it, not lose it.
+        race, karts = saved.pop("race", {}), saved.pop("karts", {})
         base.update(saved)
-        if "race" in saved:
-            base["race"].update(saved["race"])
-        if "karts" in saved:
-            base["karts"].update(saved["karts"])
+        base["race"]["category"] = race.get("category", base["race"]["category"])
+    # Category first, saved values second.  The category fills in the stops and
+    # the stint ceiling; a number typed into the settings box then overrides it.
+    # The other order silently undid every such edit on the next restart.
     apply_category(base["race"])
+    base["race"].update(race)
+    base["karts"].update(karts)
     return base
 
 # §3.8 and §3.10: the only two numbers that differ between the categories.
@@ -87,10 +92,11 @@ CATEGORY_RULES = {
 }
 
 def apply_category(race: dict):
-    """Set the category's stops and stint ceiling, unless they were overridden.
+    """Fill in the category's stops and stint ceiling.
 
-    A saved config that names a category but keeps the other category's numbers
-    is the more likely mistake, so the category wins over stale saved values.
+    Called before the saved config is merged, so this is the default a saved
+    number overrides — naming a category is enough to get that category's
+    numbers, and typing one in by hand still wins.
     """
     rules = CATEGORY_RULES.get(str(race.get("category", "")).upper())
     if rules:
@@ -137,8 +143,6 @@ def init_db():
             INSERT OR IGNORE INTO kv VALUES ('pit_start',    '');
             INSERT OR IGNORE INTO kv VALUES ('driver_id',    '');
             INSERT OR IGNORE INTO kv VALUES ('pit_plan',     '');
-            INSERT OR IGNORE INTO kv VALUES ('session_mode', 'race');
-            INSERT OR IGNORE INTO kv VALUES ('next_driver_id', '');
                 """)
         # How long the box stop after this stint actually took. Without it
         # pit_loss_seconds can only ever be a guess.
@@ -320,7 +324,6 @@ _apex_ok = False
 _apex_session: dict = {"name": "", "light": "", "dyn1": "", "dyn2": "",
                        "weather": [], "control": []}
 _ws_msg_count = 0
-_sse_queues: list = []
 
 def _process_meta(meta: dict):
     """Update session state from parsed data-id elements.
@@ -370,25 +373,11 @@ def _feed_boxed_me(_team_no: str):
 def _feed_released_me(_team_no: str):
     """Our kart is running again — close the stop without anyone pressing a key."""
     if kv_get("status") == "pitting":
-        _do_pit_done(kv_get("next_driver_id") or kv_get("driver_id"), source="feed")
+        _do_pit_done(kv_get("driver_id"), source="feed")
 
 POOL = kartpool.KartPool(DB, CFG.get("karts", {}),
                          on_my_stop=_feed_boxed_me,
                          on_my_release=_feed_released_me)
-
-def broadcast():
-    data = "data: " + json.dumps(make_snapshot()) + "\n\n"
-    dead = []
-    for q in _sse_queues:
-        try:
-            q.put_nowait(data)
-        except queue.Full:
-            dead.append(q)
-    for q in dead:
-        try:
-            _sse_queues.remove(q)
-        except ValueError:
-            pass
 
 # ── Apex Timing data ingestion ─────────────────────────────────────────────────
 _PIT_MARK = re.compile(r'\bpit\b|\bbox\b|\bin_?pit\b', re.I)
@@ -495,7 +484,7 @@ def _process_rows(rows: list) -> bool:
         if built:
             _teams = built
             _apex_ok = True
-    # Outside the lock: the pool's callbacks broadcast, and broadcasting needs it.
+    # Outside the lock: the pool's callbacks take it themselves.
     _feed_pool(built)
     return True
 
@@ -838,7 +827,7 @@ def parse_control_log(html_s: str) -> list:
                     "text": text})
     return out
 
-def _ws_run(ws_url: str, done_evt: threading.Event):
+def _ws_run(ws_url: str):
     """Connect to Apex Timing WebSocket, push rows on every message."""
     global _apex_ok, _ws_msg_count
 
@@ -897,7 +886,6 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
         global _apex_ok
         _apex_ok = False
         log("APEX WS CLOSED", f"code={code}")
-        done_evt.set()
 
     def on_error(ws, _err):
         global _apex_ok
@@ -907,10 +895,7 @@ def _ws_run(ws_url: str, done_evt: threading.Event):
     ws = _ws_mod.WebSocketApp(ws_url,
         on_message=on_msg, on_error=on_error,
         on_close=on_close, on_open=on_open)
-    ws.run_forever(
-        sslopt={"cert_reqs": _ssl.CERT_NONE},
-        ping_interval=30, ping_timeout=10,
-    )
+    ws.run_forever(ping_interval=30, ping_timeout=10)
 
 # ── Pit plan ───────────────────────────────────────────────────────────────────
 def get_pit_plan() -> list:
@@ -967,12 +952,14 @@ def worker():
 
         ws_url = _find_ws_url(url) if _HAS_WS else None
         if ws_url and not _ws_blocked:
-            done = threading.Event()
             _ws_msg_count = 0
-            t = threading.Thread(target=_ws_run, args=(ws_url, done), daemon=True)
+            t = threading.Thread(target=_ws_run, args=(ws_url,), daemon=True)
             t.start()
-            done.wait(timeout=600)  # reconnect after 10 min max or on disconnect
-            t.join(timeout=5)
+            # The thread ends when run_forever returns, which is the only thing
+            # we are waiting for: a close, an error, or a socket that never
+            # opened.  Waiting on a close callback instead would sit here the
+            # full ten minutes whenever run_forever bailed without firing one.
+            t.join(timeout=600)
             # The timing ports are on a different host to the event page and are
             # not always reachable (corporate egress, a firewall between us and
             # live-data).  One silent attempt is enough to know — after that,
@@ -1928,9 +1915,6 @@ def make_snapshot() -> dict:
     my_out = next((t for t in teams_out if t.get("is_my_team")), None)
     boards = board_log()
 
-    # Session mode (qualifying vs race)
-    session_mode = kv_get("session_mode") or "race"
-
     # Pit plan
     raw_plan = get_pit_plan()
     n_planned = CFG["race"]["mandatory_pits"]
@@ -1978,7 +1962,6 @@ def make_snapshot() -> dict:
         "current_driver":   current_driver,
         "drivers":          drivers,
         # What this stint's laps are doing, so the rota is decided knowing.
-        "stint_fade_s":     fade_s,
         "fatigue":          fatigue,
         "pits_done":        pits_done,
         "stints_done":      stints_done,
@@ -2002,12 +1985,9 @@ def make_snapshot() -> dict:
         "feed_team_name":   feed_name or "",
         "apex_url":         CFG.get("apex_url", ""),
         "teams":            teams_out,
-        "session_mode":     session_mode,
         "pit_plan":         pit_plan_out,
         "clock_source":     clock_source,
-        "race_elapsed_fmt": fmt_duration(race_elapsed),
         "kartpool":         pool,
-        "next_driver_id":   kv_get("next_driver_id"),
         "auto_pit":         CFG["karts"].get("auto_pit", True),
         "exclude_teams":    (CFG["karts"].get("rating") or {}).get("exclude_teams", []),
         "my_team":          {
@@ -2032,34 +2012,6 @@ def index():
 def api_state():
     return jsonify(make_snapshot())
 
-@app.get("/stream")
-def sse_stream():
-    q = queue.Queue(maxsize=5)
-    _sse_queues.append(q)
-
-    def gen():
-        try:
-            try:
-                yield "data: " + json.dumps(make_snapshot()) + "\n\n"
-            except Exception:
-                yield ": init-error\n\n"
-            while True:
-                try:
-                    yield q.get(timeout=15)
-                except queue.Empty:
-                    yield ": ping\n\n"
-        except GeneratorExit:
-            pass
-        finally:
-            try:
-                _sse_queues.remove(q)
-            except ValueError:
-                pass
-
-    return Response(gen(), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no",
-                             "Connection": "keep-alive"})
-
 # ── Race control ───────────────────────────────────────────────────────────────
 @app.post("/api/race/start")
 def race_start():
@@ -2068,20 +2020,18 @@ def race_start():
     kv_set("stint_start", now)   # stint clock always starts with the race
     kv_set("status", "racing")
     log("RACE START")
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/race/stop")
 def race_stop():
     kv_set("status", "idle")
     log("RACE STOP")
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/race/reset")
 def race_reset():
     for k, v in [("status","idle"),("race_start",""),("stint_start",""),
-                  ("pit_start",""),("driver_id",""),("next_driver_id","")]:
+                  ("pit_start",""),("driver_id","")]:
         kv_set(k, v)
     with get_db() as con:
         con.execute("DELETE FROM stints")
@@ -2093,7 +2043,6 @@ def race_reset():
     # pace measured in qualifying.  /api/karts/reset wipes the fleet on purpose.
     _apex_clock.reset()
     log("RACE RESET", "kart pool kept")
-    broadcast()
     return jsonify(ok=True)
 
 # ── Driver management ──────────────────────────────────────────────────────────
@@ -2105,7 +2054,6 @@ def driver_set():
         row = con.execute("SELECT name FROM drivers WHERE id=?", (did,)).fetchone()
     name = row["name"] if row else did
     log("DRIVER SET", name)
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/driver/add")
@@ -2116,7 +2064,6 @@ def driver_add():
     with get_db() as con:
         con.execute("INSERT INTO drivers(name) VALUES(?)", (name,))
     log("DRIVER ADD", name)
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/driver/rename")
@@ -2127,7 +2074,6 @@ def driver_rename():
         return jsonify(ok=False, error="Name required"), 400
     with get_db() as con:
         con.execute("UPDATE drivers SET name=? WHERE id=?", (name, did))
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/driver/delete")
@@ -2138,16 +2084,6 @@ def driver_delete():
     # Clear current driver if it was this one
     if kv_get("driver_id") == str(did):
         kv_set("driver_id", "")
-    broadcast()
-    return jsonify(ok=True)
-
-@app.post("/api/driver/clear_time")
-def driver_clear_time():
-    did = request.json.get("driver_id")
-    with get_db() as con:
-        con.execute("UPDATE drivers SET total_seconds=0 WHERE id=?", (did,))
-        con.execute("DELETE FROM stints WHERE driver_id=?", (did,))
-    broadcast()
     return jsonify(ok=True)
 
 # ── Pit management ─────────────────────────────────────────────────────────────
@@ -2194,7 +2130,6 @@ def _do_box(offset_s: float = 0.0, source: str = "button"):
     log("BOX NOW", f"driver={driver_name}  "
                    f"stint={fmt_duration(dur if did and stint_start else 0)}"
                    f"{offset_note}  [{source}]")
-    broadcast()
 
 @app.post("/api/pit/done")
 def pit_done():
@@ -2212,7 +2147,6 @@ def _do_pit_done(new_did, source: str = "button"):
     kv_set("stint_start", datetime.utcnow().isoformat())
     kv_set("pit_start",   "")
     kv_set("status",      "racing")
-    kv_set("next_driver_id", "")
     with get_db() as con:
         row = con.execute("SELECT name FROM drivers WHERE id=?", (new_did,)).fetchone()
         new_name = row["name"] if row else new_did
@@ -2221,14 +2155,6 @@ def _do_pit_done(new_did, source: str = "button"):
             con.execute("UPDATE stints SET box_seconds=? WHERE id="
                         "(SELECT MAX(id) FROM stints)", (pit_elapsed,))
     log("PIT DONE", f"driver={new_name}  pit_time={fmt_mmss(pit_elapsed)}  [{source}]")
-    broadcast()
-
-@app.post("/api/driver/next")
-def driver_next():
-    """Park the next driver server-side so a feed-driven stop can seat them."""
-    kv_set("next_driver_id", str(request.json.get("driver_id") or ""))
-    broadcast()
-    return jsonify(ok=True)
 
 # ── Pit plan route ─────────────────────────────────────────────────────────────
 @app.post("/api/plan/set")
@@ -2242,15 +2168,6 @@ def api_plan_set():
 @app.post("/api/plan/reset")
 def api_plan_reset():
     kv_set("pit_plan", "")
-    return jsonify(ok=True)
-
-# ── Session mode ────────────────────────────────────────────────────────────────
-@app.post("/api/mode")
-def api_mode():
-    mode = (request.json or {}).get("mode", "race")
-    if mode in ("race", "qualifying"):
-        kv_set("session_mode", mode)
-    broadcast()
     return jsonify(ok=True)
 
 # ── Karts ─────────────────────────────────────────────────────────────────────
@@ -2437,7 +2354,6 @@ def api_board():
     """
     text = (request.json or {}).get("text", "")
     rows = board_shown(text, datetime.utcnow())
-    broadcast()
     return jsonify(ok=True, board=rows[0] if rows else None, log=rows)
 
 
@@ -2456,7 +2372,6 @@ def api_kart_retire():
         POOL.unretire_kart(kart)
     else:
         POOL.retire_kart(kart, str(d.get("reason", "")))
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/karts/reset")
@@ -2468,7 +2383,6 @@ def api_karts_reset():
     """
     POOL.reset()
     log("KART POOL RESET", "ratings and assignments cleared")
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/kart/lane")
@@ -2479,7 +2393,6 @@ def api_kart_lane():
                  lane=d.get("lane"),
                  no_change=bool(d.get("no_change")),
                  kart_out=d.get("kart"))
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/kart/add")
@@ -2489,14 +2402,12 @@ def api_kart_add():
     if not kart:
         return jsonify(ok=False, error="Kart number required"), 400
     POOL.lane_add(int(d.get("lane", 1)), kart)
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/kart/remove")
 def api_kart_remove():
     d = request.json or {}
     POOL.lane_remove(int(d.get("lane", 1)), str(d.get("kart", "")).strip())
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/kart/assign")
@@ -2510,7 +2421,6 @@ def api_kart_assign():
         team = next((t.get("team", "") for t in _teams
                      if str(t.get("kart", "")) == team_no), "")
     POOL.set_kart(team_no, team, str(d.get("kart", "")).strip())
-    broadcast()
     return jsonify(ok=True)
 
 @app.post("/api/kart/stop")
@@ -2522,13 +2432,11 @@ def api_kart_stop():
         team = next((t.get("team", "") for t in _teams
                      if str(t.get("kart", "")) == team_no), "")
     stop_id = POOL.manual_stop(team_no, team)
-    broadcast()
     return jsonify(ok=True, stop_id=stop_id)
 
 @app.post("/api/kart/undo")
 def api_kart_undo():
     ok = POOL.undo()
-    broadcast()
     return jsonify(ok=ok)
 
 # ── Settings ───────────────────────────────────────────────────────────────────
@@ -2565,31 +2473,7 @@ def api_settings():
             [n.strip() for n in names if n and n.strip()]
     POOL.configure(CFG["karts"])
     save_cfg()
-    broadcast()
     return jsonify(ok=True)
-
-# ── Debug ──────────────────────────────────────────────────────────────────────
-@app.get("/debug/apex")
-def debug_apex():
-    url = CFG.get("apex_url", "")
-    result = {"url": url, "ws_url_cache": _ws_url_cache, "apex_ok": _apex_ok}
-    if url:
-        try:
-            base = url.split('#')[0].rstrip('/')
-            req = urllib.request.Request(base, headers={
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"
-            })
-            with urllib.request.urlopen(req, timeout=8) as r:
-                src = r.read().decode("utf-8", errors="ignore")
-            result["page_length"] = len(src)
-            result["page_snippet"] = src[:4000]
-            # Find all script src references
-            result["script_srcs"] = re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', src)
-            # Look for any port/ws patterns
-            result["ws_matches"] = re.findall(r'.{0,60}(?:WebSocket|wsPort|ws_port|wss?://|port\s*[:=]\s*\d{3,5}).{0,60}', src)
-        except Exception as e:
-            result["error"] = str(e)
-    return jsonify(result)
 
 # ── Startup (runs for both direct execution and gunicorn) ─────────────────────
 init_db()

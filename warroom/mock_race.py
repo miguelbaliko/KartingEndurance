@@ -238,7 +238,6 @@ def main():
             app._process_meta({"dyn1": race.header(total_s),
                                "title1": f"{args.hours:g}h mock · Palmela (mock)"})
             app._process_rows(race.rows())
-            app.broadcast()
             time.sleep(tick)
 
     threading.Thread(target=drive, daemon=True).start()
