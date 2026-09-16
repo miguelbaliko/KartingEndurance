@@ -1025,7 +1025,9 @@ function tick() {
       pb.className = 'pitby' + (left < 120 ? ' crit' : left < 300 ? ' low' : '');
       document.getElementById('pitby-val').textContent = fmtMmss(left);
       document.getElementById('pitby-lbl').textContent =
-        src.reason === 'lane shut' ? 'LANE SHUT' : 'PIT BY';
+        src.reason === 'lane shut' ? 'LANE SHUT'
+        : src.reason === 'too late' ? 'TOO LATE' : 'PIT BY';
+      if (src.reason === 'too late') pb.className = 'pitby crit';
       pb.title = src.detail || '';
     }
   }

@@ -1557,7 +1557,7 @@ def board_log() -> list:
 
 
 def pit_by_seconds(stint_s: float, race_elapsed_s: float, pits_done: int,
-                   race: dict) -> dict:
+                   race: dict, lap_s: Optional[float] = None) -> dict:
     """How long the next stop can still wait, and which rule is holding it.
 
     Two deadlines run at once and the earlier one is the only one that matters:
@@ -1566,7 +1566,11 @@ def pit_by_seconds(stint_s: float, race_elapsed_s: float, pits_done: int,
       started 10s over it, so this one is a penalty the moment it passes;
     * the schedule — every mandatory stop still owed needs its three minutes
       in the box before the lane shuts at 24:30 (§3.8, §3.9), so waiting past
-      this point means a stop that can never be served.
+      this point means a stop that can never be served.  Stops cannot be taken
+      back to back: between two of them the kart has to leave the lane, get
+      round, and come in again, so N stops need N boxes and N-1 laps.  Budget
+      only the boxes and the deadline comes out later than it really is — with
+      five owed, by four minutes, which is a stop that never happens.
 
     Returned in seconds with the rule named, because "box by 21:40" and why
     are one thought on a pit wall and two clicks anywhere else.
@@ -1589,12 +1593,25 @@ def pit_by_seconds(stint_s: float, race_elapsed_s: float, pits_done: int,
                 "detail": f"Every mandatory stop served — only the "
                           f"{race['stint_max_minutes']} min stint ceiling left"}
 
-    schedule = room - stops_left * box_s
+    # lap_s is unknown only before anyone has completed a lap, when the lane
+    # shuts a day away and this term cannot decide anything.
+    between = (stops_left - 1) * (lap_s or 0.0)
+    schedule = room - stops_left * box_s - between
+    if schedule < 0:
+        # Past saving, and that is a different thing to say than "box now".
+        # Boxing now is what you do either way; what the wall needs to know is
+        # that one of these stops is not going to happen, so the argument
+        # becomes which penalty to take rather than when to leave.
+        missed = int(-schedule // (box_s + (lap_s or 0.0))) + 1
+        return {"seconds": 0, "reason": "too late",
+                "detail": f"{fmt_duration(-schedule)} short for the {stops_left} "
+                          f"stops still owed — about {missed} of them cannot be "
+                          f"served before the lane shuts"}
     if schedule <= ceiling:
         return {"seconds": max(0.0, schedule), "reason": "schedule",
                 "detail": f"{stops_left} stop(s) still owed, "
-                          f"{fmt_duration(stops_left * box_s)} of box time to fit "
-                          f"before the lane shuts"}
+                          f"{fmt_duration(stops_left * box_s + between)} of box "
+                          f"and out-and-back to fit before the lane shuts"}
     return {"seconds": max(0.0, ceiling), "reason": "stint limit",
             "detail": f"{race['stint_max_minutes']} min ceiling — over it is "
                       f"20s per started 10s (§15.4)"}
@@ -1909,7 +1926,8 @@ def make_snapshot() -> dict:
         })
 
     stint_pct = min(100, (stint_s / (CFG["race"]["stint_max_minutes"] * 60)) * 100) if stint_s else 0
-    pit_by = pit_by_seconds(stint_s, race_elapsed, pits_done, CFG["race"])
+    pit_by = pit_by_seconds(stint_s, race_elapsed, pits_done, CFG["race"],
+                            lap_s=my_avg5 or track_avg_s)
     # The board is built from our own serialised row, so it quotes the same
     # numbers the wall is showing rather than a second opinion.
     my_out = next((t for t in teams_out if t.get("is_my_team")), None)

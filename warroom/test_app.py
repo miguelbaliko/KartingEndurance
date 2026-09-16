@@ -579,11 +579,56 @@ class TestHowLongThisStopCanWait(AppCase):
     the only one that matters, and the wall needs to know which it is.
     """
 
-    def by(self, stint_min, elapsed_h, pits, **over):
+    def by(self, stint_min, elapsed_h, pits, lap_s=None, **over):
         race = dict(self.app.CFG["race"])
         race.update(over)
         return self.app.pit_by_seconds(stint_min * 60, elapsed_h * 3600,
-                                       pits, race)
+                                       pits, race, lap_s=lap_s)
+
+    def shut_at(self, race=None):
+        r = race or self.app.CFG["race"]
+        return r["duration_minutes"] * 60 - r["no_pit_last_minutes"] * 60
+
+    def test_it_budgets_the_lap_between_two_stops(self):
+        """You cannot take two stops back to back — the kart has to go round.
+
+        Three owed means three boxes AND two laps, so the deadline is two laps
+        earlier than the box time alone would suggest.  Budgeting only the
+        boxes puts it late enough that a stop never happens.
+        """
+        R = self.app.CFG["race"]
+        elapsed = self.shut_at() - 21 * 60
+        owed = 3
+        with_lap = self.by(0, elapsed / 3600, R["mandatory_pits"] - owed, lap_s=62.0)
+        no_lap = self.by(0, elapsed / 3600, R["mandatory_pits"] - owed)
+        self.assertAlmostEqual(no_lap["seconds"] - with_lap["seconds"],
+                               (owed - 1) * 62.0, delta=1)
+
+    def test_sitting_on_the_deadline_still_leaves_room_for_every_stop(self):
+        """The promise the number makes: wait this long and they all fit."""
+        R = self.app.CFG["race"]
+        lap = 62.0
+        for owed in (1, 2, 3, 5, 8):
+            elapsed = self.shut_at() - owed * 7 * 60
+            got = self.by(0, elapsed / 3600, R["mandatory_pits"] - owed, lap_s=lap)
+            room = self.shut_at() - (elapsed + got["seconds"])
+            need = owed * R["pit_duration_seconds"] + (owed - 1) * lap
+            self.assertGreaterEqual(round(room, 3), round(need, 3),
+                                    f"{owed} owed: deadline promises room it does not have")
+
+    def test_past_saving_says_so_instead_of_box_now(self):
+        """"Box now" is what you do anyway; this is the thing you act on."""
+        R = self.app.CFG["race"]
+        elapsed = self.shut_at() - 9.9 * 60
+        got = self.by(0, elapsed / 3600, R["mandatory_pits"] - 3, lap_s=62.0)
+        self.assertEqual(got["reason"], "too late")
+        self.assertEqual(got["seconds"], 0)
+        self.assertIn("short", got["detail"])
+
+    def test_with_nothing_owed_it_never_says_too_late(self):
+        R = self.app.CFG["race"]
+        got = self.by(0, (self.shut_at() - 60) / 3600, R["mandatory_pits"], lap_s=62.0)
+        self.assertEqual(got["reason"], "stint limit")
 
     def test_early_on_the_ceiling_is_what_binds(self):
         got = self.by(stint_min=20, elapsed_h=2, pits=3)
