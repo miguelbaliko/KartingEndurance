@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import kartpool
 from kartpool import KartPool
+import rating
 
 
 def row(team_no, team, pits=0, laps=1, lap_s=63.0, driver="", in_pit=False):
@@ -628,3 +629,36 @@ class TestPersistence(PoolCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestPracticeSwitch(unittest.TestCase):
+    """The switch is a setting like any other, and moving it must be felt."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.pool = KartPool(os.path.join(self._tmp.name, "p.db"), {})
+
+    def test_off_by_default_and_the_rating_cfg_is_untouched(self):
+        self.assertFalse(self.pool.cfg["practice"])
+        self.assertEqual(self.pool.rating_cfg(), {})
+
+    def test_on_it_layers_practice_over_the_track_settings(self):
+        self.pool.configure({"practice": True, "rating": {"tow_gap_s": 0.5}})
+        cfg = self.pool.rating_cfg()
+        self.assertEqual(cfg["bucket_minutes"], 0)
+        self.assertEqual(cfg["min_pilot_laps"], rating.PRACTICE["min_pilot_laps"])
+        self.assertEqual(cfg["tow_gap_s"], 0.5, "per-track tuning still applies")
+
+    def test_moving_the_switch_stales_the_scores(self):
+        """No new lap arrives when you flick it, so nothing else would."""
+        self.pool.ratings(force=True)
+        self.pool._rating_dirty = False
+        self.pool.configure({"practice": True})
+        self.assertTrue(self.pool._rating_dirty)
+
+    def test_setting_it_to_what_it_already_is_changes_nothing(self):
+        self.pool.ratings(force=True)
+        self.pool._rating_dirty = False
+        self.pool.configure({"practice": False})
+        self.assertFalse(self.pool._rating_dirty)

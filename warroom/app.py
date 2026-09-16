@@ -1989,6 +1989,8 @@ def make_snapshot() -> dict:
         "clock_source":     clock_source,
         "kartpool":         pool,
         "auto_pit":         CFG["karts"].get("auto_pit", True),
+        # On the wall so nobody drives Saturday with Friday's switch still set.
+        "practice":         CFG["karts"].get("practice", False),
         "exclude_teams":    (CFG["karts"].get("rating") or {}).get("exclude_teams", []),
         "my_team":          {
             "pos":   my_team.get("pos", "?"),
@@ -2290,6 +2292,15 @@ def api_driver_laps(did):
     ranked = sorted((n for n in mine if mine[n]["spread_s"] is not None),
                     key=lambda n: mine[n]["spread_s"])
     card = mine.get(name)
+    # Practice is our team alone in one kart, so what is left between drivers
+    # is the drivers.  In a race the same number is tangled up with whichever
+    # kart they happened to be given, so it is only offered here.
+    pace = None
+    if CFG["karts"].get("practice") and card and len(mine) > 1:
+        order = sorted(mine, key=lambda n: mine[n]["effect"])
+        pace = {"delta_s": round(card["effect"] - mine[order[0]]["effect"], 3),
+                "rank": order.index(name) + 1, "of": len(order),
+                "laps": card["laps"], "quickest": order[0]}
     consistency = None
     if card and card["spread_s"] is not None:
         consistency = {
@@ -2306,6 +2317,7 @@ def api_driver_laps(did):
         total_fmt=fmt_duration(drv["total_seconds"]),
         owed_fmt=fmt_duration(owed), owed_seconds=owed,
         consistency=consistency,
+        pace=pace,
         sectors=sector_review(rows, team_rows),
         stints=stints[:40], stint_count=len(stints),
         karts=sorted(
@@ -2462,7 +2474,7 @@ def api_settings():
     if "stint_max_minutes" in data:
         CFG["race"]["stint_max_minutes"] = int(data["stint_max_minutes"])
     for key, cast in (("lanes", int), ("auto_pit", bool),
-                      ("swap_every_stop", bool)):
+                      ("swap_every_stop", bool), ("practice", bool)):
         if key in data:
             CFG["karts"][key] = cast(data[key])
     if "exclude_teams" in data:

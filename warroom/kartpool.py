@@ -60,6 +60,9 @@ DEFAULTS = {
     "skip_laps_after_stop": 1,    # out-lap is not the kart's fault
     "max_undo": 60,
     "rating_refresh_s": 8,
+    # On for a practice session — us alone on track, one kart, no swaps.  It
+    # changes how the laps are read, not what is recorded; see rating.PRACTICE.
+    "practice": False,
     # Per-track rating tuning; see rating.DEFAULTS for the keys.
     "rating": {},
 }
@@ -213,8 +216,14 @@ class KartPool:
     def configure(self, cfg: dict):
         """Apply settings.  Safe to call while racing: lanes are added, and a
         lane is only dropped once it is empty."""
+        was_practice = self.cfg.get("practice")
         self.cfg.update({k: v for k, v in (cfg or {}).items() if k in DEFAULTS})
         self.cfg["lanes"] = max(1, min(MAX_LANES, _int(self.cfg["lanes"], 2) or 2))
+        if self.cfg.get("practice") != was_practice:
+            # The same laps mean something different now, so the cached
+            # scores are stale even though no new lap has arrived — which is
+            # exactly the case the dirty flag exists to catch.
+            self._rating_dirty = True
         if getattr(self, "_lock", None):
             self._sync_lanes()
 
@@ -787,6 +796,15 @@ class KartPool:
         """How close behind counts as a shove — the model's setting, not a copy."""
         return rating.cfg_with_defaults(self.cfg.get("rating"))["push_gap_s"]
 
+    def rating_cfg(self) -> dict:
+        """The rating settings, with practice's overrides on top when we are
+        in one.  Anything set per track still wins for the keys practice does
+        not touch."""
+        cfg = dict(self.cfg.get("rating") or {})
+        if self.cfg.get("practice"):
+            cfg.update(rating.PRACTICE)
+        return cfg
+
     def ratings(self, force: bool = False) -> dict:
         """Kart scores, recomputed at most every few seconds."""
         if not (force or self._rating_dirty) or \
@@ -798,7 +816,7 @@ class KartPool:
                            "SELECT ts,pilot,kart,lap_s,ahead_s,behind_s "
                            "FROM kart_lap")]
         try:
-            self._rating = rating.rate(samples, self.cfg.get("rating"))
+            self._rating = rating.rate(samples, self.rating_cfg())
         except Exception as e:
             # Kart scores are an opinion; the timing screen is not.  A rater
             # that trips over one odd row must not take the whole wall down in

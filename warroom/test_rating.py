@@ -630,3 +630,60 @@ class TestASlowDriverDoesNotCondemnTheKart(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestPracticeMode(unittest.TestCase):
+    """Practice is our team alone, in one kart, rotating drivers.
+
+    Read with the race defaults it says almost nothing: the rolling baseline
+    is whoever is driving, so each driver is measured against themselves, and
+    min_pilot_laps folds them all into the team anyway.  rating.PRACTICE is
+    the two settings that make the same laps readable.
+    """
+
+    TRUE = {"Miguel": 0.00, "Dinis": 0.45, "Rui": -0.30, "Tiago": 0.85}
+
+    def session(self, laps_each=20, seed=4):
+        """One kart, one stint each, in blocks — how practice actually runs."""
+        rng = random.Random(seed)
+        out, t = [], 0.0
+        for name, eff in self.TRUE.items():
+            for _ in range(laps_each):
+                t += 62.0
+                out.append((t, f"TPC|{name}", "17",
+                            62.5 + eff + rng.gauss(0, 0.35), None, None))
+        return out
+
+    def effects(self, cfg):
+        cards = rating.rate(self.session(), cfg)["pilot_cards"]
+        return {k.split("|")[-1]: v["effect"] for k, v in cards.items()}
+
+    def test_the_race_defaults_cannot_read_it(self):
+        """Not a failure of the model — the wrong question asked of it."""
+        self.assertEqual(list(self.effects(None)), ["TPC"],
+                         "with race settings the drivers are one team, not four")
+
+    def test_practice_ranks_the_drivers(self):
+        got = self.effects(rating.PRACTICE)
+        self.assertEqual(sorted(got, key=got.get),
+                         sorted(self.TRUE, key=self.TRUE.get))
+
+    def test_and_gets_the_gaps_about_right(self):
+        got = self.effects(rating.PRACTICE)
+        spread = max(got.values()) - min(got.values())
+        self.assertAlmostEqual(spread, max(self.TRUE.values()) - min(self.TRUE.values()),
+                               delta=0.35)
+
+    def test_it_still_refuses_to_rate_the_kart(self):
+        """One kart shared with nobody is not evidence about that kart."""
+        karts = rating.rate(self.session(), rating.PRACTICE)["karts"]
+        self.assertIsNone(karts["17"]["delta"])
+        self.assertEqual(karts["17"]["label"], rating.DEFAULTS["unknown_label"])
+
+    def test_a_zero_window_is_one_baseline_for_the_whole_session(self):
+        laps = [(t * 60.0, "P", "1", 60.0 + t, None, None) for t in range(20)]
+        one = rating.Baseline(laps, 0, 5)
+        self.assertEqual(one.at(0.0), one.at(19 * 60.0),
+                         "a single window cannot drift")
+        rolling = rating.Baseline(laps, 5 * 60.0, 3)
+        self.assertNotEqual(rolling.at(0.0), rolling.at(19 * 60.0))

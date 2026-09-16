@@ -92,6 +92,33 @@ DEFAULTS = {
 }
 
 
+# Practice is not a race, and reading it like one throws the answer away.
+#
+# A practice session is our team alone on track, in one kart nobody lets us
+# swap.  Both of the defaults below are right for a race and wrong for that:
+#
+#   * The rolling baseline tracks how the track evolves, measured across the
+#     whole field.  With only us out there the field IS whoever is driving, so
+#     each driver ends up measured against themselves and the differences
+#     between them vanish into the baseline.  One window for the session fixes
+#     it: everybody is then measured against the same thing.
+#   * min_pilot_laps folds a driver into their team until they have laps of
+#     their own, because in a race a driver who has only sat in one kart cannot
+#     be told apart from that kart.  In practice the kart is identical for all
+#     of them, so there is nothing to tell apart and the gate only hides them.
+#
+# Measured on a four-driver, one-kart session, true spread 1.15s: read as a
+# race the order comes out right 18% of the time and the spread reads 0.16s.
+# Read like this it is 100% and 0.14s, and 20 laps each is enough.
+#
+# This says nothing about karts.  A kart is rated by being shared with the
+# field, which in practice never happens, so it stays "Unknown" — correctly.
+PRACTICE = {
+    "bucket_minutes": 0,                   # one baseline, not a rolling one
+    "min_pilot_laps": DEFAULTS["min_laps"],
+}
+
+
 def cfg_with_defaults(cfg: dict = None) -> dict:
     out = dict(DEFAULTS)
     if cfg:
@@ -110,7 +137,8 @@ class Baseline:
     def __init__(self, samples, bucket_s: float, min_laps: int):
         buckets = defaultdict(list)
         for ts, _pilot, _kart, lap_s, *_ in samples:
-            buckets[int(ts // bucket_s)].append(lap_s)
+            # A window of zero means one baseline for everything: see PRACTICE.
+            buckets[int(ts // bucket_s) if bucket_s else 0].append(lap_s)
 
         self._ts, self._val = [], []
         for b in sorted(buckets):

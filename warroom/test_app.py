@@ -360,6 +360,24 @@ class TestSwitchingEvent(AppCase):
         self.assertFalse(self.app._ws_blocked)
 
 
+class TestPracticeMode(AppCase):
+    """The switch that says "we are alone out there in one kart"."""
+
+    def test_it_is_off_until_someone_turns_it_on(self):
+        self.assertFalse(self.snap()["practice"])
+
+    def test_the_settings_box_turns_it_on_and_reaches_the_pool(self):
+        self.client.post("/api/settings", json={"practice": True})
+        self.assertTrue(self.snap()["practice"])
+        self.assertEqual(self.app.POOL.rating_cfg()["bucket_minutes"], 0)
+
+    def test_and_off_again(self):
+        self.client.post("/api/settings", json={"practice": True})
+        self.client.post("/api/settings", json={"practice": False})
+        self.assertFalse(self.snap()["practice"])
+        self.assertNotIn("bucket_minutes", self.app.POOL.rating_cfg())
+
+
 class TestArchivedSessions(AppCase):
     """Apex keeps finished sessions; this is how qualifying gets reviewed."""
 

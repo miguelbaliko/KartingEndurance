@@ -78,6 +78,13 @@ html,body{height:100%;background:var(--bg0);color:var(--tx);
 .s-racing {background:#0a2a18;color:var(--grn);border:1px solid #1a5030}
 .s-pitting{background:#2a1a00;color:var(--org);border:1px solid #5a3800;animation:tb-blink 1s infinite}
 @keyframes tb-blink{0%,100%{opacity:1}50%{opacity:.6}}
+/* Loud on purpose: practice reads the laps as a driver comparison, and
+   leaving it on for the race would score the fleet against nothing. */
+.s-practice{
+  padding:3px 9px;border-radius:var(--r);font-size:10px;font-weight:700;
+  letter-spacing:.08em;background:rgba(249,115,22,.18);color:#f97316;
+  border:1px solid rgba(249,115,22,.45);
+}
 .tb-apex{
   display:flex;align-items:center;gap:6px;
   font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--tx3);
@@ -627,6 +634,7 @@ tr.clickable{cursor:pointer}
     </div>
     <div class="tb-sep"></div>
     <span id="status-badge" class="s-idle">IDLE</span>
+    <span id="practice-badge" class="s-practice" style="display:none">PRACTICE</span>
     <div class="tb-apex">
       <div id="apex-dot" class="apex-dot apex-err"></div>
       <span id="apex-label">NO SIGNAL</span>
@@ -892,6 +900,15 @@ tr.clickable{cursor:pointer}
       <input id="cfg-swap" type="checkbox" style="width:auto">
       Karts are swapped at every stop
     </label>
+    <label class="cfg-lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input id="cfg-practice" type="checkbox" style="width:auto">
+      Practice: us alone on track, one kart
+    </label>
+    <div class="cfg-lbl" style="color:var(--tx3);font-size:10px;margin-top:-4px">
+      Reads the laps as a driver comparison instead of a kart one. Karts stay
+      Unknown — a kart is only scored by being shared with the field, which does
+      not happen in practice. Turn it off before the race.
+    </div>
     <div class="cfg-lbl">Ignore these teams when scoring karts (comma separated)</div>
     <input id="cfg-exclude" class="cfg-inp" placeholder="usually leave empty">
     <div class="cfg-lbl" style="color:var(--tx3);font-size:10px;margin-top:-4px">
@@ -1050,6 +1067,7 @@ function render(s) {
   dot.className = 'apex-dot ' + (ok ? 'apex-ok' : 'apex-err');
   if (lightColor) dot.style.background = lightColor;
   document.getElementById('apex-label').textContent = ok ? 'APEX LIVE' : 'NO SIGNAL';
+  document.getElementById('practice-badge').style.display = s.practice ? '' : 'none';
   const sname = [sess.name, sess.name2].filter(Boolean).join(' · ');
   document.getElementById('apex-session').textContent = sname;
   document.getElementById('track-avg').textContent = s.track_avg;
@@ -1686,7 +1704,7 @@ async function showDriver(id, name) {
       ${d.owed_seconds > 0
         ? `<span class="drv-owed short">still owes ${esc(d.owed_fmt)}</span>`
         : '<span class="drv-owed done">✓ minimum met</span>'}
-    </div>` + consistencyLine(d);
+    </div>` + paceLine(d) + consistencyLine(d);
   // A lap time says they are four tenths off; only the sectors say where.
   const sectors = (d.sectors || []).length ? `
     <div class="bn-hd" style="margin-top:10px">Where the lap goes</div>
@@ -1819,6 +1837,20 @@ function renderPit(s) {
 /** How repeatable their laps are, and where that puts them in the team.
  *  Not a pace ranking: on a long stint a steady driver who is two tenths off
  *  beats a quick one who throws a second away every fourth lap. */
+/** Pace against the rest of the team. Only offered in practice, where the
+ *  kart is the same for everybody and the difference left is the driver. */
+function paceLine(d) {
+  const p = d.pace;
+  if (!p) return '';
+  const who = p.rank === 1
+    ? 'quickest of ' + p.of
+    : `${p.rank} of ${p.of} — +${p.delta_s.toFixed(2)}s on ${p.quickest}`;
+  return `<div class="kd-hd"><span class="bn-note"
+    title="Same kart for all of them, so what is left between them is them.
+    Measured over ${p.laps} laps; about twenty each before the order settles."
+    >Practice pace <b>${who}</b></span></div>`;
+}
+
 function consistencyLine(d) {
   const c = d.consistency;
   if (!c) return '';
@@ -2041,6 +2073,7 @@ function openCfg() {
     document.getElementById('cfg-exclude').value = (s.exclude_teams||[]).join(', ');
     document.getElementById('cfg-autopit').checked = !!S.auto_pit;
     document.getElementById('cfg-swap').checked    = pool.swap_every_stop !== false;
+  document.getElementById('cfg-practice').checked = !!S.practice;
   }
   document.getElementById('cfg-dur').value='';
   document.getElementById('cfg-pits').value='';
@@ -2066,6 +2099,7 @@ async function saveCfg() {
   if (lanes) b.lanes = parseInt(lanes);
   b.auto_pit        = document.getElementById('cfg-autopit').checked;
   b.swap_every_stop = document.getElementById('cfg-swap').checked;
+  b.practice        = document.getElementById('cfg-practice').checked;
   await api('settings', b); closeCfg();
 }
 document.getElementById('overlay').addEventListener('click', e => {
