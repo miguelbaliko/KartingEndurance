@@ -807,12 +807,17 @@ _CONTROL_ENTRY = re.compile(r'<p\b[^>]*>(.*?)</p>', re.I | re.S)
 _CONTROL_TIME  = re.compile(r'<b[^>]*>(.*?)</b>', re.I | re.S)
 _CONTROL_FLAG  = re.compile(r'data-flag="([^"]*)"', re.I)
 
+# Not followed by a colon: a timestamp that escaped the strip above opens
+# exactly like a competitor number, and "14:50" is not kart 14.
+_CONTROL_KART = re.compile(r'^\s*(\d{1,3})(?![:\d])')
+
 def parse_control_log(html_s: str) -> list:
     """Race control's messages, newest first.
 
     Safety car and red flag periods are the cheapest stops of the race — a stop
     taken under a neutralisation costs a fraction of one taken under green — so
-    this is worth reading rather than discarding.
+    this is worth reading rather than discarding.  Who a message is about is
+    control_for_kart's job, which needs the field to tell a kart from an hour.
     """
     out = []
     for block in _CONTROL_ENTRY.findall(html_s) or ([html_s] if html_s.strip() else []):
@@ -825,6 +830,25 @@ def parse_control_log(html_s: str) -> list:
         out.append({"at": (t.group(1).strip() if t else ""),
                     "flag": (f.group(1).strip().lower() if f else ""),
                     "text": text})
+    return out
+
+
+def control_for_kart(control: list, karts: set) -> list:
+    """Tag each control message with the kart it is about, where there is one.
+
+    A message aimed at one competitor opens with their number, whatever
+    language the event runs in — RKC sends "15 Avertissement - Passage au stand
+    en 00:56", which is kart 15 warned for a 56 second stop, the same rule
+    §15.1 charges us 20s a block for.  A leading number on its own proves
+    nothing, though: "15 minutes remaining" starts the same way and a stray
+    timestamp would too.  So it only counts when that number is a kart the
+    feed is actually showing.
+    """
+    out = []
+    for e in control:
+        m = _CONTROL_KART.match(e.get("text", ""))
+        kart = m.group(1) if m and m.group(1) in karts else ""
+        out.append({**e, "kart": kart})
     return out
 
 def _ws_run(ws_url: str):
@@ -1957,7 +1981,9 @@ def make_snapshot() -> dict:
         "ts":               now.isoformat() + "Z",  # explicit UTC so JS Date() parses correctly
         "status":           status,
         "apex_ok":          apex_ok,
-        "apex_session":     apex_session,
+        "apex_session":     {**apex_session, "control": control_for_kart(
+                                apex_session.get("control") or [],
+                                {str(t.get("kart", "")) for t in teams_raw})},
         "race_elapsed":     race_elapsed,
         "race_remaining":   race_remaining,
         "race_remaining_fmt": fmt_duration(race_remaining),

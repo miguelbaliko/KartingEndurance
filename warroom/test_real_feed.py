@@ -352,5 +352,50 @@ class TestEnduranceWithPitCounter(RealFeedCase):
             self.assertIn('data-type="otr"', f.read())
 
 
+PENALTIES = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "testdata", "apex-rkc-control-penalties.raw")
+
+
+class TestControlLogPenalties(RealFeedCase):
+    """RKC at the flag, 2026-09-16: race control naming names.
+
+    Five karts warned for a stop under the minimum — "15 Avertissement -
+    Passage au stand en 00:56 (Tour 18)" is kart 15, boxed for 56 seconds,
+    which is the rule §15.1 charges us 20s a block for.  No other fixture has
+    race control saying anything but "Start", so this is the one that proves a
+    message can be traced to a competitor at all.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.control = []
+        with open(PENALTIES, encoding="utf-8") as f:
+            for frame in f.read().split("\n\x00\n"):
+                m = self.app._parse_apex_pipe(frame)[2]
+                if m.get("control"):
+                    self.control = m["control"]
+
+    def tagged(self):
+        field = {"5", "13", "14", "15", "16", "17", "21", "22"}
+        return self.app.control_for_kart(self.control, field)
+
+    def test_the_log_came_through(self):
+        self.assertGreaterEqual(len(self.control), 6)
+
+    def test_every_warning_is_traced_to_its_kart(self):
+        warned = {e["kart"] for e in self.tagged() if e["flag"] == "warning"}
+        self.assertEqual(warned, {"13", "14", "15", "17", "21"})
+
+    def test_messages_for_the_whole_field_are_left_alone(self):
+        both = {e["text"]: e["kart"] for e in self.tagged()}
+        self.assertEqual(both["Départ"], "")
+        self.assertEqual(both["Arrivée"], "")
+
+    def test_the_flags_either_side_of_the_race_are_read(self):
+        flags = [e["flag"] for e in self.control]
+        self.assertIn("green", flags)
+        self.assertIn("chequered", flags)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

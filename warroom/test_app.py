@@ -378,6 +378,43 @@ class TestPracticeMode(AppCase):
         self.assertNotIn("bucket_minutes", self.app.POOL.rating_cfg())
 
 
+class TestWhoAControlMessageIsAbout(AppCase):
+    """Race control addresses one competitor by opening with their number."""
+
+    FIELD = {"15", "17", "5"}
+
+    def tag(self, text, karts=None):
+        got = self.app.control_for_kart([{"at": "14:50", "flag": "warning",
+                                          "text": text}],
+                                        self.FIELD if karts is None else karts)
+        return got[0]["kart"]
+
+    def test_a_number_that_is_a_kart_is_the_kart(self):
+        self.assertEqual(
+            self.tag("15 Avertissement - Passage au stand en 00:56 (Tour 18)"), "15")
+
+    def test_a_number_that_is_not_a_kart_is_nobody(self):
+        """"15 minutes remaining" opens the same way and means nothing of the sort."""
+        self.assertEqual(self.tag("15 minutes remaining", karts={"7", "9"}), "")
+
+    def test_a_stray_timestamp_is_not_a_kart(self):
+        self.assertEqual(self.tag("14:50 Safety car", karts={"14", "50"}), "")
+
+    def test_a_message_for_the_whole_field_belongs_to_nobody(self):
+        self.assertEqual(self.tag("Départ"), "")
+        self.assertEqual(self.tag("Safety car deployed"), "")
+
+    def test_the_snapshot_carries_the_tag(self):
+        self.app._apex_session["control"] = [
+            {"at": "14:50", "flag": "warning", "text": "15 Avertissement"}]
+        self.app._process_rows([{"pos": "1", "kart": "15", "team": "SOMEONE",
+                                 "last_lap": "1:02.000", "last_lap_s": 62.0,
+                                 "total_laps": "10", "gap": "", "in_pit": False,
+                                 "row_cls": ""}])
+        log = self.snap()["apex_session"]["control"]
+        self.assertEqual(log[0]["kart"], "15")
+
+
 class TestArchivedSessions(AppCase):
     """Apex keeps finished sessions; this is how qualifying gets reviewed."""
 
