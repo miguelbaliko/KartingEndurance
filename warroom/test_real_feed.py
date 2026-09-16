@@ -223,5 +223,70 @@ class TestPalmelaWithKartsRunning(RealFeedCase):
         self.assertEqual(meta.get("track"), "KIP (1270m)")
 
 
+SPRINT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      "testdata", "apex-kip-sprint-no-lapcount.raw")
+
+
+class TestSprintWithoutLapCount(RealFeedCase):
+    """KIP Palmela mid-race, captured 2026-09-16: a sprint, not an endurance.
+
+    The layout is our own track's minus one column: a ten kart race with no
+    ``tlp``, so no lap count reaches us at all, and the gap is written in laps
+    ("Lap 16", "1 Lap") rather than seconds.  Every other fixture we have
+    carries a lap counter, so this is the one that fails if somebody assumes
+    the number is always there.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.app._global_col_types.clear()
+        self.rows = []
+        with open(SPRINT, encoding="utf-8") as f:
+            for frame in f.read().split("\n\x00\n"):
+                parsed, _c, _m = self.app._parse_apex_pipe(frame)
+                self.rows.extend(parsed)
+
+    def test_the_event_sends_no_lap_counter(self):
+        self.assertEqual(self.field("total_laps"), [],
+                         "the fixture stops being the no-lap-count one")
+
+    def test_the_grid_still_parses_without_it(self):
+        self.assertEqual(len(self.rows), 10)
+        self.assertEqual([r["pos"] for r in self.rows[:3]], ["1", "2", "3"])
+        self.assertEqual([r["kart"] for r in self.rows[:3]], ["17", "16", "29"])
+        self.assertEqual(self.rows[0]["driver"], "FRED L.")
+
+    def test_sectors_and_lap_times_come_through(self):
+        first = self.rows[0]
+        self.assertEqual(first["s1"], "22.465")
+        self.assertEqual(first["s3"], "28.825")
+        self.assertEqual(first["last_lap"], "1:09.109")
+        self.assertEqual(first["best_lap"], "1:08.242")
+
+    def test_a_gap_written_in_laps_is_not_read_as_seconds(self):
+        """Without a lap time to price them, laps down are unknown, not zero."""
+        self.assertIsNone(self.app.gap_seconds("1 Lap", None))
+        self.assertAlmostEqual(self.app.gap_seconds("1 Lap", 69.1), 69.1)
+
+    def test_the_leaders_lap_number_is_not_a_gap(self):
+        """Apex writes the lap they are on in the leader's gap cell.
+
+        Our leader's cell reads "Lap 16" while the kart a lap down reads
+        "1 Lap".  Reading the first as sixteen laps down would drop the leader
+        to the back of the road order, which is the one thing that column must
+        never do.
+        """
+        self.assertEqual(self.rows[0]["gap"], "Lap 16")
+        self.assertIsNone(self.app.gap_seconds("Lap 16", 69.1))
+
+    def test_the_board_ranks_without_a_lap_count(self):
+        """No lap counter must not collapse the order or the virtual position."""
+        order = self.app.kartpool.KartPool.road_order(self.rows)
+        self.assertEqual(order[0][0], "17")
+        virtual = self.app.virtual_positions(self.rows, mandatory_pits=0,
+                                             pit_loss_s=200.0, lap_s=69.1)
+        self.assertEqual(virtual["17"]["virtual_pos"], 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -77,6 +77,13 @@ def event_url(slug: str) -> str:
 # Apex's light command: lr red, lg green, ly yellow, lsc safety car, lf the
 # chequered flag.  Without lf a finished session reports its raw code and reads
 # as if it were still running.
+# Columns we see everywhere and deliberately do not read, so that a recording
+# carrying them is not reported as a layout we cannot parse.  "sta" is Apex's
+# on-track status flag; every fixture we have carries it and reads "sr" for
+# every kart, and we already take pit state from the row class.  Teaching the
+# parser its other values needs a recording that actually contains one.
+KNOWN_SKIPPED = frozenset({"sta"})
+
 LIGHTS = {"lg": "GREEN", "ly": "YELLOW", "lr": "RED", "lsc": "SAFETY CAR",
           "lf": "CHEQUERED"}
 
@@ -146,7 +153,7 @@ def analyse(frames: list) -> dict:
     }
 
 
-def listen(url: str, seconds: float) -> list:
+def listen(url: str, seconds: float, tries: int = 1) -> list:
     """Collect whatever the event sends for a few seconds.
 
     Tries the WebSocket first, then falls back to Apex's AJAX feed.  The two
@@ -157,7 +164,17 @@ def listen(url: str, seconds: float) -> list:
     warroom.CFG["apex_url"] = url
     warroom._ws_url_cache, warroom._ws_url_checked_at = None, 0.0
     warroom._reset_ajax_state()
-    if not warroom._find_apex_endpoints(url):
+    # A dropped handshake during discovery is not an answer, the same way a
+    # dropped poll is not one in listen_ajax.  The sweep takes the first answer
+    # and says "not a verdict" when it fails, so it stays on one try; a
+    # recording gets one shot at a session that is live right now, so it asks
+    # again.  Clearing the timestamp is what makes the retry immediate —
+    # _find_apex_endpoints otherwise sits on a failure for fifteen seconds.
+    for _ in range(max(1, tries)):
+        if warroom._find_apex_endpoints(url):
+            break
+        warroom._ws_url_checked_at = 0.0
+    else:
         return []
 
     frames = listen_ws(url, seconds)
@@ -255,8 +272,9 @@ def find(slugs: list, seconds: float):
               f"{' · ' + s['session'] if s['session'] else ''}"
               f"{' · ' + s['light'] if s['light'] else ''}"
               f"{' · ' + s['clock'] if s['clock'] else ''}")
-        if s["columns_ignored"]:
-            print(f"  {'':<22}columns we ignore: {', '.join(s['columns_ignored'])}")
+        unseen = sorted(set(s["columns_ignored"]) - KNOWN_SKIPPED)
+        if unseen:
+            print(f"  {'':<22}columns we have never seen: {', '.join(unseen)}")
         if not s["has_pit_counter"]:
             print(f"  {'':<22}no pit counter — stops fall back to lap-time spikes")
 
@@ -281,8 +299,13 @@ def find(slugs: list, seconds: float):
 
 def record(url: str, seconds: float, out_dir: str):
     print(f"recording {event_name(url)} for {seconds:g}s…")
-    frames = listen(url, seconds)
+    frames = listen(url, seconds, tries=3)
     if not frames:
+        # Same distinction the sweep makes: never having reached the feed is a
+        # network result, not a verdict on whether anything is running.
+        if not warroom._find_apex_endpoints(url):
+            sys.exit(f"Could not reach the feed behind {url} — "
+                     f"that is the network, not the event.  Try again.")
         sys.exit(f"Nothing came back from {url} — is the event live?")
     ep = warroom._find_apex_endpoints(url)
 
@@ -301,8 +324,10 @@ def record(url: str, seconds: float, out_dir: str):
     print(f"  pit counter      {'yes' if report['has_pit_counter'] else 'NO'}")
     print(f"  driver names     {'yes' if report['has_driver'] else 'no'}")
     print(f"  race clock       {'yes' if report['clock_parsed'] else 'NO'}")
-    if report["columns_ignored"] or not report["has_pit_counter"]:
-        print("\n  Send both files over — the parser needs teaching for this event.")
+    new_cols = sorted(set(report["columns_ignored"]) - KNOWN_SKIPPED)
+    if new_cols:
+        print(f"\n  Send both files over — {', '.join(new_cols)} is a column we "
+              f"have never seen.")
 
 
 def replay(path: str, speed: float):

@@ -1,0 +1,64 @@
+init|r|
+best|hide|
+css|no9|border-bottom-color:#400080 !important; color:#FFFFFF !important;
+css|no10|border-bottom-color:#F40000 !important; color:#FFFFFF !important;
+css|no11|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no12|border-bottom-color:#3E9EFF !important; color:#FFFFFF !important;
+css|no13|border-bottom-color:#000040 !important; color:#FFFFFF !important;
+css|no14|border-bottom-color:#80FF00 !important; color:#000000 !important;
+css|no15|border-bottom-color:#FF0080 !important; color:#FFFFFF !important;
+css|no16|border-bottom-color:#FF8040 !important; color:#000000 !important;
+css|no17|border-bottom-color:#804040 !important; color:#FFFFFF !important;
+css|no18|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no1|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no2|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no3|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no4|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no5|border-bottom-color:#FF0080 !important; color:#FFFFFF !important;
+css|no6|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no7|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no8|border-bottom-color:#0000A0 !important; color:#FFFFFF !important;
+css|pena1|color:#f00; font-size:11px; font-weight: bold; text-align:center;
+effects||Display Effects
+comments||Comments
+title1||
+title2||Race 15
+dyn1|countdown|44430
+light|lg|
+wth1||
+wth2||
+wth3||
+track||KIP (1270m)
+com||
+grid||<tbody><tr data-id="r0" class="head" data-pos="0"><td data-id="c1" data-type="grp" data-pr="6"></td><td data-id="c2" data-type="sta" data-pr="1"></td><td data-id="c3" data-type="rk" data-pr="1">Rnk</td><td data-id="c4" data-type="no" data-pr="1">Kart</td><td data-id="c5" data-type="dr" data-pr="1" data-width="16" data-min="16">Driver</td><td data-id="c6" data-type="s1" data-pr="3" data-width="9" data-min="6">S1</td><td data-id="c7" data-type="s2" data-pr="3" data-width="9" data-min="6">S2</td><td data-id="c8" data-type="s3" data-pr="3" data-width="9" data-min="6">S3</td><td data-id="c9" data-type="" data-pr="6" data-width="9" data-min="8">Time</td><td data-id="c10" data-type="gap" data-pr="1" data-width="11" data-min="8">Gap</td><td data-id="c11" data-type="llp" data-pr="2" data-width="11" data-min="7">Last lap</td><td data-id="c12" data-type="gap" data-pr="1" data-width="11" data-min="8">Gap</td><td data-id="c13" data-type="blp" data-pr="6" data-width="9" data-min="7">Best lap</td></tr><tr data-id="r13" data-pos="1"><td data-id="r13c1" class="gf"></td><td data-id="r13c2" class="sr"></td><td class="rk"><div><p data-id="r13c3" class="">1</p></div></td><td class="no"><div data-id="r13c4" class="no9">17</div></td><td data-id="r13c5" class="dr">FRED L.</td><td data-id="r13c6" class="tn">22.465</td><td data-id="r13c7" class="tn">17.819</td><td data-id="r13c8" class="tn">28.825</td><td data-id="r13c9" class="in">19:09.996</td><td data-id="r13c10" class="ib"></td><td data-id="r13c11" class="tn">1:09.109</td><td data-id="r13c12" class="in">Lap 16</td><td data-id="r13c13" class="in">1:08.242</td></tr><tr data-id="r10" data-pos="2"><td data-id="r10c1" class="gl"></td><td data-id="r10c2" class="sr"></td><td class="rk"><div><p data-id="r10c3" class="">2</p></div></td><td class="no"><div data-id="r10c4" class="no9">16</div></td><td data-id="r10c5" class="dr">ANDRE M.</td><td data-id="r10c6" class="tn">22.745</td><td data-id="r10c7" class="tn">18.095</td><td data-id="r10c8" class="tn">28.424</td><td data-id="r10c9" class="in">19:10.288</td><td data-id="r10c10" class="ib">0.292</td><td data-id="r10c11" class="tn">1:09.264</td><td data-id="r10c12" class="ib">0.292</td><td data-id="r10c13" class="tb">1:07.916</td></tr><tr data-id="r12" data-pos="3"><td data-id="r12c1" class="gs"></td><td data-id="r12c2" class="in"></td><td class="rk"><div><p data-id="r12c3" class="">3</p></div></td><td class="no"><div data-id="r12c4" class="no9">29</div></td><td data-id="r12c5" class="dr">DYLAN M.</td><td data-id="r12c6" class="tn">23.143</td><td data-id="r12c7" class="tn">17.668</td><td data-id="r12c8" class=""></td><td data-id="r12c9" class="in">18:20.873</td><td data-id="r12c10" class="ib">19.986</td><td data-id="r12c11" class="tn">1:09.210</td><td data-id="r12c12" class="ib">19.986</td><td data-id="r12c13" class="in">1:08.296</td></tr><tr data-id="r11" data-pos="4"><td data-id="r11c1" class="gs"></td><td data-id="r11c2" class="in"></td><td class="rk"><div><p data-id="r11c3" class="">4</p></div></td><td class="no"><div data-id="r11c4" class="no9">31</div></td><td data-id="r11c5" class="dr">MARIA L.</td><td data-id="r11c6" class="tn">23.006</td><td data-id="r11c7" class="tn">17.786</td><td data-id="r11c8" class=""></td><td data-id="r11c9" class="in">18:41.459</td><td data-id="r11c10" class="ib">40.572</td><td data-id="r11c11" class="tn">1:11.208</td><td data-id="r11c12" class="ib">40.572</td><td data-id="r11c13" class="in">1:09.923</td></tr><tr data-id="r6" data-pos="5"><td data-id="r6c1" class="gs"></td><td data-id="r6c2" class="sr"></td><td class="rk"><div><p data-id="r6c3" class="">5</p></div></td><td class="no"><div data-id="r6c4" class="no9">9</div></td><td data-id="r6c5" class="dr">TIAGO S.</td><td data-id="r6c6" class="tn">22.995</td><td data-id="r6c7" class="ti">17.997</td><td data-id="r6c8" class="tn">31.604</td><td data-id="r6c9" class="in">19:15.340</td><td data-id="r6c10" class="ib">1 Lap</td><td data-id="r6c11" class="tn">1:12.596</td><td data-id="r6c12" class="ib">1 Lap</td><td data-id="r6c13" class="in">1:12.171</td></tr><tr data-id="r7" data-pos="6"><td data-id="r7c1" class="gs"></td><td data-id="r7c2" class="in"></td><td class="rk"><div><p data-id="r7c3" class="">6</p></div></td><td class="no"><div data-id="r7c4" class="no9">21</div></td><td data-id="r7c5" class="dr">RODRIGO T.</td><td data-id="r7c6" class="tn">23.966</td><td data-id="r7c7" class="ti">18.738</td><td data-id="r7c8" class=""></td><td data-id="r7c9" class="in">18:44.276</td><td data-id="r7c10" class="ib">1 Lap</td><td data-id="r7c11" class="tn">1:13.992</td><td data-id="r7c12" class="ib">41.532</td><td data-id="r7c13" class="in">1:13.409</td></tr><tr data-id="r9" data-pos="8"><td data-id="r9c1" class="gs"></td><td data-id="r9c2" class="sr"></td><td class="rk"><div><p data-id="r9c3" class="">8</p></div></td><td class="no"><div data-id="r9c4" class="no9">36</div></td><td data-id="r9c5" class="dr">INES T.</td><td data-id="r9c6" class="tn">25.747</td><td data-id="r9c7" class="tn">20.278</td><td data-id="r9c8" class="tn">32.661</td><td data-id="r9c9" class="in">19:31.200</td><td data-id="r9c10" class="ib">2 Laps</td><td data-id="r9c11" class="tn">1:18.686</td><td data-id="r9c12" class="ib">2 Laps</td><td data-id="r9c13" class="in">1:18.091</td></tr><tr data-id="r8" data-pos="10"><td data-id="r8c1" class="gs"></td><td data-id="r8c2" class="sr"></td><td class="rk"><div><p data-id="r8c3" class="">10</p></div></td><td class="no"><div data-id="r8c4" class="no9">18</div></td><td data-id="r8c5" class="dr">PEDRO S.</td><td data-id="r8c6" class="tn">26.585</td><td data-id="r8c7" class="tn">23.575</td><td data-id="r8c8" class="tn">34.200</td><td data-id="r8c9" class="in">19:17.818</td><td data-id="r8c10" class="ib">5 Laps</td><td data-id="r8c11" class="tn">1:24.360</td><td data-id="r8c12" class="ib">5 Laps</td><td data-id="r8c13" class="in">1:17.800</td></tr><tr data-id="r14" data-pos="7"><td data-id="r14c1" class="gs"></td><td data-id="r14c2" class="in"></td><td class="rk"><div><p data-id="r14c3" class="">7</p></div></td><td class="no"><div data-id="r14c4" class="no9">40</div></td><td data-id="r14c5" class="dr">J P.</td><td data-id="r14c6" class="tn">28.458</td><td data-id="r14c7" class=""></td><td data-id="r14c8" class=""></td><td data-id="r14c9" class="in">18:51.323</td><td data-id="r14c10" class="ib">1 Lap</td><td data-id="r14c11" class="tn">1:24.121</td><td data-id="r14c12" class="ib">48.579</td><td data-id="r14c13" class="in">1:14.617</td></tr><tr data-id="r15" data-pos="9"><td data-id="r15c1" class="gs"></td><td data-id="r15c2" class="in"></td><td class="rk"><div><p data-id="r15c3" class="">9</p></div></td><td class="no"><div data-id="r15c4" class="no9">11</div></td><td data-id="r15c5" class="dr">MUCAHIT T.</td><td data-id="r15c6" class="tn">26.872</td><td data-id="r15c7" class="ti">19.514</td><td data-id="r15c8" class=""></td><td data-id="r15c9" class="in">18:18.279</td><td data-id="r15c10" class="ib">2 Laps</td><td data-id="r15c11" class="tn">1:30.827</td><td data-id="r15c12" class="ib">5.765</td><td data-id="r15c13" class="in">1:16.873</td></tr></tbody>
+msg||
+
+ 
+r8c6|tn|26.361
+r8c7||
+r8c8||
+r8|*i1|21439
+r14c7|tn|24.781
+r14|*i2|31703
+dyn1|countdown|14447
+r10c7|tn|17.805
+r10|*i2|28369
+r13c7|tn|18.377
+r13|*i2|28630
+r11c2|sr|
+r11c8|tn|29.096
+r11c9|in|19:51.347
+r11c10|ib|41.351
+r11c11|ti|1:09.888
+r11c12|ib|41.351
+r11c13|in|1:09.888
+r11|*|69888|23002
+
+ 
+r11c6|ti|22.762
+r11c7||
+r11c8||
+r11|*i1|17781
+r12c7|tn|18.956
+r12|*i2|28937
+dyn1|countdown|
