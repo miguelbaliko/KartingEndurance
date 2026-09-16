@@ -1385,7 +1385,9 @@ def match_team(want: str, names) -> Optional[str]:
     "TPC CIAO CUORE" on the entry list and may be plain "TPC" on the timing
     screen.  Exact equality would leave the pit wall with no team at all for
     twenty-five hours, so a name that is the start of another, or a subset of
-    its words, counts.
+    its words, counts.  So does one cut off mid-word: the team column is a
+    fixed width and a long name arrives clipped, which is how "TPC CIAO CUORE"
+    reaches us as "TPC CIAO CUO" and matched nothing at all.
 
     It never guesses between two.  This entry list has three STF teams, two
     TRACK LIMITS and a JURASSIC KART alongside a JURASSIC KART RAPTOR, and
@@ -1403,10 +1405,22 @@ def match_team(want: str, names) -> Optional[str]:
         # Compared with the gaps closed up too, so a hyphen cannot split a word
         # an accent leaves whole: "MICRO-AGUA" is "MICROÁGUA".
         if c == w or "".join(c) == "".join(w):
-            return 3
+            return 4
         short, long = (w, c) if len(w) <= len(c) else (c, w)
         if long[:len(short)] == short:
-            return 2                      # "TPC" opening "TPC CIAO CUORE"
+            return 3                      # "TPC" opening "TPC CIAO CUORE"
+        # Clipped mid-word.  Weaker than a whole-word prefix, because a cut can
+        # land anywhere and two teams can share the surviving half — which is
+        # what the tie rule below is for: "TRACK LIMITS" is both of ours.
+        # Which side is shorter is decided on characters here, not words: a cut
+        # that leaves the word count alone ("TPC CIAO CUORE" -> "TPC CIAO CUO")
+        # would otherwise be compared the wrong way round and match nothing,
+        # and this is asked in both directions — the config name against the
+        # feed's, and the feed's against the entry list.
+        a, b = "".join(w), "".join(c)
+        sj, lj = (a, b) if len(a) <= len(b) else (b, a)
+        if lj.startswith(sj):
+            return 2
         if set(short) <= set(long):
             return 1                      # the same words, in another order
         return 0

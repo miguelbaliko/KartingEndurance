@@ -599,6 +599,56 @@ class TestFindingOurselvesInTheFeed(AppCase):
         self.assertEqual(self.app.my_team_name(), "TPC CIAO CUORE")
 
 
+class TestAClippedTeamNameStillFindsUs(AppCase):
+    """The team column is a fixed width, so long names arrive cut off.
+
+    Every KIP session we have recorded is arrive-and-drive, so we have never
+    seen the event's own team column — but it is the one that has to find us,
+    and if it does not, the whole right-hand side of the wall is blank for
+    twenty-five hours.
+    """
+
+    def names(self):
+        import entries
+        return [n for n, _c in entries.ENTRIES]
+
+    def test_our_name_survives_being_cut_anywhere(self):
+        for typed in ("TPC CIAO CUORE", "TPC CIAO CUOR", "TPC CIAO CUO",
+                      "TPC CIAO CU", "TPC CIAO", "TPC CIA", "TPC"):
+            self.assertEqual(self.app.match_team(typed, self.names()),
+                             "TPC CIAO CUORE", f"clipped to {typed!r}")
+
+    def test_a_cut_that_two_teams_share_is_refused_not_guessed(self):
+        """Showing another team's pace as ours is worse than showing none."""
+        for typed in ("TRACK LIMITS", "TRACK LI", "JURASSIC KAR", "JURASSIC"):
+            self.assertIsNone(self.app.match_team(typed, self.names()), typed)
+
+    def test_no_spelling_ever_returns_the_wrong_team(self):
+        """Refusing is survivable. Confidently wrong is not."""
+        import unicodedata
+        names = self.names()
+        for name in names:
+            flat = "".join(c for c in unicodedata.normalize("NFKD", name)
+                           if not unicodedata.combining(c))
+            for typed in (name, name.lower(), flat, name[:12].strip(),
+                          name[:8].strip(), name.replace(" ", ""),
+                          name.replace(" ", "-"), name.replace(" ", "  ")):
+                got = self.app.match_team(typed, names)
+                self.assertIn(got, (name, None),
+                              f"{name!r} typed {typed!r} came back as {got!r}")
+
+    def test_a_clipped_name_reaches_the_wall_as_us(self):
+        self.app.CFG["team_name"] = "TPC CIAO CUORE"
+        self.app._process_rows([{
+            "pos": "1", "kart": "30", "team": "TPC CIAO CUO", "driver": "Miguel",
+            "last_lap": "1:02.500", "last_lap_s": 62.5, "best_lap": "1:02.000",
+            "total_laps": "40", "gap": "", "in_pit": False, "row_cls": ""}])
+        s = self.snap()
+        self.assertEqual(s["feed_team_name"], "TPC CIAO CUO")
+        self.assertTrue(s["teams"][0]["is_my_team"])
+        self.assertEqual(s["teams"][0]["category"], "AM")
+
+
 class TestCategoryFromTheEntryList(AppCase):
     """PRO or AM when the feed's own class column is blank."""
 
