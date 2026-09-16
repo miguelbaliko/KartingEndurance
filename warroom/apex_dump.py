@@ -152,7 +152,11 @@ def analyse(frames: list) -> dict:
         "has_driver": any(r.get("driver") for r in rows),
         "has_category": any(r.get("category") for r in rows),
         "clock_samples": clock[:5],
-        "clock_parsed": bool(clock and warroom.ApexClock().update(clock[-1])),
+        # Fed in sequence, not one value: KIP sends a bare millisecond counter
+        # and a single reading of that proves nothing — the clock has to watch
+        # it move before it will believe it.  Spaced at the interval the tower
+        # republishes, which is what a recording samples.
+        "clock_parsed": _clock_reads(clock),
         "sample_rows": rows[:5],
         "commands": sorted({l.split("|")[0] for f in frames
                             for l in f.replace("\r", "").split("\n") if "|" in l}),
@@ -236,6 +240,13 @@ def listen_ajax(url: str, seconds: float, interval: float = 2.0,
                 return frames
             left -= 1
         time.sleep(interval)
+
+
+def _clock_reads(samples: list) -> bool:
+    """Whether the race clock can be read from these header values."""
+    c = warroom.ApexClock()
+    return any(c.update(v, now=1000.0 + i * 30.0)
+               for i, v in enumerate(samples))
 
 
 def find(slugs: list, seconds: float):

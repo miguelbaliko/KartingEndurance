@@ -250,3 +250,25 @@ class TestAnalyse(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestTheClockReport(unittest.TestCase):
+    """What the recorder says about a feed's race clock.
+
+    It reported "race clock NO" for KIP, whose dyn1 is a bare millisecond
+    counter, because it only ever showed the clock one value.  A single bare
+    number proves nothing by design — the clock has to watch it move.
+    """
+
+    def test_kips_millisecond_counter_reads_as_a_clock(self):
+        # Taken off the live feed, 2026-09-16.
+        self.assertTrue(apex_dump._clock_reads(["448197", "418145", "388082"]))
+
+    def test_the_written_out_form_reads_as_a_clock(self):
+        self.assertTrue(apex_dump._clock_reads(["0:45:00 / 25:00:00"]))
+
+    def test_a_lap_count_does_not(self):
+        self.assertFalse(apex_dump._clock_reads(["118", "119", "120"]))
+
+    def test_nothing_at_all_does_not(self):
+        self.assertFalse(apex_dump._clock_reads([]))

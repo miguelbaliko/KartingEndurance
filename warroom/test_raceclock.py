@@ -110,6 +110,26 @@ class TestABareMillisecondCounter(unittest.TestCase):
         self.assertAlmostEqual(c.remaining, 867.412, places=3)
         self.assertIsNone(c.elapsed)
 
+    def test_the_cadence_kip_actually_sends(self):
+        """Taken off the live feed: 22s, then 47s, then 11s between frames.
+
+        The tower steps the counter down by a flat 30,000 each time it
+        republishes, but the frames arrive whenever the poll lands, so
+        consecutive readings gave 1368, 641 and 2727 a second for one clock.
+        Judging pairs reads the polling jitter; judging against a held anchor
+        reads the clock.
+        """
+        c = ApexClock()
+        for at, v in ((0, "358036"), (22, "327941"), (69, "297801"), (80, "267802")):
+            c.update(v, now=1000.0 + at)
+        self.assertAlmostEqual(c.remaining, 267.802, places=3)
+
+    def test_a_slow_counter_at_that_cadence_is_still_refused(self):
+        c = ApexClock()
+        for at, v in ((0, "118"), (22, "119"), (69, "121"), (80, "122"), (300, "130")):
+            self.assertFalse(c.update(v, now=1000.0 + at), f"at {at}s")
+        self.assertIsNone(c.remaining)
+
     def test_a_counter_going_up_is_elapsed(self):
         c, _ = self.feed(["60000", "90000", "120000"])
         self.assertAlmostEqual(c.elapsed, 120.0, places=3)

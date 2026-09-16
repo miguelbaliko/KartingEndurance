@@ -25,8 +25,19 @@ _CLOCK = re.compile(r'(?<![\d:.])(\d{1,3}):([0-5]\d)(?::([0-5]\d))?(?![\d:.])')
 # never sees it.  A bare number on its own could be anything, though, so it only
 # becomes a clock once it has been watched moving at about a thousand a second.
 _MS_PER_S = 1000.0
-_MS_SLACK = 0.25            # how far off that rate a reading may sit
+_MS_SLACK = 0.35            # how far off that rate the average may sit
 _MS_MAX_DIGITS = 12
+# The rate has to be measured over a decent stretch.  KIP's counter steps down
+# by a flat 30,000 every time the tower republishes it, but those frames reach
+# us whenever the poll happens to land — measured live, the same clock gave
+# 1368, 641 and 2727 a second over consecutive readings and 1128 against a
+# fixed anchor eighty seconds back.  Judging on consecutive pairs reads the
+# polling jitter, not the clock.
+_MS_MIN_BASELINE = 20.0
+# How long an anchor is kept while it has proved nothing.  Long enough for the
+# average to settle, short enough that a field which only becomes a clock later
+# is not judged against a reading from another session.
+_MS_MAX_BASELINE = 300.0
 
 # Words the timing feeds put next to a countdown, in the languages Apex ships.
 _REMAINING_WORDS = ("remain", "restant", "restante", "left", "to go", "rest")
@@ -107,23 +118,37 @@ class ApexClock:
 
         The first sighting proves nothing: a lap count, a temperature and a
         distance are all bare numbers too.  What a clock does and they do not
-        is move at a thousand a second, so that is what is waited for.  Once a
-        feed has shown it, it keeps the benefit of the doubt — otherwise the
-        clock would be dropped exactly when it stops under a red flag, which is
-        the moment it is worth most.
+        is move at a thousand a second averaged over twenty seconds or more,
+        so that is what is waited for — the first reading is kept as an anchor
+        and nothing is decided until enough time has passed for the feed's own
+        irregular delivery to average out.  Once a feed has shown it, it keeps
+        the benefit of the doubt: otherwise the clock would be dropped exactly
+        when it stops under a red flag, which is the moment it is worth most.
         """
         t = (text or "").strip()
         if not t.isdigit() or len(t) > _MS_MAX_DIGITS:
             self._ms_prev = None
             return None
         value = int(t)
-        prev, self._ms_prev = self._ms_prev, (value, now)
         if self._ms_confirmed:
+            self._ms_prev = (value, now)
             return value / _MS_PER_S
-        if prev is None or now <= prev[1]:
+        anchor = self._ms_prev
+        if anchor is None:
+            self._ms_prev = (value, now)
             return None
-        rate = abs(value - prev[0]) / (now - prev[1])
+        span = now - anchor[1]
+        if span < _MS_MIN_BASELINE:
+            return None                  # too soon to tell a clock from a count
+        rate = abs(value - anchor[0]) / span
         if abs(rate - _MS_PER_S) > _MS_PER_S * _MS_SLACK:
+            # Not a clock at this pace — but the anchor stays, because the
+            # average is what settles.  Measured live on KIP, the first span
+            # read 1368 a second and the third 1128 against the same anchor;
+            # re-anchoring on each miss throws away the very baseline that
+            # makes it converge, and nothing is ever confirmed.
+            if span > _MS_MAX_BASELINE:
+                self._ms_prev = (value, now)
             return None
         self._ms_confirmed = True
         # The reading that proved the rate also showed the direction, so hand
@@ -131,7 +156,8 @@ class ApexClock:
         # wall reports fifteen minutes elapsed in a twenty-five hour race until
         # the next frame corrects it.
         if self._prev_single is None:
-            self._prev_single = prev[0] / _MS_PER_S
+            self._prev_single = anchor[0] / _MS_PER_S
+        self._ms_prev = (value, now)
         return value / _MS_PER_S
 
     def _set(self, elapsed=None, remaining=None, now=0.0):
