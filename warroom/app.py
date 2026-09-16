@@ -25,10 +25,15 @@ app = Flask(__name__)
 # against its own settings instead of whatever the last run happened to save.
 _CFG_PATH = os.environ.get("WARROOM_CONFIG") or os.path.join(
     os.path.dirname(__file__), "config.json")
+os.makedirs(os.path.dirname(os.path.abspath(_CFG_PATH)), exist_ok=True)
 
 def load_cfg() -> dict:
     base = {
-        "team_name": "TPC",
+        # The organisers' entry list spells us this way.  Apex may not — the
+        # matching handles a clipped or reordered name, and team_no below beats
+        # both — but starting from the real name is one less thing to type in
+        # on the Friday.
+        "team_name": "TPC CIAO CUORE",
         # The number beside us on the timing screen.  A name is the usual way
         # to find our row, but KIP's own sessions carry no team column at all —
         # the driver cell is the whole of it, and it changes every time someone
@@ -119,6 +124,11 @@ def save_cfg():
 # which is how the mock race and the real one stay out of each other's way.
 DB = os.environ.get("WARROOM_DB") or os.path.join(
     os.path.dirname(__file__), "data", "race.db")
+# A mounted disk starts empty and a hand-set path may point anywhere, and
+# sqlite will not make the folder for us — it just refuses to open the file,
+# which reaches the wall as "unable to open database file" and no war room at
+# all.  Cheaper to create it than to debug that on the Friday.
+os.makedirs(os.path.dirname(os.path.abspath(DB)), exist_ok=True)
 
 def init_db():
     os.makedirs(os.path.dirname(DB), exist_ok=True)

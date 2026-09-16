@@ -10,6 +10,21 @@ services:
     # second poller stealing frames from the first, and a second copy of the
     # race.
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 0
+    # The whole race lives in one SQLite file: every stop we log, every
+    # driver's running total, the kart pool and every lap banked in it.  The
+    # service's own filesystem does not survive a restart or a redeploy, so
+    # without this the first hiccup at 3am takes the §3.8 stop count and
+    # twenty-five hours of learning with it.  The settings sit here too — the
+    # Apex URL, our number, the measured pit loss — so a restart does not send
+    # someone to the settings box mid-race.
+    disk:
+      name: warroom-data
+      mountPath: /var/warroom
+      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: WARROOM_DB
+        value: /var/warroom/race.db
+      - key: WARROOM_CONFIG
+        value: /var/warroom/config.json
