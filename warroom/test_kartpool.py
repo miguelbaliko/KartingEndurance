@@ -7,6 +7,7 @@ has been waiting longest.
 """
 
 import os
+import random
 import sys
 import tempfile
 import unittest
@@ -81,6 +82,38 @@ class TestStopDetection(PoolCase):
             pool.observe([row("1", "ALPHA", laps=lap, lap_s=63.0)])
         pool.observe([row("1", "ALPHA", laps=8, lap_s=63.0 + 6)])
         self.assertEqual(pool.pending(), [])
+
+    def warmed(self, noise, seed):
+        """A kart at KIP pace with realistic lap-to-lap scatter.
+
+        Its own database: PoolCase.make shares one file, so a run would
+        otherwise inherit the stops the run before it left pending.
+        """
+        rng = random.Random(seed)
+        pool = KartPool(os.path.join(self._tmp.name, f"warm{seed}.db"),
+                        {"detect_by_pit_column": False, "lanes": 1})
+        for lap in range(1, 13):
+            pool.observe([row("1", "ALPHA", laps=lap, lap_s=63.0 + rng.gauss(0, noise))])
+        return pool
+
+    def test_a_mandatory_stop_is_caught_every_time(self):
+        """At KIP this is the only detector there is — no feed carries a pit
+        column, so a missed spike is a stop that never reaches the count.
+
+        §3.9 puts three minutes in the box, nine times the threshold, so the
+        margin is about 160 seconds.  Twenty runs with real scatter, no misses.
+        """
+        for seed in range(20):
+            pool = self.warmed(noise=0.8, seed=seed)
+            pool.observe([row("1", "ALPHA", laps=13, lap_s=63.0 + 180)])
+            self.assertEqual(len(pool.pending()), 1, f"seed {seed}")
+
+    def test_a_spin_and_restart_is_never_a_stop(self):
+        """Nineteen seconds lost is a bad lap, not three minutes in a box."""
+        for seed in range(20):
+            pool = self.warmed(noise=0.8, seed=seed)
+            pool.observe([row("1", "ALPHA", laps=13, lap_s=63.0 + 19)])
+            self.assertEqual(pool.pending(), [], f"seed {seed}")
 
 
 class TestLaneFlow(PoolCase):

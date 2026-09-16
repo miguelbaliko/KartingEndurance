@@ -59,9 +59,18 @@ import app as warroom
 # except on race weekends, and a layout we have never parsed is the main risk.
 KNOWN_EVENTS = ["kip-palmela", "kartalcanede"]
 
+# Other Apex installs, swept only when KIP is dark.  They are a parser
+# exercise, never the target — but the endurance ones are the exercise worth
+# having, because KIP's own sessions are arrive-and-drive and will never show
+# us a pit counter, a class column or a field big enough to rate.
 OTHER_TRACKS = ["kartplanet", "kartodromodeviana", "wsk", "rgmmc", "rgmmc2",
                 "ligue-karting-op", "korridas", "rkc", "lemans-karting",
-                "elk-motorsport"]
+                "elk-motorsport",
+                # ACO Le Mans runs the 24H Karting; the rest are French clubs
+                # whose championship rounds are the likeliest place to catch a
+                # real stop.
+                "lemans-karting2", "circuit-europe", "capkarting",
+                "pks-loisirs", "formula-karts", "karttiming"]
 
 
 def event_name(url: str) -> str:
@@ -292,8 +301,12 @@ def find(slugs: list, seconds: float):
         unseen = sorted(set(s["columns_ignored"]) - KNOWN_SKIPPED)
         if unseen:
             print(f"  {'':<22}columns we have never seen: {', '.join(unseen)}")
-        if not s["has_pit_counter"]:
+        if s["has_pit_counter"]:
+            print(f"  {'':<22}** HAS A PIT COUNTER — endurance shape, worth recording **")
+        else:
             print(f"  {'':<22}no pit counter — stops fall back to lap-time spikes")
+        if s["karts"] >= 15:
+            print(f"  {'':<22}** {s['karts']} karts — a real field, worth recording **")
 
     if live:
         print("\n  Record one with:\n")
