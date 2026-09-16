@@ -880,8 +880,16 @@ tr.clickable{cursor:pointer}
     <h3>⚙ Settings</h3>
     <div class="cfg-lbl">Apex Timing URL</div>
     <input id="cfg-url"   class="cfg-inp" placeholder="https://live.apex-timing.com/…">
-    <div class="cfg-lbl">My Team Name (must match Apex exactly)</div>
-    <input id="cfg-team"  class="cfg-inp" placeholder="TPC">
+    <div class="cfg-lbl">My team name</div>
+    <input id="cfg-team"  class="cfg-inp" placeholder="TPC CIAO CUORE">
+    <div class="cfg-lbl">My number on the timing screen</div>
+    <input id="cfg-teamno" class="cfg-inp" placeholder="leave empty to match by name">
+    <div class="cfg-lbl" style="color:var(--tx3);font-size:10px;margin-top:-4px">
+      Set this and our row is found by its number instead of its name, and keeps
+      our name whatever the feed puts in the team cell. KIP's own sessions have
+      no team column at all — the driver cell is the whole of it — so without a
+      number our four drivers read as four different teams.
+    </div>
     <div class="cfg-row">
       <div>
         <div class="cfg-lbl">Race duration (min)</div>
@@ -2087,6 +2095,7 @@ function openCfg() {
   if (S) {
     document.getElementById('cfg-url').value  = S.apex_url  || '';
     document.getElementById('cfg-team').value = S.team_name || '';
+  document.getElementById('cfg-teamno').value = S.team_no || '';
     const pool = S.kartpool || {};
     document.getElementById('cfg-lanes').value   = (pool.lanes||[]).length || 2;
     document.getElementById('cfg-exclude').value = (s.exclude_teams||[]).join(', ');
@@ -2104,6 +2113,7 @@ async function saveCfg() {
   const b={};
   const url=document.getElementById('cfg-url').value.trim();
   const team=document.getElementById('cfg-team').value.trim();
+  b.team_no = document.getElementById('cfg-teamno').value.trim();
   const dur=document.getElementById('cfg-dur').value.trim();
   const pits=document.getElementById('cfg-pits').value.trim();
   const stint=document.getElementById('cfg-stint').value.trim();
