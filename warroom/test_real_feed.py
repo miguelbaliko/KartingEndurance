@@ -487,5 +487,43 @@ class TestTheBiggestKipFieldWeHaveSeen(RealFeedCase):
         self.assertTrue(apex_dump._clock_reads(["136781", "106729", "76725"]))
 
 
+LEMANS = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                      "testdata", "apex-lemans-22karts-french.raw")
+
+
+class TestABigFrenchFieldLapsItsBackmarkers(RealFeedCase):
+    """Le Mans, 2026-09-17: twenty-two karts, and a French board.
+
+    Twice the field of any other capture, and the first one where a lapped
+    kart appears at all: the gap column reads "1 Tour" / "2 Tours" instead of
+    a time.  We already read "Lap"/"Volta"; the French plural went unread, so
+    those two karts dropped out of the virtual order entirely.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.app._global_col_types.clear()
+        with open(LEMANS, encoding="utf-8") as f:
+            self.rows = []
+            for frame in f.read().split("\n\x00\n"):
+                parsed, _c, _m = self.app._parse_apex_pipe(frame)
+                self.rows.extend(parsed)
+
+    def test_all_twenty_two_arrive(self):
+        self.assertEqual(len(self.rows), 22)
+        self.assertEqual(len(self.field("kart")), 22)
+
+    def test_lapped_karts_are_read_as_laps_not_dropped(self):
+        lapped = [r["gap"] for r in self.rows
+                  if "Tour" in str(r.get("gap", "")) and r["gap"][0].isdigit()]
+        self.assertEqual(sorted(lapped), ["1 Tour", "2 Tours"])
+        self.assertAlmostEqual(self.app.gap_seconds("1 Tour", 62.0), 62.0)
+        self.assertAlmostEqual(self.app.gap_seconds("2 Tours", 62.0), 124.0)
+
+    def test_the_leaders_lap_count_is_still_not_a_gap(self):
+        """The leader's cell reads "Tour 10" — the race lap, not a deficit."""
+        self.assertIsNone(self.app.gap_seconds("Tour 10", 62.0))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

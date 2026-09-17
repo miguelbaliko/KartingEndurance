@@ -1063,7 +1063,7 @@ def penalty_for_shortfall(short_s: float) -> int:
     return 20 * math.ceil(short_s / 10.0)
 
 
-_LAP_GAP = re.compile(r'^\s*(\d+)\s*(?:lap|laps|volta|voltas|t)\b', re.I)
+_LAP_GAP = re.compile(r'^\s*(\d+)\s*(?:(?:lap|volta|tour)s?|t)\b', re.I)
 
 def gap_seconds(gap: str, lap_s: Optional[float]) -> Optional[float]:
     """Apex writes a gap either as seconds behind, or as whole laps.
