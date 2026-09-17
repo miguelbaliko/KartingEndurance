@@ -567,6 +567,7 @@ class KartPool:
                 "SELECT * FROM kart_stop WHERE state IN (?,?) ORDER BY id",
                 (PENDING, AWAIT_KART)).fetchall()
             now = time.time()
+            mine = (self._my_team or "").strip().lower()
             out = []
             for r in rows:
                 since = self._in_box_since.get(str(r["team_no"]))
@@ -586,13 +587,20 @@ class KartPool:
                     # What the silence is costing: every lap since this stop
                     # is a lap the kart ratings never see.
                     "laps_lost": self._dropped.get(str(r["team_no"]), 0),
+                    # Ours is the one stop where somebody can walk over and
+                    # read the number off the kart, and with a queue behind us
+                    # that is the only answer that is reliable: the lane hands
+                    # out its front kart, so tapping it while an earlier stop
+                    # on the same lane is unanswered gives us their kart.
+                    "mine": bool(mine) and (r["team"] or "").strip().lower() == mine,
                 })
             # Ours first, the rest in the order they happened.  A rival's
             # question can wait all race; ours is answerable only by the
             # person standing in the box, and only while they are there.
-            mine = (self._my_team or "").strip().lower()
+            # Rivals must stay chronological: the lane hands out its front
+            # kart, so answering them out of order hands each the other's.
             if mine:
-                out.sort(key=lambda p: (p["team"] or "").strip().lower() != mine)
+                out.sort(key=lambda p: not p["mine"])
             return out
 
     # ── feed ingestion ────────────────────────────────────────────────────────

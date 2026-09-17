@@ -764,3 +764,38 @@ class TestOurQuestionComesFirst(PoolCase):
         for no, team in (("1", "RIVAL A"), ("7", "TPC CIAO CUORE")):
             self.pool.manual_stop(no, team)
         self.assertEqual(self.pool.pending()[0]["team"], "RIVAL A")
+
+
+class TestAnsweringOutOfOrder(PoolCase):
+    """A lane hands out its front kart, so the order answers arrive in is
+    part of the answer.  With every team asked about, a backlog is normal,
+    and ours is the one stop somebody can answer without guessing."""
+
+    def setUp(self):
+        super().setUp()
+        self.pool = self.make(lanes=2)
+        self.pool.set_kart("1", "RIVAL", "10")
+        self.pool.set_kart("7", "TPC", "11")
+        for k in ("21", "22", "23"):
+            self.pool.lane_add(1, k)
+        self.rival = self.pool.manual_stop("1", "RIVAL")   # stopped first
+        self.ours = self.pool.manual_stop("7", "TPC")      # we stopped second
+
+    def test_tapping_the_lane_ahead_of_an_unanswered_stop_takes_their_kart(self):
+        """Why ours must not be answered by lane while a queue exists."""
+        self.pool.resolve(self.ours, lane=1)
+        self.assertEqual(self.pool.kart_of()["7"], "21",
+                         "the front kart was the rival's, and we took it")
+
+    def test_reading_the_number_is_right_whatever_is_unanswered(self):
+        self.pool.resolve(self.ours, kart_out="22")
+        self.assertEqual(self.pool.kart_of()["7"], "22")
+        # and the rival's own answer still gives them the front kart
+        self.pool.resolve(self.rival, lane=1)
+        self.assertEqual(self.pool.kart_of()["1"], "21")
+
+    def test_ours_is_flagged_so_the_phone_can_ask_for_the_number(self):
+        self.pool.observe([row("9", "SOMEONE", pits=0, laps=1)], my_team="TPC")
+        by_team = {p["team"]: p for p in self.pool.pending()}
+        self.assertTrue(by_team["TPC"]["mine"])
+        self.assertFalse(by_team["RIVAL"]["mine"])

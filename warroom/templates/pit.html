@@ -48,6 +48,9 @@ header{position:sticky;top:0;z-index:5;background:var(--bg);
 
 .ask{background:linear-gradient(180deg,#2a1f0a,#1a1508);
      border:1px solid #7c5e12;border-radius:var(--r);padding:13px;margin-bottom:12px}
+/* Ours, which is the one the person holding this phone is standing at. */
+.ask.mine{background:linear-gradient(180deg,#0d2440,#08172a);border-color:#2d6ca8}
+.ask.mine .ask-hd{color:#6fb3ff}
 .ask-hd{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--ylw);
         margin-bottom:9px}
 .ask-team{font-size:16px;font-weight:700;margin-bottom:2px}
@@ -291,6 +294,25 @@ function renderAsks(){
         margin-top:3px">${sub}</div></button>`;
     }).join('');
     const also = withThem(p);
+    // Our own stop is the one somebody is standing at, and with a queue
+    // behind us the lane is the wrong answer: it hands out its front kart,
+    // so tapping it while an earlier stop on the same lane is unanswered
+    // gives us that team's kart.  Reading the number is right either way.
+    if (p.mine) {
+      return `<div class="ask mine">
+        <div class="ask-hd">OUR KART — READ THE NUMBER OFF IT</div>
+        <div class="ask-team">${esc(p.team || ('#'+p.team_no))}${
+          p.kart_in ? ` · handed over kart ${esc(p.kart_in)}` : ''}</div>
+        <div class="ask-meta">${waiting}${also}</div>
+        <div class="ask-btns">
+          <button class="lane-btn" onclick="askKart(${p.id})">Enter kart number</button>
+        </div>
+        <div class="ask-meta" style="margin-top:6px">Only if you cannot see it:
+          ${(POOL.lanes||[]).map(l => `<button class="ask-alt"
+            onclick="post('kart/lane',{stop_id:${p.id},lane:${l.lane}})"
+            >${esc(l.name)}</button>`).join(' ')}</div>
+        </div>`;
+    }
     return `<div class="ask">
       ${i === 0 ? `<div class="ask-hd">${order ? 'WHO WENT OUT FIRST?' : 'WHICH LANE?'}</div>` : ''}
       <div class="ask-team">${esc(p.team || ('#'+p.team_no))}${
