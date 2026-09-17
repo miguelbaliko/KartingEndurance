@@ -525,5 +525,78 @@ class TestABigFrenchFieldLapsItsBackmarkers(RealFeedCase):
         self.assertIsNone(self.app.gap_seconds("Tour 10", 62.0))
 
 
+REAL_STOPS = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "testdata", "apex-rkc-36karts-real-stops.raw")
+
+
+class TestARealPitStop(RealFeedCase):
+    """RKC "COURSE 1", 2026-09-17: thirty-six karts and a pit window.
+
+    Every other fixture carries the pit column but never sees it move.  This
+    one was recorded across eight minutes of a live endurance race in which
+    twenty-four counters ticked, so it is the only evidence we have that a
+    stop is detected from the thing the regulation is actually judged on —
+    the organiser's own count — rather than from a lap-time spike.
+    """
+
+    def setUp(self):
+        super().setUp()
+        import kartpool, tempfile
+        self.app._global_col_types.clear()
+        self.app._global_head_cols.clear()
+        self.app._row_kart_map.clear()
+        self.app._reset_sector_best()
+        self.app._teams = []
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.pool = kartpool.KartPool(os.path.join(self.tmp.name, "s.db"),
+                                      {"lanes": 2})
+        self.ticks = {}
+        with open(REAL_STOPS, encoding="utf-8") as fh:
+            frames = fh.read().split("\n\x00\n")
+        first = self.app._parse_apex_pipe(frames[0])[0]
+        for r in first:
+            if r.get("kart"):
+                self.pool.set_kart(r["kart"], r.get("team") or r["kart"], r["kart"])
+        for f in frames:
+            rows, cells, _m = self.app._parse_apex_pipe(f)
+            for kart, upd in cells.items():
+                if "pits" in upd:
+                    self.ticks.setdefault(kart, set()).add(upd["pits"])
+            for r in rows:
+                if r.get("pits"):
+                    self.ticks.setdefault(r.get("kart"), set()).add(r["pits"])
+            if cells: self.app._apply_cell_updates(cells)
+            if rows: self.app._process_rows(rows)
+            if self.app._teams:
+                self.pool.observe([dict(t) for t in self.app._teams])
+
+    def test_the_counters_really_move_in_this_one(self):
+        moved = {k for k, v in self.ticks.items() if len(v) > 1}
+        self.assertGreaterEqual(len(moved), 20,
+                                "the fixture exists for the ticks; without "
+                                "them it is just another grid")
+
+    def test_every_tick_becomes_a_stop(self):
+        moved = {k for k, v in self.ticks.items() if len(v) > 1}
+        stops = {str(p["team_no"]) for p in self.pool.pending()}
+        missed = moved - stops
+        self.assertFalse(missed, f"counters ticked but no stop opened: {missed}")
+
+    def test_the_stops_came_from_the_feed_not_a_lap_spike(self):
+        """§3.8 is judged on the organiser's count, so that is what we follow."""
+        with self.pool._con() as con:
+            sources = {r["source"] for r in
+                       con.execute("SELECT DISTINCT source FROM kart_stop")}
+        self.assertEqual(sources, {"feed"})
+
+    def test_the_field_and_its_laps_come_through(self):
+        self.assertEqual(len(self.app._teams), 36)
+        with self.pool._con() as con:
+            karts = con.execute(
+                "SELECT COUNT(DISTINCT kart) FROM kart_lap").fetchone()[0]
+        self.assertGreaterEqual(karts, 30, "laps must reach the rating model")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
