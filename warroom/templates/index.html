@@ -477,24 +477,52 @@ tr.clickable{cursor:pointer}
 .dec-why{font-size:10px;color:var(--tx3);text-align:center;padding:6px 8px 2px;
   line-height:1.4}
 .matrix-hd{font-size:10px;color:var(--tx3);margin:10px 0 6px}
-.matrix{display:flex;gap:8px}
-.mx-col{flex:1;min-width:0}
-.mx-nm{font-size:10px;color:var(--tx3);margin-bottom:4px;display:flex;
-  justify-content:space-between}
-.mx-k{display:flex;align-items:center;gap:5px;padding:4px 6px;margin-bottom:3px;
-  border-radius:6px;background:var(--bg2);border:1px solid var(--line);
-  border-left-width:3px;cursor:pointer;font-size:11px}
-.mx-k.grade-rocket{border-left-color:#c084fc}
-.mx-k.grade-verygood{border-left-color:#22c55e}
-.mx-k.grade-good{border-left-color:#a3e635}
+.matrix{display:flex;gap:10px}
+/* A lane is a queue, so it is drawn as one: a headed column, the kart at the
+   front raised out of it, and everything behind it stepping back in tone. */
+/* Capped, because early in the race most of the fleet is waiting and an
+   uncapped column pushes everything below it off the wall.  The front of the
+   queue is at the top, so what scrolls away is what matters least. */
+.mx-col{flex:1;min-width:0;background:var(--bg1);border:1px solid var(--line);
+  border-radius:9px;padding:7px;display:flex;flex-direction:column;gap:4px;
+  max-height:440px;overflow-y:auto}
+.mx-nm{position:sticky;top:-7px;z-index:1;background:var(--bg1);
+  font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--tx2);display:flex;justify-content:space-between;align-items:center;
+  padding:2px 2px 6px;border-bottom:1px solid var(--line)}
+.mx-cnt{font-family:var(--mono);font-weight:600;color:var(--tx3);
+  background:var(--bg3);border-radius:10px;padding:1px 7px;font-size:9px}
+/* Two rows, not one: the column is only ~150px wide, and squeezing the number,
+   the grade and the delta onto a single line clipped "Very Good" to "V.".  The
+   number and the delta share the top row; the grade gets the whole width under
+   them, which is the only way it always reads. */
+.mx-k{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:6px 8px;
+  border-radius:7px;background:var(--bg2);border:1px solid var(--line);
+  border-left-width:4px;cursor:pointer;font-size:11px;
+  transition:transform .12s ease,border-color .12s ease,background .12s ease}
+.mx-k .kchip{flex:0 0 100%;justify-content:center;padding:2px 6px;font-size:10px}
+.mx-k.grade-rocket{border-left-color:#c084fc;background:linear-gradient(90deg,#1a1030,var(--bg2) 62%)}
+.mx-k.grade-verygood{border-left-color:#22c55e;background:linear-gradient(90deg,#0c2418,var(--bg2) 62%)}
+.mx-k.grade-good{border-left-color:#a3e635;background:linear-gradient(90deg,#1b2410,var(--bg2) 62%)}
 .mx-k.grade-ok{border-left-color:#64748b}
-.mx-k.grade-bad{border-left-color:#ef4444}
+.mx-k.grade-bad{border-left-color:#ef4444;background:linear-gradient(90deg,#2a1010,var(--bg2) 62%)}
 .mx-k.grade-unknown{border-left-color:#2a3340}
-.mx-k:hover{border-color:var(--line2)}
-.mx-k.next{border-color:var(--blue);background:#0d1725}
-.mx-n{font-weight:700;font-variant-numeric:tabular-nums;min-width:20px}
-.mx-d{margin-left:auto;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums}
-.mx-empty{font-size:10px;color:var(--tx3);font-style:italic;padding:4px 2px}
+.mx-k:hover{border-color:var(--line2);transform:translateX(2px)}
+/* The front of the queue is the only kart anyone can actually take, so it is
+   the one thing in the column that has to be unmissable. */
+.mx-k.next{border-color:var(--blue);box-shadow:0 0 0 1px rgba(79,145,255,.35),
+  0 2px 10px rgba(79,145,255,.13);padding:8px}
+.mx-k.next .mx-n{font-size:16px;color:var(--tx)}
+.mx-k.next .mx-q{color:var(--blue);border-color:#28406b;background:#101d33}
+.mx-q{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--tx3);
+  background:var(--bg3);border:1px solid var(--line);border-radius:4px;
+  min-width:15px;text-align:center;padding:1px 0;flex:none}
+.mx-n{font-weight:800;font-size:13px;font-variant-numeric:tabular-nums;
+  min-width:22px;line-height:1}
+.mx-d{margin-left:auto;padding-left:4px;font-size:10px;color:var(--tx3);
+  font-variant-numeric:tabular-nums;flex:none;white-space:nowrap}
+.mx-empty{font-size:10px;color:var(--tx3);font-style:italic;padding:10px 2px;
+  text-align:center;border:1px dashed var(--line);border-radius:7px}
 .kd-hd{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
 .kd-drv{display:flex;gap:10px;padding:4px 8px;font-size:11px;
   border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -1696,14 +1724,16 @@ function renderMatrix(s) {
   el.innerHTML = lanes.length ? lanes.map(l => `
     <div class="mx-col">
       <div class="mx-nm"><span>${esc(l.name||('Lane '+l.lane))}</span>
-        <span>${l.karts.length}</span></div>
+        <span class="mx-cnt">${l.karts.length}</span></div>
       ${l.karts.length ? l.karts.map((k, i) => `
         <div class="mx-k grade-${CHIP_CLS[k.label]||'unknown'} ${i===0?'next':''}"
              onclick="showKart('${esc(k.num)}')"
-             title="${esc(k.label)}${k.delta!=null?' '+fmtDelta(k.delta):''} — click for its laps">
+             title="${i===0?'Next out of this lane. ':''}${esc(k.label)}${
+               k.delta!=null?' '+fmtDelta(k.delta):''} — click for its laps">
+          <span class="mx-q">${i===0?'▶':i+1}</span>
           <span class="mx-n">${esc(k.num)}</span>
-          <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}</span>
           <span class="mx-d">${k.delta!=null?fmtDelta(k.delta):paceHint(k)}</span>
+          <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}</span>
         </div>`).join('')
         : '<div class="mx-empty">empty</div>'}
     </div>`).join('') : '<div class="mx-empty">No karts entered yet.</div>';
