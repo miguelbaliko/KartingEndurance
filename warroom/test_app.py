@@ -684,9 +684,12 @@ class TestTheBoardKeepsMoving(AppCase):
         self.assertEqual(cells["204"]["gap"], "0.418")
 
     def test_the_header_beats_the_css_class(self):
-        """c9 is the lap column; "tb" only says the lap was a best."""
+        """c9 is the lap column even though "tb" is also a field name of its
+        own (best_lap) — the header wins, and "tb" is read for what it also
+        is here: the lap was the session's best."""
         _r, cells, _m = self.app._parse_apex_pipe("r56c9|tb|1:10.617\n")
-        self.assertEqual(cells["202"], {"last_lap": "1:10.617"})
+        self.assertEqual(cells["202"],
+                         {"last_lap": "1:10.617", "last_lap_mark": "sb"})
 
     def test_a_cell_for_an_unknown_row_is_ignored(self):
         _r, cells, _m = self.app._parse_apex_pipe("r99c9|tn|1:20.000\n")
@@ -1016,6 +1019,7 @@ class TestSectorColours(AppCase):
         # Same time, same kart, next frame: the purple is not theirs any more.
         self.assertEqual(self.mark("102", s1="39.137")["s1"]["mark"], "pb")
 
+
     def test_the_order_rows_arrive_in_cannot_decide_the_purple(self):
         """Apex sends rows in its own order, not in race order.
 
@@ -1073,6 +1077,75 @@ class TestSectorColours(AppCase):
         # through S2, so it takes the purple there.
         self.assertEqual(rows["9"]["sectors"]["s1"]["mark"], "pb")
         self.assertEqual(rows["9"]["sectors"]["s2"]["mark"], "sb")
+
+
+class TestLastLapColour(AppCase):
+    """Apex classifies every lap itself — purple, green, or plain — on the
+    same cell it sends the time in.  The parser only had to stop discarding
+    the class, not compute anything: it is read straight off the feed's own
+    tb/ti/tn, exactly the way mark_sectors reads s1/s2/s3."""
+
+    def test_the_grid_carries_the_feed_apos_s_own_verdict(self):
+        grid = [{"pos": "1", "kart": "17", "team": "QUICK",
+                 "last_lap": "1:02.500", "last_lap_mark": "sb"},
+                {"pos": "2", "kart": "21", "team": "SLOW",
+                 "last_lap": "1:05.000", "last_lap_mark": ""}]
+        self.app._process_rows(grid)
+        rows = {t["kart"]: t for t in
+                self.client.get("/api/state").get_json()["teams"]}
+        self.assertEqual(rows["17"]["last_lap_mark"], "sb")
+        self.assertEqual(rows["21"]["last_lap_mark"], "")
+
+    def test_a_normal_lap_clears_a_stale_purple_on_an_incremental_update(self):
+        """The lap-cell mark is written on every update, not only when it is
+        set — an incremental merge into the existing row must not leave a
+        purple from three laps ago glowing under a plain one."""
+        self.app._process_rows([{"pos": "1", "kart": "17", "team": "Q",
+                                 "last_lap": "1:00.000", "last_lap_mark": "sb"}])
+        rows, cells, _meta = self.app._parse_apex_pipe("r1c9|tn|1:04.000")
+        self.app._row_kart_map["r1"] = "17"
+        rows, cells, _meta = self.app._parse_apex_pipe("r1c9|tn|1:04.000")
+        self.app._apply_cell_updates(cells)
+        got = next(t for t in self.client.get("/api/state").get_json()["teams"]
+                  if t["kart"] == "17")
+        self.assertEqual(got["last_lap_mark"], "")
+
+    def test_the_pipe_protocol_reads_purple_and_green_off_the_class(self):
+        self.app._global_col_types["c9"] = "last_lap"
+        self.app._row_kart_map["r1"] = "17"
+        _rows, cells, _meta = self.app._parse_apex_pipe("r1c9|tb|1:02.500")
+        self.assertEqual(cells["17"]["last_lap_mark"], "sb")
+        _rows, cells, _meta = self.app._parse_apex_pipe("r1c9|ti|1:03.100")
+        self.assertEqual(cells["17"]["last_lap_mark"], "pb")
+
+
+class TestFastestLapBadge(AppCase):
+    """Unlike the last-lap colour, which fades the moment a kart's next lap
+    is not a session best, this one is F1's other purple: it stays on
+    whoever holds the outright fastest lap until somebody actually beats it."""
+
+    def test_the_quickest_best_lap_in_the_field_is_marked(self):
+        self.app._process_rows([
+            {"pos": "1", "kart": "17", "team": "A", "best_lap": "1:02.500"},
+            {"pos": "2", "kart": "21", "team": "B", "best_lap": "1:01.800"},
+        ])
+        rows = {t["kart"]: t for t in
+                self.client.get("/api/state").get_json()["teams"]}
+        self.assertFalse(rows["17"]["fastest_lap"])
+        self.assertTrue(rows["21"]["fastest_lap"])
+
+    def test_a_tie_marks_both(self):
+        self.app._process_rows([
+            {"pos": "1", "kart": "17", "team": "A", "best_lap": "1:00.000"},
+            {"pos": "2", "kart": "21", "team": "B", "best_lap": "1:00.000"},
+        ])
+        rows = self.client.get("/api/state").get_json()["teams"]
+        self.assertTrue(all(t["fastest_lap"] for t in rows))
+
+    def test_nobody_has_set_a_lap_yet(self):
+        self.app._process_rows([{"pos": "1", "kart": "17", "team": "A"}])
+        rows = self.client.get("/api/state").get_json()["teams"]
+        self.assertFalse(rows[0]["fastest_lap"])
 
 
 class TestDiscoverySurvivesABlip(AppCase):

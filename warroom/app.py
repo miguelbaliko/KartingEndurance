@@ -205,6 +205,13 @@ _CELL_MAP = {
     "tb": "last_lap", "ti": "last_lap", "tn": "last_lap", "ib": "best_lap",
 }
 
+# The last-lap cell's own class is Apex's verdict on that lap, sent for every
+# lap of every session in every fixture we have: purple against the field,
+# green against the kart's own best, or plain.  It was being read only to
+# guess the column when the header did not say — the colour itself was
+# thrown away, which is the one thing a real timing screen never does.
+LAP_MARK = {"tb": "sb", "ti": "pb"}
+
 _global_col_types: dict = {}   # "c6" -> "last_lap" (built from grid header row)
 # Every column the header declared, including the ones we do not read.  A
 # column the header named is never guessed at from a CSS class, which is how
@@ -215,7 +222,7 @@ _row_kart_map: dict     = {}   # "r14915" -> "17"    (built from parsed data row
 class ApexParser(html.parser.HTMLParser):
     def __init__(self):
         super().__init__()
-        self.rows, self._cur, self._col = [], None, None
+        self.rows, self._cur, self._col, self._mark = [], None, None, None
         self.meta: dict = {}        # data-id -> {"text":..., "cls":...}
         self._meta_id: Optional[str] = None
         self._is_head  = False
@@ -243,6 +250,7 @@ class ApexParser(html.parser.HTMLParser):
             self._meta_id = None
         elif tag in ("td", "th"):
             self._col = None
+            self._mark = None
             dt = a.get("data-type", "")
             if self._is_head and did:
                 # Every declared column is recorded, mapped or not: "this is S1"
@@ -275,6 +283,11 @@ class ApexParser(html.parser.HTMLParser):
                         if cls in _CELL_MAP:
                             self._col = _CELL_MAP[cls]
                             break
+                if self._col == "last_lap":
+                    for cls in a.get("class", "").split():
+                        if cls in LAP_MARK:
+                            self._mark = LAP_MARK[cls]
+                            break
 
     def handle_data(self, data):
         v = data.strip()
@@ -284,6 +297,8 @@ class ApexParser(html.parser.HTMLParser):
             self.meta.setdefault(self._meta_id, {})["text"] = v
         if self._col and self._cur is not None:
             self._cur.setdefault(self._col, v)
+            if self._col == "last_lap":
+                self._cur.setdefault("last_lap_mark", self._mark or "")
             self._col = None
 
     def handle_endtag(self, tag):
@@ -809,6 +824,11 @@ def _parse_apex_pipe(msg: str) -> tuple:
                 text = re.sub(r'<[^>]+>', '', val).strip()
                 if text:
                     cell_updates.setdefault(kart, {})[field] = text
+                    if field == "last_lap":
+                        # Always written, even blank: a normal lap has to
+                        # clear a purple the kart posted an hour ago, not
+                        # leave it glowing on a merge into the existing row.
+                        cell_updates[kart]["last_lap_mark"] = LAP_MARK.get(mod, "")
 
         elif cmd == 'C' and mod:
             # Incremental cell update: mod="r14915c6", val="<td ...>0:52.3</td>"
@@ -1921,6 +1941,11 @@ def make_snapshot() -> dict:
     # reads next to the gap, because the gap says where you are in the race and
     # the interval says whether you can do anything about it.
     road_int = kartpool.KartPool.gaps_ahead(teams_raw)
+    # Whoever holds the outright fastest lap of the session — the one F1 marks
+    # with a purple tag that stays put until somebody beats it, unlike the
+    # last-lap colour above which fades the moment that kart's next lap is not.
+    best_times = [t["best_lap_s"] for t in teams_raw if t.get("best_lap_s")]
+    fastest_s = min(best_times) if best_times else None
     # Race order, always.  Apex sends its rows in whatever order suits it, and
     # a timing screen that is not in position order cannot be read at a glance.
     teams_raw.sort(key=lambda t: _int_or_last(t.get("pos")))
@@ -1940,9 +1965,11 @@ def make_snapshot() -> dict:
             "sectors":    t.get("sectors") or {},
             "int_s":      road_int.get(str(t.get("kart", ""))),
             "last_lap":   t.get("last_lap", "-"),
+            "last_lap_mark": t.get("last_lap_mark", ""),
             "avg5":       t.get("avg5", "-"),
             "avg10":      t.get("avg10", "-"),
             "best_lap":   t.get("best_lap", "-"),
+            "fastest_lap": fastest_s is not None and t.get("best_lap_s") == fastest_s,
             "total_laps": t.get("total_laps", "-"),
             "pits":       t.get("pits", "-"),
             "gap":        t.get("gap", "-"),
