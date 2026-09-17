@@ -1901,6 +1901,23 @@ class TestBoxTimeCalibration(AppCase):
         self.assertTrue(hist, "no stint recorded")
         self.assertIsNotNone(hist[-1]["box_s"])
 
+    def test_the_log_lists_each_stint_once_however_many_drivers(self):
+        """It read every stint once per driver, so the wall saw the race
+        repeated six times over with the numbering restarting each round."""
+        for name in ("Ana", "Bruno", "Carla"):
+            self.client.post("/api/driver/add", json={"name": name})
+        did = self.snap()["drivers"][0]["id"]
+        self.client.post("/api/driver/set", json={"driver_id": did})
+        self.client.post("/api/race/start")
+        for _ in range(2):
+            self.client.post("/api/pit/box", json={"offset_seconds": 0})
+            self.client.post("/api/pit/done", json={"driver_id": did})
+        snap = self.snap()
+        self.assertEqual(len(snap["drivers"]), 3)
+        hist = snap["pit_history"]
+        self.assertEqual(len(hist), 2)
+        self.assertEqual([r["n"] for r in hist], [1, 2])
+
 
 class TestKartWatch(AppCase):
     """Spotting a good kart by who is driving it unusually well."""

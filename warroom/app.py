@@ -1887,23 +1887,26 @@ def make_snapshot() -> dict:
         d["rested_s"] = r
         d["rested_fmt"] = fmt_duration(r) if r is not None else ""
 
-        for i, row in enumerate(con.execute("""
-            SELECT s.id, s.driver_id, s.start_ts, s.end_ts, s.duration_seconds,
-                   d.name as driver_name, s.box_seconds
-            FROM stints s
-            LEFT JOIN drivers d ON d.id = s.driver_id
-            ORDER BY s.id
-        """), start=1):
-            pit_history.append({
-                "n":        i,
-                "driver":   row["driver_name"] or "?",
-                "duration": fmt_duration(row["duration_seconds"] or 0),
-                "start":    row["start_ts"][:19].replace("T", " ") if row["start_ts"] else "-",
-                "end":      row["end_ts"][:19].replace("T", " ")   if row["end_ts"]   else "-",
-                "dur_s":    row["duration_seconds"] or 0,
-                "box":      fmt_mmss(row["box_seconds"]) if row["box_seconds"] else "",
-                "box_s":    row["box_seconds"],
-            })
+    # Once, not once per driver: this reads every stint there is, so running it
+    # inside the loop above filed the whole race under each driver in turn and
+    # restarted the numbering each time.
+    for i, row in enumerate(con.execute("""
+        SELECT s.id, s.driver_id, s.start_ts, s.end_ts, s.duration_seconds,
+               d.name as driver_name, s.box_seconds
+        FROM stints s
+        LEFT JOIN drivers d ON d.id = s.driver_id
+        ORDER BY s.id
+    """), start=1):
+        pit_history.append({
+            "n":        i,
+            "driver":   row["driver_name"] or "?",
+            "duration": fmt_duration(row["duration_seconds"] or 0),
+            "start":    row["start_ts"][:19].replace("T", " ") if row["start_ts"] else "-",
+            "end":      row["end_ts"][:19].replace("T", " ")   if row["end_ts"]   else "-",
+            "dur_s":    row["duration_seconds"] or 0,
+            "box":      fmt_mmss(row["box_seconds"]) if row["box_seconds"] else "",
+            "box_s":    row["box_seconds"],
+        })
 
     # My team
     my_name = CFG.get("team_name", "")
