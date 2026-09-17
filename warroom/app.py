@@ -1759,7 +1759,13 @@ def make_snapshot() -> dict:
 
     clock = _apex_clock.state()
     clock_source = "local"
-    if clock["ok"]:
+    # In practice the tower's clock is counting down a half-hour track
+    # session, not our race, and the feed sends one bare number with no
+    # length attached — so it is read against the configured 25 hours and
+    # comes out as 24h36m elapsed.  Every deadline downstream then believes
+    # the pit lane has shut: the wall showed "STOPS MISSED, 34 never taken"
+    # against a practice session with a kart circulating happily.
+    if clock["ok"] and not CFG["karts"].get("practice"):
         clock_source = "apex"
         if clock["elapsed"] is not None:
             race_elapsed = clock["elapsed"]

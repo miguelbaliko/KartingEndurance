@@ -377,6 +377,37 @@ class TestPracticeMode(AppCase):
         self.assertFalse(self.snap()["practice"])
         self.assertNotIn("bucket_minutes", self.app.POOL.rating_cfg())
 
+    def kip_clock(self):
+        """A real KIP practice countdown, as recorded live on 2026-09-17.
+
+        One bare millisecond number, thirty seconds apart, no session length
+        attached — so it is read against the configured 25 hours.
+        """
+        import time as _t
+        now = _t.time()
+        for i, ms in enumerate(("1614288", "1584277", "1554190",
+                                "1524108", "1493931", "1463894")):
+            self.app._apex_clock.update(ms, now=now + i * 30)
+
+    def test_a_practice_countdown_is_not_our_race_clock(self):
+        """It said 24h36m elapsed and shut the pit lane on a practice session.
+
+        The tower is counting down a half-hour track session; read against a
+        25-hour race it comes out as nearly over, and every deadline
+        downstream believed it — the wall showed STOPS MISSED with a kart
+        circulating happily.
+        """
+        self.client.post("/api/settings", json={"practice": True})
+        self.kip_clock()
+        s = self.snap()
+        self.assertEqual(s["clock_source"], "local")
+        self.assertNotEqual(s["strategy"]["label"], "STOPS MISSED")
+
+    def test_but_it_is_our_race_clock_when_we_are_racing(self):
+        """The same feed, practice off: the tower wins, which is the point."""
+        self.kip_clock()
+        self.assertEqual(self.snap()["clock_source"], "apex")
+
 
 class TestStopCountDisagreement(AppCase):
     """The feed's stop count and our own log must agree, or we must be told.
