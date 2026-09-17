@@ -97,7 +97,9 @@ def event_url(slug: str) -> str:
 #        — it is every rival's stint clock — but KIP Palmela does not send the
 #        column, so parsing it would be building for a track we do not race
 #        at.  Revisit if a feed we actually use starts carrying it.
-KNOWN_SKIPPED = frozenset({"sta", "otr"})
+#   nat  Driver nationality at RGMMC — a flag, nothing the pit wall acts on.
+#   sp1  Speed-trap reading at RGMMC.  A track sensor KIP does not have.
+KNOWN_SKIPPED = frozenset({"sta", "otr", "nat", "sp1"})
 
 LIGHTS = {"lg": "GREEN", "ly": "YELLOW", "lr": "RED", "lsc": "SAFETY CAR",
           "lf": "CHEQUERED"}
