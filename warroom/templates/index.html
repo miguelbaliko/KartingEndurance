@@ -416,21 +416,6 @@ td{padding:7px 8px;white-space:nowrap}
 .ready{font-size:10px;margin-left:8px;color:var(--tx3)}
 .ready.cold{color:var(--org);font-weight:700}
 .ready.warming{color:var(--ylw)}
-/* The board, as it would be written. */
-.board{font-family:var(--mono);font-weight:800;font-size:26px;letter-spacing:.04em;
-  text-align:center;padding:14px 8px;border-radius:var(--r);background:#000;
-  color:#ffe14d;border:2px solid var(--line2);margin-bottom:10px;
-  white-space:nowrap;overflow:hidden}
-.board.stale{color:var(--tx3)}
-.board-btns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.board-btn{font-family:var(--mono);font-size:12px;font-weight:700;padding:6px 10px;
-  border-radius:var(--r);border:1px solid var(--line2);background:var(--bg2);
-  color:var(--tx);cursor:pointer}
-.board-btn:hover{background:var(--bg3);border-color:var(--blue)}
-.board-log{margin-top:8px;font-size:11px;color:var(--tx3);
-  font-variant-numeric:tabular-nums}
-.board-log div{display:flex;gap:8px;padding:2px 0}
-.board-log b{font-family:var(--mono);color:var(--tx2);font-weight:700}
 .sec-loss{color:#f97316}
 .sec-ok{color:#22c55e}
 /* §3.14: every driver owes 120 minutes, and being short is a penalty. */
@@ -813,22 +798,6 @@ tr.clickable{cursor:pointer}
         </div>
       </div>
 
-      <!-- PIT BOARD -->
-      <div class="card">
-        <div class="card-hd">Pit board</div>
-        <!-- Read at seventy an hour in about two seconds: three tokens, big. -->
-        <div class="board" id="board-preview">—</div>
-        <div class="board-btns" id="board-presets"></div>
-        <div class="add-row">
-          <input id="board-free" class="add-inp" maxlength="24"
-                 placeholder="Or write it…"
-                 onkeydown="if(event.key==='Enter')showBoard(this.value)">
-          <button class="add-btn" onclick="showBoard(
-            document.getElementById('board-free').value)">Shown</button>
-        </div>
-        <div class="board-log" id="board-log"></div>
-      </div>
-
       <!-- PIT LANES -->
       <div class="card" id="lanes-card">
         <div class="card-hd">
@@ -1135,7 +1104,6 @@ function render(s) {
   renderStrategy(s);
   renderPit(s);
   renderDrivers(s);
-  renderBoard(s);
   renderLog(s.pit_history);
   renderPlan(s);
 }
@@ -1918,42 +1886,6 @@ function consistencyLine(d) {
     title="Median lap-to-lap scatter against the field baseline, over
     ${c.laps} laps">Consistency <b>±${c.spread_s.toFixed(2)}s</b>${
       rank ? ' — ' + rank : ''}${gap}</span></div>`;
-}
-
-// ── Pit board ───────────────────────────────────────────────────
-/** What to write on the board, built from what is already on the wall.
- *  Nothing reaches a driver until somebody walks to the fence with it. */
-function renderBoard(s) {
-  const prev = document.getElementById('board-preview');
-  if (!prev) return;
-  const last = s.board;
-  // A board goes stale: what he was told twenty minutes ago is not a message.
-  const age = last ? (Date.now() - new Date(last.at + 'Z')) / 1000 : null;
-  prev.className = 'board' + (age != null && age > 600 ? ' stale' : '');
-  prev.textContent = last ? last.text : '—';
-  prev.title = last ? 'Shown ' + fmtAgo(age) : 'Nothing shown yet';
-
-  document.getElementById('board-presets').innerHTML =
-    (s.board_presets || []).map(b =>
-      `<button class="board-btn" onclick="showBoard('${esc(b).replace(/'/g, "\\'")}')"
-        >${esc(b)}</button>`).join('');
-
-  document.getElementById('board-log').innerHTML =
-    (s.board_log || []).slice(0, 5).map(r =>
-      `<div><span>${pitTimestamp(r.at)}</span><b>${esc(r.text)}</b></div>`).join('');
-}
-
-function fmtAgo(sec) {
-  if (sec == null) return '';
-  const m = Math.floor(sec / 60);
-  return m < 1 ? 'just now' : m + ' min ago';
-}
-
-async function showBoard(text) {
-  if (!text || !text.trim()) return;
-  await api('board', {text: text});
-  const f = document.getElementById('board-free');
-  if (f) f.value = '';
 }
 
 /** A driver back out within the half hour has not really rested. */

@@ -1565,81 +1565,6 @@ def fatigue_note(fade_s: Optional[float], stint_s: float,
     return {"level": "good", "text": "Holding their pace."}
 
 
-# ── Pit board ──────────────────────────────────────────────────────────────────
-# A pit board is read at seventy kilometres an hour in about two seconds, so it
-# is three short tokens in big letters and never a sentence.  The war room
-# knows things the driver cannot: where they really are, who is coming, and how
-# long this stint can still run.
-BOARD_MAX = 24            # characters that still fit across a real board
-BOARD_LOG = 12            # how many shown boards are kept
-
-
-def board_presets(my_row: dict, pit_by: dict, strategy: dict,
-                  fatigue: dict = None) -> list:
-    """The boards worth showing right now, best first.
-
-    Built from what is already on the wall rather than typed out again at four
-    in the morning.  Everything is suggested; nothing is shown to a driver
-    until somebody presses the button.
-    """
-    out = []
-    my_row = my_row or {}
-    label = (strategy or {}).get("label", "")
-
-    if label == "BOX NOW":
-        out.append("BOX BOX BOX")
-    elif pit_by and pit_by.get("reason") != "lane shut":
-        mins = int(pit_by.get("seconds", 0) // 60)
-        if mins <= 5:
-            out.append("BOX IN %d" % max(1, mins))
-        else:
-            out.append("%d MIN" % mins)
-
-    pos = str(my_row.get("pos", "") or "").strip()
-    if pos:
-        # The gap that matters is to whoever is actually next on the road.
-        gap = my_row.get("int_s")
-        if gap is not None:
-            out.append("P%s  +%.1f" % (pos, gap))
-        else:
-            out.append("P%s" % pos)
-    if my_row.get("class_pos"):
-        out.append("%s P%s" % (my_row.get("category", "CLASS"),
-                               my_row["class_pos"]))
-
-    if fatigue and fatigue.get("level") == "warn":
-        out.append("SMOOTH")
-    elif label in ("PUSH", "HOLD"):
-        out.append(label)
-
-    seen, uniq = set(), []
-    for b in out:
-        b = b[:BOARD_MAX]
-        if b not in seen:
-            seen.add(b)
-            uniq.append(b)
-    return uniq
-
-
-def board_shown(text: str, now: datetime) -> list:
-    """Record a board as shown and return the log, newest first."""
-    text = " ".join(str(text or "").split())[:BOARD_MAX]
-    if not text:
-        return board_log()
-    log_rows = [{"text": text, "at": now.isoformat()}] + board_log()
-    kv_set("board_log", json.dumps(log_rows[:BOARD_LOG]))
-    log("PIT BOARD", text)
-    return log_rows[:BOARD_LOG]
-
-
-def board_log() -> list:
-    try:
-        rows = json.loads(kv_get("board_log") or "[]")
-        return rows if isinstance(rows, list) else []
-    except ValueError:
-        return []
-
-
 def pit_by_seconds(stint_s: float, race_elapsed_s: float, pits_done: int,
                    race: dict, lap_s: Optional[float] = None) -> dict:
     """How long the next stop can still wait, and which rule is holding it.
@@ -2031,11 +1956,6 @@ def make_snapshot() -> dict:
     stint_pct = min(100, (stint_s / (CFG["race"]["stint_max_minutes"] * 60)) * 100) if stint_s else 0
     pit_by = pit_by_seconds(stint_s, race_elapsed, pits_done, CFG["race"],
                             lap_s=my_avg5 or track_avg_s)
-    # The board is built from our own serialised row, so it quotes the same
-    # numbers the wall is showing rather than a second opinion.
-    my_out = next((t for t in teams_out if t.get("is_my_team")), None)
-    boards = board_log()
-
     # Pit plan
     raw_plan = get_pit_plan()
     n_planned = CFG["race"]["mandatory_pits"]
@@ -2073,10 +1993,6 @@ def make_snapshot() -> dict:
         # The one pit number a wall reads at a glance: how long this stop can
         # still wait, and which rule is the one holding it.
         "pit_by":           pit_by,
-        # What to write on the board, and what was last written on it.
-        "board_presets":    board_presets(my_out, pit_by, strat, fatigue),
-        "board_log":        boards,
-        "board":            boards[0] if boards else None,
         "pit_remaining":    pit_remaining,
         "pit_remaining_fmt": fmt_mmss(pit_remaining),
         "pit_min_met":       pit_min_met,
@@ -2479,19 +2395,6 @@ def api_apex_session(sid):
                "last_lap": r.get("last_lap", "-"),
                "total_laps": r.get("total_laps", "-"),
                "gap": r.get("gap", "-")} for r in rows])
-
-
-@app.post("/api/board")
-def api_board():
-    """Record what was just held out to the driver.
-
-    The app cannot show a driver anything — somebody walks to the fence with a
-    board.  What it can do is compose the line and remember what was shown, so
-    "what did we last tell him" has an answer at four in the morning.
-    """
-    text = (request.json or {}).get("text", "")
-    rows = board_shown(text, datetime.utcnow())
-    return jsonify(ok=True, board=rows[0] if rows else None, log=rows)
 
 
 @app.get("/api/karts")

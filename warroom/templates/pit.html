@@ -112,14 +112,6 @@ dialog button{flex:1;padding:11px;border-radius:8px;border:none;font-size:13px;
               font-weight:600;cursor:pointer}
 .b-go{background:var(--blue);color:#fff}
 .b-no{background:var(--bg3);color:var(--tx2)}
-/* The board itself: read through a visor, so nothing subtle. */
-.board{margin:10px 12px;padding:16px 10px;border-radius:10px;background:#000;
-  border:2px solid #333;text-align:center}
-.board-txt{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:800;
-  font-size:30px;letter-spacing:.04em;color:#ffe14d;white-space:nowrap;
-  overflow:hidden}
-.board.stale .board-txt{color:#6b7280}
-.board-age{font-size:10px;color:#6b7280;margin-top:4px;letter-spacing:.08em}
 </style>
 </head>
 <body>
@@ -138,7 +130,6 @@ dialog button{flex:1;padding:11px;border-radius:8px;border:none;font-size:13px;
 
 <!-- What the wall wants held out at the fence.  Big, because it is read
      through a helmet visor at seventy an hour. -->
-<div id="board" hidden></div>
 <div id="mine"></div>
 <div id="asks"></div>
 <div id="lanes"></div>
@@ -206,7 +197,6 @@ function render(){
     ' · ' + (STATE.clock_source === 'apex' ? 'race clock from Apex' : 'local clock');
   document.getElementById('clock').textContent = '· ' + STATE.race_remaining_fmt + ' left';
 
-  renderBoard();
   renderMine();
   renderAsks();
   renderLanes();
@@ -226,20 +216,6 @@ function withThem(p) {
 }
 
 /** Our own pit stop: the feed starts and ends it, this just shows the clock. */
-function renderBoard(){
-  const el = document.getElementById('board');
-  if (!el) return;
-  const b = STATE.board;
-  el.hidden = !b;
-  if (!b) return;
-  // A board goes stale: what he was told twenty minutes ago is not a message.
-  const age = (Date.now() - new Date(b.at + 'Z')) / 1000;
-  const mins = Math.floor(age / 60);
-  el.className = age > 600 ? 'board stale' : 'board';
-  el.innerHTML = '<div class="board-txt">' + esc(b.text) + '</div>'
-    + '<div class="board-age">' + (mins < 1 ? 'just now' : mins + ' min ago') + '</div>';
-}
-
 function renderMine(){
   const el = document.getElementById('mine');
   const pitting = STATE.status === 'pitting';
