@@ -1767,8 +1767,13 @@ async function showDriver(id, name) {
       '<div class="bn-note">Could not load this driver.</div>';
     return;
   }
-  document.getElementById('laps-sub').textContent =
-    d.count ? `${d.count} laps · best ${d.best} · avg ${d.avg}` : '';
+  // Median first, best second: over a stint the middle of the clean laps is
+  // what a driver is actually worth, and a single best lap is the one most
+  // likely to have been a tow.
+  document.getElementById('laps-sub').textContent = d.count
+    ? `${d.count} laps (${d.clean_laps} clean) · median ${d.median}` +
+      ` · P90 ${d.p90} · best ${d.best}`
+    : '';
   const head = `
     <div class="kd-hd">
       <span>Driven <b>${esc(d.total_fmt)}</b> over ${d.stint_count} stint${d.stint_count===1?'':'s'}</span>
@@ -1802,9 +1807,12 @@ async function showDriver(id, name) {
   const laps = d.count ? `
     <div class="bn-hd" style="margin-top:10px">Every lap</div>
     ${d.laps.map((l, i) => `
-      <div class="lap-row">
+      <div class="lap-row ${l.tow?'towed':''}">
         <span class="lap-n">${d.count - i}</span>
         <span class="lap-t ${l.lap===d.best?'best':''}">${esc(l.lap)}</span>
+        ${l.tow?`<span class="tow" title="${l.ahead_s.toFixed(2)}s behind the
+          kart ahead — quicker than the driver, so it is left out of the
+          median">tow</span>`:''}
         <span class="lap-p">kart ${esc(l.kart)}</span>
       </div>`).join('')}`
     : `<div class="bn-note">No laps recorded for this driver yet. Laps are only

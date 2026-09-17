@@ -1800,6 +1800,28 @@ class TestDriverDetail(AppCase):
     def test_a_driver_with_no_laps_is_empty_not_an_error(self):
         d = self.detail()
         self.assertEqual((d["count"], d["best"], d["karts"]), (0, "-", []))
+        self.assertEqual((d["median"], d["p90"], d["clean_laps"]), ("-", "-", 0))
+
+    def test_median_and_p90_describe_a_stint_better_than_a_best_lap(self):
+        self.record("17", [61.0, 62.0, 62.0, 62.0, 68.0])
+        d = self.detail()
+        self.assertEqual(d["best"], "1:01.000")     # one lap
+        self.assertEqual(d["median"], "1:02.000")   # what they actually run
+        # The tail is what a stint costs: P90 sits out with the 68.
+        self.assertGreater(self.app.parse_laptime(d["p90"]), 62.0)
+
+    def test_a_towed_lap_is_left_out_of_the_median(self):
+        """A best lap is the one most likely to have been a tow."""
+        with self.app.POOL._con() as con:
+            con.execute("UPDATE kart_lap SET ahead_s=0.3")   # nothing recorded yet
+        self.record("17", [62.0, 62.0])
+        with self.app.POOL._con() as con:                    # one of them towed
+            con.execute("UPDATE kart_lap SET lap_s=55.0, ahead_s=0.3 "
+                        "WHERE id=(SELECT MIN(id) FROM kart_lap)")
+        d = self.detail()
+        self.assertEqual(d["clean_laps"], 1)
+        self.assertEqual(d["median"], "1:02.000", "the tow must not set the pace")
+        self.assertEqual(d["best"], "0:55.000", "but it is still their best lap")
 
     def test_an_unknown_driver_is_a_404(self):
         self.assertEqual(self.client.get("/api/driver/9999/laps").status_code, 404)
@@ -1829,6 +1851,17 @@ class TestBoxTimeCalibration(AppCase):
     def test_stints_with_no_box_time_are_skipped(self):
         s = self.app.box_time_summary([{"box_s": None}, {"box_s": 190}], 200.0, 180.0)
         self.assertEqual(s["n"], 1)
+
+    def test_the_best_stop_and_what_the_rest_gave_away(self):
+        """Over thirty-four stops the overrun is what compounds."""
+        s = self.app.box_time_summary(self.hist(185, 190, 240), 200.0, 180.0)
+        self.assertEqual(s["best_s"], 185.0)
+        self.assertEqual(s["extra_s"], 75.0)     # 5 + 10 + 60
+
+    def test_a_stop_under_the_minimum_is_not_time_in_hand(self):
+        """It is a penalty (§15.1), so it cannot pay for somebody's overrun."""
+        s = self.app.box_time_summary(self.hist(150, 200), 200.0, 180.0)
+        self.assertEqual(s["extra_s"], 20.0)     # the 150 contributes nothing
 
     def test_a_stop_records_its_box_time_against_the_stint(self):
         self.client.post("/api/driver/add", json={"name": "Dinis"})

@@ -1209,11 +1209,20 @@ def box_time_summary(history: list, configured_loss_s: float,
                                 "configured estimate."}
     med = statistics.median(times)
     over = med - minimum_s
+    # Every stop is charged the minimum whatever we do; what is ours to lose
+    # is the time on top of it, and over thirty-four stops it compounds into
+    # something worth a driver change.  Only overruns count — a stop under
+    # the minimum is a penalty, not time in hand, and §15.1 charges for it.
+    extra = sum(max(0.0, t - minimum_s) for t in times)
     return {
         "n": len(times),
         "median_s": round(med, 1),
+        "best_s": round(times[0], 1),
+        "extra_s": round(extra, 1),
         "note": (f"{len(times)} stops, median {fmt_mmss(med)} in the box "
-                 f"({over:+.0f}s on the {fmt_mmss(minimum_s)} minimum). "
+                 f"({over:+.0f}s on the {fmt_mmss(minimum_s)} minimum), "
+                 f"best {fmt_mmss(times[0])}, {fmt_mmss(extra)} given away "
+                 f"in total. "
                  f"Pit loss is set to {configured_loss_s:.0f}s; the box alone "
                  f"is {med:.0f}s, so the in and out lap make up the rest."),
     }
@@ -2312,19 +2321,27 @@ def api_driver_laps(did):
     name = (drv["name"] or "").strip()
     with POOL._con() as con:
         rows = [dict(r) for r in con.execute(
-            "SELECT ts, pilot, kart, lap_s, s1, s2, s3 FROM kart_lap "
+            "SELECT ts, pilot, kart, lap_s, s1, s2, s3, ahead_s FROM kart_lap "
             "ORDER BY id DESC LIMIT 4000")]
     team_rows = [r for r in rows
                  if (r["pilot"] or "").split("|", 1)[0].strip().lower()
                  == my_team_name().lower()]
     rows = [r for r in rows
             if (r["pilot"] or "").rsplit("|", 1)[-1].strip().lower() == name.lower()]
+    tow_gap = POOL.tow_gap_s
     by_kart = defaultdict(list)
     for r in rows:
         r["lap"] = fmt_laptime(r["lap_s"])
+        r["tow"] = r["ahead_s"] is not None and r["ahead_s"] <= tow_gap
         by_kart[r["kart"]].append(r["lap_s"])
 
     times = [r["lap_s"] for r in rows]
+    # A best lap is one lap, and it is the one most likely to have been a tow.
+    # What a driver is worth over a stint is the middle of their clean laps,
+    # and what they cost is the tail — so both are quoted, and neither is the
+    # headline number a single quick lap makes it.
+    clean = sorted(r["lap_s"] for r in rows if not r["tow"])
+    pace_on = clean or sorted(times)
     owed = max(0.0, CFG["race"].get("driver_min_minutes", 0) * 60
                - drv["total_seconds"])
 
@@ -2360,6 +2377,12 @@ def api_driver_laps(did):
         id=did, name=name, laps=rows[:600], count=len(rows),
         best=fmt_laptime(min(times)) if times else "-",
         avg=fmt_laptime(sum(times) / len(times)) if times else "-",
+        clean_laps=len(clean),
+        median=fmt_laptime(statistics.median(pace_on)) if pace_on else "-",
+        # quantiles needs two points to interpolate between; with one lap the
+        # ninetieth percentile is that lap.
+        p90=fmt_laptime(statistics.quantiles(pace_on, n=10)[8]) if len(pace_on) > 1
+            else (fmt_laptime(pace_on[0]) if pace_on else "-"),
         total_fmt=fmt_duration(drv["total_seconds"]),
         owed_fmt=fmt_duration(owed), owed_seconds=owed,
         consistency=consistency,
