@@ -223,31 +223,6 @@ def _pilot_keys(samples: list, min_laps: int) -> dict:
             for p in laps}
 
 
-class _Components:
-    """Union-find over the bipartite pilot↔kart graph.
-
-    Two karts are only comparable if a chain of shared drivers connects them.
-    Before the first kart swaps nothing is connected, and no amount of lap data
-    can say whether a slow lap was the kart or the driver — so the model reports
-    that honestly instead of inventing a ranking.
-    """
-
-    def __init__(self):
-        self._parent = {}
-
-    def find(self, node):
-        self._parent.setdefault(node, node)
-        while self._parent[node] != node:
-            self._parent[node] = self._parent[self._parent[node]]
-            node = self._parent[node]
-        return node
-
-    def union(self, a, b):
-        ra, rb = self.find(a), self.find(b)
-        if ra != rb:
-            self._parent[ra] = rb
-
-
 def label_for(delta: float, cfg: dict) -> str:
     for cut, name in zip(cfg["thresholds"], cfg["labels"]):
         if delta < cut:
@@ -481,7 +456,19 @@ def rate(samples: list, cfg: dict = None) -> dict:
     obs = []
     kart_laps = defaultdict(int)
     kart_pilots = defaultdict(set)
-    comps = _Components()
+    # Union-find over the bipartite pilot↔kart graph.  Two karts are only
+    # comparable if a chain of shared drivers connects them; before the first
+    # swap nothing is connected and no lap data can say whether a slow lap was
+    # the kart or the driver, so the model reports that instead of guessing.
+    parent = {}
+
+    def find(node):
+        parent.setdefault(node, node)
+        while parent[node] != node:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
+
     for (pilot, kart), res in seg_res.items():
         # A lap run in someone's tow measures the tow, not the kart, so the
         # reading comes from the clean laps whenever there are any.  Towed laps
@@ -499,7 +486,9 @@ def rate(samples: list, cfg: dict = None) -> dict:
         # exclusively in traffic has not been read, however many laps it did.
         kart_laps[kart] += len(clean_res)
         kart_pilots[kart].add(pilot)
-        comps.union(("P", pilot), ("K", kart))
+        ra, rb = find(("P", pilot)), find(("K", kart))
+        if ra != rb:
+            parent[ra] = rb
 
     if obs:
         pilots, karts = fit_effects(obs, cfg["lambda_pilot"], cfg["lambda_kart"],
@@ -509,13 +498,13 @@ def rate(samples: list, cfg: dict = None) -> dict:
         # one isolated group cannot drag the rest of the fleet up or down.
         by_comp = defaultdict(list)
         for kart in karts:
-            by_comp[comps.find(("K", kart))].append(kart)
+            by_comp[find(("K", kart))].append(kart)
         for root, members in by_comp.items():
             level = sum(karts[k] for k in members) / len(members)
             for k in members:
                 karts[k] -= level
             for p in pilots:
-                if comps.find(("P", p)) == root:
+                if find(("P", p)) == root:
                     pilots[p] += level
 
         # The main component is the bulk of the field; only inside it are kart
@@ -523,7 +512,7 @@ def rate(samples: list, cfg: dict = None) -> dict:
         # one kart, or one driver, compares a kart against nothing — the first
         # minutes of every race look like that, before anyone has swapped.
         main = max(by_comp, key=lambda r: sum(kart_laps[k] for k in by_comp[r]))
-        main_pilots = {p for p in pilots if comps.find(("P", p)) == main}
+        main_pilots = {p for p in pilots if find(("P", p)) == main}
         linked = (set(by_comp[main])
                   if len(by_comp[main]) >= 2 and len(main_pilots) >= 2
                   else set())

@@ -38,3 +38,5 @@ data/state.json
 warroom/data/*.db
 warroom/data/*.db-*
 
+warroom/*.db
+warroom/*.db-*
