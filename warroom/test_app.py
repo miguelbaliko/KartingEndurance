@@ -2102,5 +2102,86 @@ class TestPages(AppCase):
         self.assertIn(b"Lane", res.data)
 
 
+class TestTheWebSocketPathIsTheSamePath(AppCase):
+    """The socket is the transport we have never been able to reach from
+    here, so until now nothing exercised it at all — it carried its own copy
+    of the dispatch and its own branches for JSON and bare HTML, neither of
+    which has appeared in any frame of any recording.
+
+    It now hands the payload to _consume_pipe, the code the AJAX fallback
+    has been running all along.  These drive the real handler, through the
+    real wiring, with frames recorded live at KIP.
+    """
+
+    KIP = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "testdata", "apex-kip-13karts-lapcount.raw")
+
+    def handler(self):
+        """The on_message callback exactly as _ws_run hands it to the socket."""
+        captured = {}
+
+        class FakeWS:
+            def __init__(self, url, **kw):
+                captured.update(kw)
+            def run_forever(self, **kw):
+                return None
+
+        real = self.app._ws_mod
+        self.app._ws_mod = type("m", (), {"WebSocketApp": FakeWS})
+        self.addCleanup(setattr, self.app, "_ws_mod", real)
+        self.app._ws_run("wss://example/")
+        return captured["on_message"]
+
+    def frames(self):
+        with open(self.KIP, encoding="utf-8") as fh:
+            return [f for f in fh.read().split("\n\x00\n") if f.strip()]
+
+    def test_a_kip_session_fills_the_board_through_the_socket(self):
+        on_msg = self.handler()
+        self.app._reset_sector_best()
+        self.app._global_col_types.clear()
+        self.app._row_kart_map.clear()
+        for f in self.frames():
+            on_msg(None, f)
+        teams = self.client.get("/api/state").get_json()["teams"]
+        self.assertEqual(len(teams), 13)
+        self.assertTrue(all(t["last_lap"] not in ("", "-") for t in teams),
+                        "the board must not freeze on the opening grid")
+
+    def test_the_incremental_cells_arrive_too(self):
+        """The live form is the whole session after the first frame."""
+        on_msg = self.handler()
+        self.app._reset_sector_best()
+        self.app._global_col_types.clear()
+        self.app._row_kart_map.clear()
+        frames = self.frames()
+        for f in frames[:1]:
+            on_msg(None, f)
+        opening = {t["kart"]: t["last_lap"]
+                   for t in self.client.get("/api/state").get_json()["teams"]}
+        for f in frames[1:]:
+            on_msg(None, f)
+        later = {t["kart"]: t["last_lap"]
+                 for t in self.client.get("/api/state").get_json()["teams"]}
+        self.assertNotEqual(opening, later, "no cell update reached the board")
+
+    def test_an_empty_frame_is_not_counted_or_parsed(self):
+        on_msg = self.handler()
+        before = self.app._ws_msg_count
+        on_msg(None, "")
+        on_msg(None, "   ")
+        on_msg(None, None)
+        self.assertEqual(self.app._ws_msg_count, before)
+
+    def test_rubbish_does_not_take_the_socket_down(self):
+        """A frame we cannot read must cost that frame, not the connection."""
+        on_msg = self.handler()
+        on_msg(None, "not a pipe protocol frame at all")
+        on_msg(None, "{\"json\": \"we have never seen this\"}")
+        self.app._process_rows([{"pos": "1", "kart": "7", "team": "TPC",
+                                 "last_lap": "1:03.000"}])
+        self.assertEqual(len(self.client.get("/api/state").get_json()["teams"]), 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
