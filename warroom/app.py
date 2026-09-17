@@ -907,49 +907,33 @@ def _ws_run(ws_url: str):
     global _apex_ok, _ws_msg_count
 
     def on_msg(ws, msg):
-        global _ws_msg_count, _apex_ok
-        if not msg:
+        """A frame off the socket goes through the same door as a polled one.
+
+        It used to have its own copy of the dispatch, plus a branch for JSON
+        and one for bare HTML.  Across every frame of every recording — ten
+        sessions, five tracks — neither has ever fired: Apex speaks the pipe
+        protocol on both transports.  So the socket now hands the payload to
+        _consume_pipe, which is the same code the AJAX fallback has been
+        running all along, and the one the tests cover.
+        """
+        global _ws_msg_count
+        s = (msg or "").strip()
+        if not s:
             return
         _ws_msg_count += 1
-        try:
-            s = msg.strip()
-            if not s:
-                return
-
-            # Log first message in full so we can see the protocol
-            if _ws_msg_count == 1:
-                log("APEX WS MSG#1", f"{len(s)} bytes\n{s[:3000]}")
-            elif _ws_msg_count % 20 == 0:
-                log("APEX WS", f"msg #{_ws_msg_count} | teams={len(_teams)} | session={_apex_session.get('name','?')}")
-
-            rows = []
-            cell_updates = {}
-            meta = {}
-            if s[0] in ('{', '['):
-                d = json.loads(s)
-                rows = d if isinstance(d, list) else d.get('rows', d.get('data', d.get('grid', [])))
-                if not rows and isinstance(d, dict):
-                    html_s = d.get('html', d.get('content', d.get('grid_html', '')))
-                    if html_s:
-                        p = ApexParser(); p.feed(html_s); rows = p.rows; meta = p.meta
-            elif '|' in s:
-                # Apex Timing pipe-delimited protocol
-                rows, cell_updates, meta = _parse_apex_pipe(s)
-            else:
-                p = ApexParser(); p.feed(s); rows = p.rows; meta = p.meta
-
-            if meta:
-                _process_meta(meta)
-            if cell_updates:
-                _apply_cell_updates(cell_updates)
-                _apex_ok = True
-            if _process_rows(rows):
-                _apex_ok = True
-                if _ws_msg_count <= 3:
-                    log("APEX PARSED", f"{len(rows)} teams, meta={meta}")
-        except Exception as e:
-            if _ws_msg_count <= 3:
-                log("APEX WS ERR", str(e))
+        # The first frame in full: it is the only look we get at what the
+        # socket actually speaks if it ever turns out not to be this.
+        if _ws_msg_count == 1:
+            log("APEX WS MSG#1", f"{len(s)} bytes\n{s[:3000]}")
+        elif _ws_msg_count % 20 == 0:
+            log("APEX WS", f"msg #{_ws_msg_count} | teams={len(_teams)} | "
+                           f"session={_apex_session.get('name','?')}")
+        got = _consume_pipe(s)
+        # The opening frames are where a socket that speaks something else
+        # would give itself away, so say whether they read as anything.
+        if _ws_msg_count <= 3:
+            log("APEX PARSED" if got else "APEX WS UNREAD",
+                f"{len(_teams)} teams on the board")
 
     def on_open(ws):
         global _apex_ok, _ws_msg_count
