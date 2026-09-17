@@ -730,12 +730,14 @@ class TestCrewLog(PoolCase):
         self.assertEqual(self.pool.snapshot()["log"], [])
 
 
-class TestOurQuestionComesFirst(PoolCase):
-    """In a full field every rival's stop asks a lane question too.
+class TestTheQueueStaysInArrivalOrder(PoolCase):
+    """A lane hands out its front kart, so the queue is only rebuilt
+    correctly if answers arrive in the order the karts actually left.
 
-    By half distance there are two hundred of them, and ours was buried at
-    whatever position it happened in — on the one screen the person standing
-    in our box is holding.
+    Ours was briefly sorted to the top so the person in the box could find
+    it — which made every one of our stops an out-of-order answer, handing
+    us the kart belonging to whoever stopped before us.  It is marked
+    instead, and answered by its number, which does not move the sequence.
     """
 
     def setUp(self):
@@ -744,26 +746,23 @@ class TestOurQuestionComesFirst(PoolCase):
         for k in ("21", "22"):
             self.pool.lane_add(1, k)
 
-    def test_ours_is_top_of_the_queue(self):
+    def test_ours_keeps_its_place_in_the_queue(self):
         for no, team in (("1", "RIVAL A"), ("2", "RIVAL B"),
                          ("7", "TPC CIAO CUORE"), ("3", "RIVAL C")):
             self.pool.manual_stop(no, team)
         self.pool.observe([row("9", "SOMEONE", pits=0, laps=1)],
                           my_team="TPC CIAO CUORE")
-        self.assertEqual(self.pool.pending()[0]["team"], "TPC CIAO CUORE")
+        self.assertEqual([p["team"] for p in self.pool.pending()],
+                         ["RIVAL A", "RIVAL B", "TPC CIAO CUORE", "RIVAL C"])
 
-    def test_the_rest_keep_the_order_they_happened_in(self):
-        for no, team in (("1", "RIVAL A"), ("2", "RIVAL B"), ("3", "RIVAL C")):
-            self.pool.manual_stop(no, team)
+    def test_ours_is_still_marked_so_the_phone_can_lead_with_the_number(self):
+        self.pool.manual_stop("1", "RIVAL A")
+        self.pool.manual_stop("7", "TPC CIAO CUORE")
         self.pool.observe([row("9", "SOMEONE", pits=0, laps=1)],
                           my_team="TPC CIAO CUORE")
-        self.assertEqual([p["team"] for p in self.pool.pending()],
-                         ["RIVAL A", "RIVAL B", "RIVAL C"])
-
-    def test_before_the_feed_names_us_nothing_is_reordered(self):
-        for no, team in (("1", "RIVAL A"), ("7", "TPC CIAO CUORE")):
-            self.pool.manual_stop(no, team)
-        self.assertEqual(self.pool.pending()[0]["team"], "RIVAL A")
+        by_team = {p["team"]: p["mine"] for p in self.pool.pending()}
+        self.assertTrue(by_team["TPC CIAO CUORE"])
+        self.assertFalse(by_team["RIVAL A"])
 
 
 class TestAnsweringOutOfOrder(PoolCase):

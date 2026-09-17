@@ -594,13 +594,14 @@ class KartPool:
                     # on the same lane is unanswered gives us their kart.
                     "mine": bool(mine) and (r["team"] or "").strip().lower() == mine,
                 })
-            # Ours first, the rest in the order they happened.  A rival's
-            # question can wait all race; ours is answerable only by the
-            # person standing in the box, and only while they are there.
-            # Rivals must stay chronological: the lane hands out its front
-            # kart, so answering them out of order hands each the other's.
-            if mine:
-                out.sort(key=lambda p: not p["mine"])
+            # Strictly the order they stopped in, ours included.  A lane
+            # hands out its front kart, so the queue is only rebuilt
+            # correctly if the answers arrive in the same order the karts
+            # actually left — sorting ours to the top made every one of our
+            # stops an out-of-order answer, and took the kart belonging to
+            # whoever stopped before us.  Ours is marked, not moved: the
+            # phone leads it with the kart number, which is the one answer
+            # that does not disturb the sequence.
             return out
 
     # ── feed ingestion ────────────────────────────────────────────────────────
