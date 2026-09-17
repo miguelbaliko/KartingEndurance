@@ -253,6 +253,7 @@ def main():
         os.path.dirname(os.path.abspath(__file__)), "data", "mock.db"))
 
     import app
+    import kartpool
     race = MockRace(seed=args.seed, n_karts=args.karts, lanes=args.lanes)
     total_s = args.hours * 3600
 
@@ -286,6 +287,44 @@ def main():
             "kart_quality": race.kart_quality,
             "race_time": hms(race.t), "teams": rows,
         })
+
+    @app.app.get("/mock/answers")
+    def mock_answers():
+        """What a person standing in the lane can see, without answering it.
+
+        ``answer()`` pops the tap as it uses it; this peeks, so a rehearsal
+        driven through the pit phone can look up the right lane the way the
+        crew would by watching, and still go through the real buttons.
+        """
+        by_team = {t.number: t for t in race.teams}
+        # A team's taps are appended once per stop and never popped, so the
+        # ones already spent are exactly the stops that are no longer
+        # outstanding.  Without this offset the first answer for each team is
+        # right and every one after it replays that same stale tap.
+        with app.POOL._con() as con:
+            spent = {str(r["team_no"]): r["n"] for r in con.execute(
+                "SELECT team_no, COUNT(*) n FROM kart_stop "
+                "WHERE state NOT IN (?,?) GROUP BY team_no",
+                (kartpool.PENDING, kartpool.AWAIT_KART))}
+        seen = collections.Counter()
+        out = []
+        for q in app.POOL.pending():
+            team = by_team.get(str(q["team_no"]))
+            if team is None:
+                continue
+            # The n-th still-outstanding stop is answered by the n-th tap
+            # after the spent ones.  Peek by position: popping here would
+            # spend a tap this endpoint is only being asked to describe.
+            i = spent.get(str(q["team_no"]), 0) + seen[team.number]
+            seen[team.number] += 1
+            if i >= len(team.taps):
+                continue
+            seq, lane, kart = team.taps[i]
+            out.append({"stop_id": q["id"], "team_no": q["team_no"],
+                        "team": q["team"], "mine": q.get("mine", False),
+                        "seq": seq, "lane": lane, "kart": kart})
+        out.sort(key=lambda a: a["seq"])
+        return app.jsonify({"answers": out})
 
     def drive():
         tick = 0.5
