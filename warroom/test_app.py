@@ -712,13 +712,14 @@ class TestTheBoardKeepsMoving(AppCase):
         self.assertEqual(ours["total_laps"], "9")
 
 
-class TestFindingOurRowByItsNumber(AppCase):
-    """KIP's own sessions carry no team column at all.
+class TestFindingOurRowByName(AppCase):
+    """We do not expect to know our own number on the timing screen, so
+    name matching is the only way our row is ever found.
 
-    The driver cell is the whole of it, and it changes every time somebody
-    gets in — so matching by name finds nothing, and our four drivers read as
-    four different teams.  Setting the number pins the row the way a human
-    does, by reading it off the screen.
+    KIP's own arrive-and-drive sessions carry no team column at all — the
+    driver cell is the whole of it, and it changes every time somebody gets
+    in — so a session like that loses us entirely.  A real team endurance
+    entry list, which is what race day actually is, always has one.
     """
 
     KIP = [{"pos": "1", "kart": "80", "driver": "MIGUEL B.",
@@ -728,52 +729,19 @@ class TestFindingOurRowByItsNumber(AppCase):
             "last_lap": "1:06.405", "last_lap_s": 66.4, "best_lap": "1:06.000",
             "total_laps": "39", "gap": "1.3", "in_pit": False, "row_cls": ""}]
 
-    def test_without_a_number_a_nameless_feed_loses_us(self):
+    def test_a_nameless_feed_loses_us(self):
         self.app.CFG["team_name"] = "TPC CIAO CUORE"
-        self.app.CFG["team_no"] = ""
         self.app._process_rows([dict(r) for r in self.KIP])
         s = self.snap()
         self.assertEqual(s["feed_team_name"], "")
         self.assertIsNone(s["my_team"])
 
-    def test_the_number_finds_us(self):
+    def test_a_clipped_name_still_finds_us(self):
         self.app.CFG["team_name"] = "TPC CIAO CUORE"
-        self.app.CFG["team_no"] = "80"
-        self.app._process_rows([dict(r) for r in self.KIP])
-        s = self.snap()
-        self.assertIsNotNone(s["my_team"])
-        self.assertEqual(s["my_team"]["kart"], "80")
-
-    def test_our_row_keeps_our_name_whoever_is_driving(self):
-        """Otherwise every stint is a new team and the drivers never group."""
-        self.app.CFG["team_name"] = "TPC CIAO CUORE"
-        self.app.CFG["team_no"] = "80"
-        for who in ("MIGUEL B.", "DINIS X.", "RUI T."):
-            rows = [dict(r) for r in self.KIP]
-            rows[0]["driver"] = who
-            self.app._process_rows(rows)
-            ours = self.snap()["teams"][0]
-            self.assertEqual(ours["team"], "TPC CIAO CUORE")
-            self.assertEqual(ours["driver"], who)
-
-    def test_it_leaves_everyone_else_alone(self):
-        self.app.CFG["team_name"] = "TPC CIAO CUORE"
-        self.app.CFG["team_no"] = "80"
-        self.app._process_rows([dict(r) for r in self.KIP])
-        other = next(t for t in self.snap()["teams"] if t["kart"] == "302")
-        self.assertEqual(other["team"], "PEDRO G.")
-
-    def test_the_name_still_works_when_no_number_is_set(self):
-        self.app.CFG["team_name"] = "TPC CIAO CUORE"
-        self.app.CFG["team_no"] = ""
         rows = [dict(r) for r in self.KIP]
         rows[0]["team"] = "TPC CIAO CUO"        # clipped, as a real feed sends
         self.app._process_rows(rows)
         self.assertEqual(self.snap()["feed_team_name"], "TPC CIAO CUO")
-
-    def test_the_settings_box_saves_it(self):
-        self.client.post("/api/settings", json={"team_no": "80"})
-        self.assertEqual(self.snap()["team_no"], "80")
 
 
 class TestCategoryFromTheEntryList(AppCase):

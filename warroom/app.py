@@ -30,16 +30,9 @@ os.makedirs(os.path.dirname(os.path.abspath(_CFG_PATH)), exist_ok=True)
 def load_cfg() -> dict:
     base = {
         # The organisers' entry list spells us this way.  Apex may not — the
-        # matching handles a clipped or reordered name, and team_no below beats
-        # both — but starting from the real name is one less thing to type in
-        # on the Friday.
+        # matching handles a clipped or reordered name — but starting from
+        # the real name is one less thing to type in on the Friday.
         "team_name": "TPC CIAO CUORE",
-        # The number beside us on the timing screen.  A name is the usual way
-        # to find our row, but KIP's own sessions carry no team column at all —
-        # the driver cell is the whole of it, and it changes every time someone
-        # gets in.  Setting this pins the row the way a human does, by reading
-        # the number, and it wins over the name when both are there.
-        "team_no": "",
         "apex_url": "",
         "refresh_interval": 5,
         # Defaults are the 24 Horas de Portugal 2026 regulation (KIP Palmela,
@@ -414,14 +407,6 @@ POOL = kartpool.KartPool(DB, CFG.get("karts", {}),
 _PIT_MARK = re.compile(r'\bpit\b|\bbox\b|\bin_?pit\b', re.I)
 
 def _enrich(t: dict) -> dict:
-    # Our own row, pinned by the number on the screen, carries our name
-    # whatever the feed puts in the team cell.  Without this, a feed with no
-    # team column names us after whoever is driving — so every stint reads as
-    # a different team, our four drivers never group together, and the driver
-    # comparison practice exists for comes out empty.
-    my_no = str(CFG.get("team_no", "") or "").strip()
-    if my_no and str(t.get("kart", "")).strip() == my_no:
-        t["team"] = CFG.get("team_name", "") or t.get("team", "")
     # Events without a separate team column name the competitor in the driver
     # cell; the rest of the app keys off "team", so make sure it is filled.
     if not t.get("team") and t.get("driver"):
@@ -1858,15 +1843,9 @@ def make_snapshot() -> dict:
     # Apex spells teams its own way, so find ours by meaning rather than by
     # exact text — but on one unambiguous answer only.  Everything below keys
     # off the name the feed actually used.
-    my_no = str(CFG.get("team_no", "") or "").strip()
-    my_team = next((t for t in teams_raw
-                    if str(t.get("kart", "")).strip() == my_no), None) if my_no else None
-    if my_team is not None:
-        feed_name = my_team.get("team", "")
-    else:
-        feed_name = match_team(my_name, [t.get("team", "") for t in teams_raw])
-        my_team = next((t for t in teams_raw if t.get("team", "") == feed_name),
-                       None) if feed_name else None
+    feed_name = match_team(my_name, [t.get("team", "") for t in teams_raw])
+    my_team = next((t for t in teams_raw if t.get("team", "") == feed_name),
+                   None) if feed_name else None
     my_avg5 = my_team["avg5_s"] if my_team else None
 
     # The timekeepers' pit count is the one that settles a protest, so use it
@@ -2051,7 +2030,6 @@ def make_snapshot() -> dict:
         # a thing to fix in the settings, not to guess at.
         "feed_team_name":   feed_name or "",
         "apex_url":         CFG.get("apex_url", ""),
-        "team_no":          CFG.get("team_no", ""),
         "teams":            teams_out,
         "pit_plan":         pit_plan_out,
         "clock_source":     clock_source,
@@ -2522,8 +2500,6 @@ def api_settings():
         _ws_blocked = False
     if "team_name" in data:
         CFG["team_name"] = data["team_name"].strip()
-    if "team_no" in data:
-        CFG["team_no"] = str(data["team_no"]).strip()
     if "duration_minutes" in data:
         CFG["race"]["duration_minutes"] = int(data["duration_minutes"])
     if "mandatory_pits" in data:
