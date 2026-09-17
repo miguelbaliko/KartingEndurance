@@ -110,6 +110,14 @@ CREATE TABLE IF NOT EXISTS kart_undo (
     id    INTEGER PRIMARY KEY AUTOINCREMENT,
     ts    TEXT, what TEXT, state TEXT
 );
+-- What somebody saw and the feed cannot: a bent axle, a black-and-orange, a
+-- marshal's word, a kart swapped for a reason nobody timed.  The only entries
+-- in the log that cannot be rebuilt from the stops and assignments, so the
+-- only ones written down.
+CREATE TABLE IF NOT EXISTS crew_note (
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts   TEXT, text TEXT
+);
 CREATE INDEX IF NOT EXISTS kart_lap_kart ON kart_lap(kart);
 """
 
@@ -195,6 +203,13 @@ class KartPool:
                 str(r["team_no"]): 0.0 for r in con.execute(
                     "SELECT team_no FROM kart_stop WHERE state IN (?,?)",
                     (PENDING, AWAIT_KART))}
+            # The log itself is in memory and dies with the process.  The
+            # crew's own notes are the part of it nobody can write again, so
+            # they come back.
+            for r in con.execute("SELECT ts, text FROM crew_note "
+                                 "ORDER BY id DESC LIMIT 60"):
+                self._log.append({"ts": _hhmmss(r["ts"]), "text": r["text"],
+                                  "team": "", "tag": "crew"})
 
     # ── storage ───────────────────────────────────────────────────────────────
     def _con(self):
@@ -306,6 +321,17 @@ class KartPool:
     def _note(self, text: str, team: str = "", tag: str = ""):
         self._log.appendleft({"ts": _hhmmss(_now_iso()), "text": text,
                               "team": team, "tag": tag})
+
+    def note(self, text: str) -> bool:
+        """Write down something only a person saw.  Kept across a restart."""
+        text = " ".join(str(text or "").split())[:200]
+        if not text:
+            return False
+        with self._lock, self._con() as con:
+            con.execute("INSERT INTO crew_note(ts,text) VALUES(?,?)",
+                        (_now_iso(), text))
+        self._note(text, tag="crew")
+        return True
 
     # ── assignment ────────────────────────────────────────────────────────────
     def _held_by(self, con, team_no: str):

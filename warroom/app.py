@@ -2406,6 +2406,15 @@ def api_apex_session(sid):
 def api_karts():
     return jsonify(POOL.snapshot())
 
+@app.post("/api/note")
+def api_note():
+    """One line about something the feed cannot see.
+
+    Free text on purpose: at four in the morning nobody picks a category off
+    a dropdown, they type "17 bent steering, do not take it again".
+    """
+    return jsonify(ok=POOL.note((request.json or {}).get("text", "")))
+
 @app.post("/api/kart/retire")
 def api_kart_retire():
     """A kart out of service — broken, stored, withdrawn by the organisers."""

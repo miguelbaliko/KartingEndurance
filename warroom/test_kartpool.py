@@ -695,3 +695,36 @@ class TestPracticeSwitch(unittest.TestCase):
         self.pool._rating_dirty = False
         self.pool.configure({"practice": False})
         self.assertFalse(self.pool._rating_dirty)
+
+
+class TestCrewLog(PoolCase):
+    """The one part of the log nobody can write again from the data."""
+
+    def test_a_note_reaches_the_log(self):
+        self.assertTrue(self.pool.note("17 bent steering"))
+        top = self.pool.snapshot()["log"][0]
+        self.assertEqual(top["text"], "17 bent steering")
+        self.assertEqual(top["tag"], "crew")
+
+    def test_it_survives_a_restart(self):
+        """The log is a deque in memory; the crew's own lines are not.
+
+        Twenty-five hours is long enough for the process to go down once, and
+        "do not take 17 again" is exactly the line you need at five in the
+        morning and wrote at three.
+        """
+        self.pool.note("17 bent steering")
+        self.pool.note("black and orange for 30")
+        texts = [r["text"] for r in self.make().snapshot()["log"]]
+        self.assertIn("17 bent steering", texts)
+        self.assertIn("black and orange for 30", texts)
+
+    def test_an_automatic_note_is_not_written_down(self):
+        """Stops and swaps can be rebuilt from the tables; they are not ours."""
+        self.pool.manual_stop("7", "ALPHA")
+        self.assertEqual([r["text"] for r in self.make().snapshot()["log"]], [])
+
+    def test_blank_is_not_a_note(self):
+        self.assertFalse(self.pool.note("   "))
+        self.assertFalse(self.pool.note(None))
+        self.assertEqual(self.pool.snapshot()["log"], [])
