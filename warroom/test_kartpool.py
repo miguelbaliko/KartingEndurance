@@ -728,3 +728,39 @@ class TestCrewLog(PoolCase):
         self.assertFalse(self.pool.note("   "))
         self.assertFalse(self.pool.note(None))
         self.assertEqual(self.pool.snapshot()["log"], [])
+
+
+class TestOurQuestionComesFirst(PoolCase):
+    """In a full field every rival's stop asks a lane question too.
+
+    By half distance there are two hundred of them, and ours was buried at
+    whatever position it happened in — on the one screen the person standing
+    in our box is holding.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.pool = self.make(lanes=2)
+        for k in ("21", "22"):
+            self.pool.lane_add(1, k)
+
+    def test_ours_is_top_of_the_queue(self):
+        for no, team in (("1", "RIVAL A"), ("2", "RIVAL B"),
+                         ("7", "TPC CIAO CUORE"), ("3", "RIVAL C")):
+            self.pool.manual_stop(no, team)
+        self.pool.observe([row("9", "SOMEONE", pits=0, laps=1)],
+                          my_team="TPC CIAO CUORE")
+        self.assertEqual(self.pool.pending()[0]["team"], "TPC CIAO CUORE")
+
+    def test_the_rest_keep_the_order_they_happened_in(self):
+        for no, team in (("1", "RIVAL A"), ("2", "RIVAL B"), ("3", "RIVAL C")):
+            self.pool.manual_stop(no, team)
+        self.pool.observe([row("9", "SOMEONE", pits=0, laps=1)],
+                          my_team="TPC CIAO CUORE")
+        self.assertEqual([p["team"] for p in self.pool.pending()],
+                         ["RIVAL A", "RIVAL B", "RIVAL C"])
+
+    def test_before_the_feed_names_us_nothing_is_reordered(self):
+        for no, team in (("1", "RIVAL A"), ("7", "TPC CIAO CUORE")):
+            self.pool.manual_stop(no, team)
+        self.assertEqual(self.pool.pending()[0]["team"], "RIVAL A")

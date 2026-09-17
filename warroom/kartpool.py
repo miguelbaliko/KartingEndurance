@@ -190,6 +190,7 @@ class KartPool:
         self._in_box_since = {}
         self._category = {}
         self._pace = defaultdict(lambda: deque(maxlen=12))
+        self._my_team = ""
         self._log = deque(maxlen=250)
         self._rating = {"karts": {}, "pilots": {}, "n_laps": 0, "linked_karts": 0}
         self._rating_at = 0.0
@@ -586,6 +587,12 @@ class KartPool:
                     # is a lap the kart ratings never see.
                     "laps_lost": self._dropped.get(str(r["team_no"]), 0),
                 })
+            # Ours first, the rest in the order they happened.  A rival's
+            # question can wait all race; ours is answerable only by the
+            # person standing in the box, and only while they are there.
+            mine = (self._my_team or "").strip().lower()
+            if mine:
+                out.sort(key=lambda p: (p["team"] or "").strip().lower() != mine)
             return out
 
     # ── feed ingestion ────────────────────────────────────────────────────────
@@ -597,6 +604,11 @@ class KartPool:
         """
         if not self.cfg["enabled"] or not rows:
             return
+        # Kept so pending() can put our own question first.  In a full field
+        # every rival's stop asks one too, and by half distance there are two
+        # hundred of them — ours has to be the one on screen when our kart is
+        # the one standing in the box.
+        self._my_team = my_team or self._my_team
         now = now or time.time()
         ahead = self.gaps_ahead(rows)
         behind = self.gaps_behind(rows)
