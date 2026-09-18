@@ -815,6 +815,19 @@ def _parse_apex_pipe(msg: str) -> tuple:
                         # leave it glowing on a merge into the existing row.
                         cell_updates[kart]["last_lap_mark"] = LAP_MARK.get(mod, "")
 
+        elif re.match(r'^r\w+$', cmd) and mod in ('*out', '*in'):
+            # Some endurance events (lemans-karting2, 2026-09-18) push a pit
+            # lane entry/exit as a bare row command instead of resending the
+            # row's CSS class, which we otherwise only ever see once, in the
+            # opening grid.  Without this a kart's in_pit status freezes at
+            # whatever the grid said and never updates again for the rest of
+            # the session.  Routing it through row_cls means _enrich's
+            # existing _PIT_MARK check picks it up for free.
+            kart = _row_kart_map.get(cmd)
+            if kart:
+                cell_updates.setdefault(kart, {})["row_cls"] = (
+                    "pit" if mod == '*out' else "")
+
         elif cmd == 'C' and mod:
             # Incremental cell update: mod="r14915c6", val="<td ...>0:52.3</td>"
             m = re.match(r'(r\w+?)(c\d+)$', mod)

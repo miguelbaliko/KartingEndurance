@@ -598,5 +598,54 @@ class TestARealPitStop(RealFeedCase):
         self.assertGreaterEqual(karts, 30, "laps must reach the rating model")
 
 
+PITMARK = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "testdata", "apex-lemans-karting2-pitmark.raw")
+
+
+class TestBareRowPitMarker(unittest.TestCase):
+    """lemans-karting2, captured 2026-09-18: a kart's pit lane entry arrives as
+    a bare ``r93442|*out|0`` command — no column, so _PIPE_CELL never matches
+    it, and no other branch did either.  It went straight to the floor.
+
+    That command is the only thing that told us this kart pitted: its row
+    carried no class in the opening grid, so without translating *out/*in
+    into row_cls, in_pit would freeze at whatever the grid said for the rest
+    of the session.  KIP runs the same Apex platform for the race itself
+    tomorrow, so a stop we cannot see after the first one is not a hypothetical.
+    """
+
+    def setUp(self):
+        os.environ["WARROOM_NO_WORKER"] = "1"
+        self.addCleanup(os.environ.pop, "WARROOM_NO_WORKER", None)
+        import app
+        app._global_col_types.clear()
+        app._row_kart_map.clear()
+        self.app = app
+        with open(PITMARK, encoding="utf-8") as f:
+            grid, self.in_frame, self.out_frame = f.read().split("\n\x00\n")
+        rows, _cells, _meta = app._parse_apex_pipe(grid)
+        app._process_rows(rows)
+
+    def _in_pit(self, kart):
+        return next(t for t in self.app._teams
+                    if str(t.get("kart")) == kart)["in_pit"]
+
+    def test_neither_kart_starts_in_the_pits(self):
+        """The opening grid gave both rows no class at all."""
+        self.assertFalse(self._in_pit("38"))
+        self.assertFalse(self._in_pit("56"))
+
+    def test_a_bare_out_command_marks_the_kart_in_the_pits(self):
+        _rows, cells, _meta = self.app._parse_apex_pipe(self.out_frame)
+        self.app._apply_cell_updates(cells)
+        self.assertTrue(self._in_pit("38"))
+
+    def test_a_bare_in_command_clears_it_again(self):
+        _rows, cells, _meta = self.app._parse_apex_pipe(
+            self.out_frame.replace("r93442|*out|0", "r93442|*in|0"))
+        self.app._apply_cell_updates(cells)
+        self.assertFalse(self._in_pit("38"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

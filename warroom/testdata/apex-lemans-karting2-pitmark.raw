@@ -1,0 +1,213 @@
+init|r|
+best|hide|
+css|no64|border-bottom-color:#000075 !important; color:#FFFFFF !important;
+css|no52|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no65|border-bottom-color:#8000FF !important; color:#FFFFFF !important;
+css|no51|border-bottom-color:#B300B3 !important; color:#FFFFFF !important;
+css|no2|border-bottom-color:#FF8000 !important; color:#FFFFFF !important;
+css|no4|border-bottom-color:#808080 !important; color:#FFFFFF !important;
+css|no50|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no8|border-bottom-color:#D52BC8 !important; color:#FFFFFF !important;
+css|no11|border-bottom-color:#1ADB23 !important; color:#000000 !important;
+css|no13|border-bottom-color:#EF3F25 !important; color:#FFFFFF !important;
+css|no14|border-bottom-color:#047CF4 !important; color:#FFFFFF !important;
+css|no16|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no17|border-bottom-color:#1C3FE1 !important; color:#FFFFFF !important;
+css|no18|border-bottom-color:#F40B0B !important; color:#FFFFFF !important;
+css|no25|border-bottom-color:#18AEE7 !important; color:#FFFFFF !important;
+css|no30|border-bottom-color:#045AFB !important; color:#FFFFFF !important;
+css|no55|border-bottom-color:#C0C0C0 !important; color:#000000 !important;
+css|no56|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no66|border-bottom-color:#FF80FF !important; color:#000000 !important;
+css|no68|border-bottom-color:#80FFFF !important; color:#000000 !important;
+css|no69|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no70|border-bottom-color:#FF8000 !important; color:#FFFFFF !important;
+css|no71|border-bottom-color:#FF80FF !important; color:#000000 !important;
+css|no72|border-bottom-color:#25F134 !important; color:#000000 !important;
+css|no73|border-bottom-color:#400000 !important; color:#FFFFFF !important;
+css|no74|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|pena1|color:#f00; font-size:11px; font-weight: bold; text-align:center;
+effects||Effets
+comments||Commentaires
+title1||EUROVIA HRC 
+title2||ENDURANCE 
+dyn1|countdown|3596083
+light|lg|
+wth1||
+wth2||
+wth3||
+track||Piste Alain Prost B (980m)
+com||<p><b>19:11</b><span data-flag="green"></span>Départ</p>
+grid||<tbody><tr data-id="r0" class="head" data-pos="0"><td data-id="c1" data-type="rk" data-pr="1">Clt</td><td data-id="c2" data-type="sta" data-pr="1"></td><td data-id="c3" data-type="no" data-pr="1">Kart</td><td data-id="c4" data-type="dr" data-pr="1" data-width="25" data-min="16">Equipe</td><td data-id="c5" data-type="llp" data-pr="2" data-width="11" data-min="7">Dernier T.</td><td data-id="c6" data-type="gap" data-pr="1" data-width="11" data-min="8">Ecart</td><td data-id="c7" data-type="int" data-pr="5" data-width="8" data-min="7">Interv.</td><td data-id="c8" data-type="blp" data-pr="6" data-width="9" data-min="7">Meilleur T.</td><td data-id="c9" data-type="tlp" data-pr="5" data-width="4" data-min="4">Tours</td><td data-id="c10" data-type="otr" data-pr="2" data-width="8" data-min="4">En piste</td><td data-id="c11" data-type="pit" data-pr="2" data-width="5" data-min="7">Stands</td><td data-id="c12" data-type="" data-pr="6" data-width="7" data-min="5">Péna.</td><td data-id="c13" data-type="" data-pr="6" data-width="7" data-min="6">Catégorie</td></tr><tr data-id="r93436" data-pos="1"><td class="rk"><div><p data-id="r93436c1" class="">1</p></div></td><td data-id="r93436c2" class="sr"></td><td class="no"><div data-id="r93436c3" class="no2">56</div></td><td data-id="r93436c4" class="dr">KART 56</td><td data-id="r93436c5" class="tn">1:04.728</td><td data-id="r93436c6" class="in">Tour 26</td><td data-id="r93436c7" class="in"></td><td data-id="r93436c8" class="tb">1:04.346</td><td data-id="r93436c9" class="in">26</td><td data-id="r93436c10" class="in">0:13</td><td data-id="r93436c11" class="in">1</td><td data-id="r93436c12" class=""></td><td data-id="r93436c13" class="in"></td></tr><tr data-id="r93437" data-pos="2"><td class="rk"><div><p data-id="r93437c1" class="">2</p></div></td><td data-id="r93437c2" class="si"></td><td class="no"><div data-id="r93437c3" class="no2">2</div></td><td data-id="r93437c4" class="dr">KART 2</td><td data-id="r93437c5" class="tn">1:05.315</td><td data-id="r93437c6" class="ib">12.436</td><td data-id="r93437c7" class="in">12.436</td><td data-id="r93437c8" class="in">1:04.665</td><td data-id="r93437c9" class="in">25</td><td data-id="r93437c10" class="to">34.</td><td data-id="r93437c11" class="in">2</td><td data-id="r93437c12" class=""></td><td data-id="r93437c13" class="in"></td></tr><tr data-id="r93438" data-pos="7"><td class="rk"><div><p data-id="r93438c1" class="">7</p></div></td><td data-id="r93438c2" class="si"></td><td class="no"><div data-id="r93438c3" class="no2">48</div></td><td data-id="r93438c4" class="dr">KART 48</td><td data-id="r93438c5" class="tn">1:07.930</td><td data-id="r93438c6" class="ib">7.347</td><td data-id="r93438c7" class="in">2.564</td><td data-id="r93438c8" class="in">1:06.486</td><td data-id="r93438c9" class="in">24</td><td data-id="r93438c10" class="to">14.</td><td data-id="r93438c11" class="in">2</td><td data-id="r93438c12" class=""></td><td data-id="r93438c13" class="in"></td></tr><tr data-id="r93439" data-pos="4"><td class="rk"><div><p data-id="r93439c1" class="">4</p></div></td><td data-id="r93439c2" class="si"></td><td class="no"><div data-id="r93439c3" class="no2">31</div></td><td data-id="r93439c4" class="dr">KART 31</td><td data-id="r93439c5" class="tn">1:06.447</td><td data-id="r93439c6" class="ib">37.570</td><td data-id="r93439c7" class="in">0.658</td><td data-id="r93439c8" class="in">1:05.558</td><td data-id="r93439c9" class="in">25</td><td data-id="r93439c10" class="to">10.</td><td data-id="r93439c11" class="in">2</td><td data-id="r93439c12" class=""></td><td data-id="r93439c13" class="in"></td></tr><tr data-id="r93440" data-pos="11"><td class="rk"><div><p data-id="r93440c1" class=""></p></div></td><td data-id="r93440c2" class="in"></td><td class="no"><div data-id="r93440c3" class="no2">42</div></td><td data-id="r93440c4" class="dr">KART 42</td><td data-id="r93440c5" class=""></td><td data-id="r93440c6" class="ib"></td><td data-id="r93440c7" class="in"></td><td data-id="r93440c8" class="in"></td><td data-id="r93440c9" class="in"></td><td data-id="r93440c10" class="in">0:30</td><td data-id="r93440c11" class="in"></td><td data-id="r93440c12" class=""></td><td data-id="r93440c13" class="in"></td></tr><tr data-id="r93441" data-pos="10"><td class="rk"><div><p data-id="r93441c1" class="">10</p></div></td><td data-id="r93441c2" class="si"></td><td class="no"><div data-id="r93441c3" class="no2">39</div></td><td data-id="r93441c4" class="dr">KART 39</td><td data-id="r93441c5" class="tn">1:09.975</td><td data-id="r93441c6" class="ib">24.813</td><td data-id="r93441c7" class="in">24.813</td><td data-id="r93441c8" class="in">1:05.978</td><td data-id="r93441c9" class="in">23</td><td data-id="r93441c10" class="to">00.</td><td data-id="r93441c11" class="in">2</td><td data-id="r93441c12" class=""></td><td data-id="r93441c13" class="in"></td></tr><tr data-id="r93442" data-pos="9"><td class="rk"><div><p data-id="r93442c1" class="">9</p></div></td><td data-id="r93442c2" class="si"></td><td class="no"><div data-id="r93442c3" class="no2">38</div></td><td data-id="r93442c4" class="dr">KART 38</td><td data-id="r93442c5" class="tn">1:10.437</td><td data-id="r93442c6" class="ib">2 Tours</td><td data-id="r93442c7" class="in">46.679</td><td data-id="r93442c8" class="in">1:05.193</td><td data-id="r93442c9" class="in">23</td><td data-id="r93442c10" class="to">23.</td><td data-id="r93442c11" class="in">2</td><td data-id="r93442c12" class=""></td><td data-id="r93442c13" class="in"></td></tr><tr data-id="r93443" data-pos="12"><td class="rk"><div><p data-id="r93443c1" class=""></p></div></td><td data-id="r93443c2" class="in"></td><td class="no"><div data-id="r93443c3" class="no2">20</div></td><td data-id="r93443c4" class="dr">KART 20</td><td data-id="r93443c5" class=""></td><td data-id="r93443c6" class="ib"></td><td data-id="r93443c7" class="in"></td><td data-id="r93443c8" class="in"></td><td data-id="r93443c9" class="in"></td><td data-id="r93443c10" class="in">0:30</td><td data-id="r93443c11" class="in"></td><td data-id="r93443c12" class=""></td><td data-id="r93443c13" class="in"></td></tr><tr data-id="r93444" data-pos="8"><td class="rk"><div><p data-id="r93444c1" class="">8</p></div></td><td data-id="r93444c2" class="si"></td><td class="no"><div data-id="r93444c3" class="no2">23</div></td><td data-id="r93444c4" class="dr">KART 23</td><td data-id="r93444c5" class="tn">1:11.145</td><td data-id="r93444c6" class="ib">20.500</td><td data-id="r93444c7" class="in">13.153</td><td data-id="r93444c8" class="in">1:06.829</td><td data-id="r93444c9" class="in">24</td><td data-id="r93444c10" class="to">02.</td><td data-id="r93444c11" class="in">2</td><td data-id="r93444c12" class=""></td><td data-id="r93444c13" class="in"></td></tr><tr data-id="r93445" data-pos="6"><td class="rk"><div><p data-id="r93445c1" class="">6</p></div></td><td data-id="r93445c2" class="si"></td><td class="no"><div data-id="r93445c3" class="no2">10</div></td><td data-id="r93445c4" class="dr">KART 10</td><td data-id="r93445c5" class="tn">1:10.096</td><td data-id="r93445c6" class="ib">4.783</td><td data-id="r93445c7" class="in">4.783</td><td data-id="r93445c8" class="in">1:06.253</td><td data-id="r93445c9" class="in">24</td><td data-id="r93445c10" class="to">17.</td><td data-id="r93445c11" class="in">2</td><td data-id="r93445c12" class=""></td><td data-id="r93445c13" class="in"></td></tr><tr data-id="r93446" data-pos="5"><td class="rk"><div><p data-id="r93446c1" class="">5</p></div></td><td data-id="r93446c2" class="si"></td><td class="no"><div data-id="r93446c3" class="no2">9</div></td><td data-id="r93446c4" class="dr">KART 9</td><td data-id="r93446c5" class="tn">1:09.766</td><td data-id="r93446c6" class="ib">1 Tour</td><td data-id="r93446c7" class="in">50.326</td><td data-id="r93446c8" class="in">1:05.603</td><td data-id="r93446c9" class="in">24</td><td data-id="r93446c10" class="to">19.</td><td data-id="r93446c11" class="in">2</td><td data-id="r93446c12" class=""></td><td data-id="r93446c13" class="in"></td></tr><tr data-id="r93447" data-pos="13"><td class="rk"><div><p data-id="r93447c1" class=""></p></div></td><td data-id="r93447c2" class="in"></td><td class="no"><div data-id="r93447c3" class="no2">12</div></td><td data-id="r93447c4" class="dr">KART 12</td><td data-id="r93447c5" class=""></td><td data-id="r93447c6" class="ib"></td><td data-id="r93447c7" class="in"></td><td data-id="r93447c8" class="in"></td><td data-id="r93447c9" class="in"></td><td data-id="r93447c10" class="in">0:30</td><td data-id="r93447c11" class="in"></td><td data-id="r93447c12" class=""></td><td data-id="r93447c13" class="in"></td></tr><tr data-id="r93448" data-pos="3"><td class="rk"><div><p data-id="r93448c1" class="">3</p></div></td><td data-id="r93448c2" class="si"></td><td class="no"><div data-id="r93448c3" class="no2">21</div></td><td data-id="r93448c4" class="dr">KART 21</td><td data-id="r93448c5" class="tn">1:05.961</td><td data-id="r93448c6" class="ib">36.912</td><td data-id="r93448c7" class="in">24.476</td><td data-id="r93448c8" class="in">1:05.272</td><td data-id="r93448c9" class="in">25</td><td data-id="r93448c10" class="to">11.</td><td data-id="r93448c11" class="in">2</td><td data-id="r93448c12" class=""></td><td data-id="r93448c13" class="in"></td></tr></tbody>
+msg||
+
+ 
+r93445c10|to|37.
+r93438c10|to|34.
+r93448c10|to|31.
+r93446c10|to|39.
+r93444c10|to|22.
+r93442c10|to|43.
+r93436c2|si|
+r93436c10|to|00.
+r93436c11|in|2
+r93441c10|to|21.
+r93436|*in|0
+r93437c10|to|55.
+r93439c10|to|31.
+r93436c10|to|01.
+r93445c10|to|38.
+r93438c10|to|35.
+r93446c10|to|40.
+r93448c10|to|32.
+r93444c10|to|23.
+r93442c10|to|44.
+r93437c10|to|56.
+r93441c10|to|22.
+r93439c10|to|32.
+r93436c10|to|02.
+r93445c10|to|39.
+r93438c10|to|36.
+r93446c10|to|41.
+
+ 
+r93446c10|to|1:06.
+r93444c10|to|49.
+r93442c10|to|1:10.
+dyn1|countdown|3536024
+r93441c10|to|48.
+r93439c10|to|58.
+r93436c10|to|28.
+r93445c10|to|1:05.
+r93438c10|to|1:02.
+r93448c10|to|59.
+r93446c10|to|1:07.
+r93444c10|to|50.
+r93442c10|to|1:11.
+r93441c10|to|49.
+r93439c10|to|59.
+r93436c10|to|29.
+r93445c10|to|1:06.
+r93438c10|to|1:03.
+r93448c10|to|1:00.
+r93446c10|to|1:08.
+r93444c10|to|51.
+r93442c10|to|1:12.
+r93441c10|to|50.
+r93439c10|to|1:00.
+r93436c10|to|30.
+r93445c10|to|1:07.
+r93438c10|to|1:04.
+r93448c10|to|1:01.
+r93446c10|to|1:09.
+r93444c10|to|52.
+r93442c10|to|1:13.
+r93441c10|to|51.
+r93439c10|to|1:01.
+r93436c10|to|31.
+r93445c10|to|1:08.
+r93438c10|to|1:05.
+r93448c10|to|1:02.
+r93446c10|to|1:10.
+r93444c10|to|53.
+r93442c10|to|1:14.
+r93441c10|to|52.
+r93439c10|to|1:02.
+r93436c10|to|32.
+r93445c10|to|1:09.
+r93438c10|to|1:06.
+r93446c10|to|1:11.
+r93448c10|to|1:03.
+r93444c10|to|54.
+r93442c10|to|1:15.
+r93441c10|to|53.
+r93439c10|to|1:03.
+r93436c10|to|33.
+r93445c10|to|1:10.
+r93438c10|to|1:07.
+r93448c10|to|1:04.
+r93446c10|to|1:12.
+r93444c10|to|55.
+r93442c10|to|1:16.
+r93441c10|to|54.
+r93436c10|to|34.
+r93439c10|to|1:04.
+r93445c10|to|1:11.
+r93438c10|to|1:08.
+r93448c10|to|1:05.
+r93446c10|to|1:13.
+r93444c10|to|56.
+r93442c10|to|1:17.
+r93441c10|to|55.
+r93439c10|to|1:05.
+r93445c10|to|1:12.
+r93436c10|to|35.
+r93438c10|to|1:09.
+r93448c10|to|1:06.
+r93446c10|to|1:14.
+r93444c10|to|57.
+r93442c10|to|1:18.
+r93441c10|to|56.
+r93442c2|so|
+r93442c5|tn|1:18.047
+r93442c7|in|2:05.464
+r93442c9|in|24
+r93442c10|in|0:00
+r93442|*out|0
+r93439c10|to|1:06.
+r93436c10|to|36.
+r93445c10|to|1:13.
+r93438c10|to|1:10.
+r93448c10|to|1:07.
+r93446c10|to|1:15.
+r93444c10|to|58.
+r93441c10|to|57.
+r93446c2|so|
+r93446c5|tn|1:15.289
+r93446c7|in|2:10.925
+r93446c9|in|25
+r93446c10|in|0:00
+r93446|*out|0
+r93439c10|to|1:07.
+r93436c10|to|37.
+r93445c10|to|1:14.
+r93438c10|to|1:11.
+r93448c10|to|1:08.
+r93444c10|to|59.
+r93441c10|to|58.
+r93439c10|to|1:08.
+r93436c10|to|38.
+r93445c10|to|1:15.
+r93438c10|to|1:12.
+r93445c2|so|
+r93445c5|tn|1:14.865
+r93445c6|ib|1.206
+r93445c7|in|1.206
+r93445c9|in|25
+r93445c10|in|0:00
+r93445|*out|0
+r93448c10|to|1:09.
+r93444c10|to|1:00.
+r93441c10|to|59.
+r93439c10|to|1:09.
+r93436c10|to|39.
+r93438c10|to|1:13.
+r93448c10|to|1:10.
+r93444c10|to|1:01.
+r93438c2|so|
+r93438c5|tn|1:13.400
+r93438c6|ib|2.757
+r93438c7|in|1.551
+r93438c9|in|25
+r93438c10|in|0:00
+r93441c10|to|1:00.
+r93438|*out|0
+r93439c10|to|1:10.
+r93436c10|to|40.
+r93448c2|so|
+r93448c5|tn|1:10.515
+r93448c6|ib|1:47.014
+r93448c7|in|25.298
+r93448c9|in|26
+r93448c10|in|0:00
+r93448|*out|0
