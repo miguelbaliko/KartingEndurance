@@ -969,13 +969,17 @@ def get_pit_plan() -> list:
     kv_set("pit_plan", json.dumps(plan))
     return plan
 
-def set_plan_stop(stop_idx: int, driver_id):
+def set_plan_stop(stop_idx: int, driver_id, time: str = None):
     plan = get_pit_plan()
     n = CFG["race"]["mandatory_pits"]
     while len(plan) < n:
         plan.append({"driver_id": None, "note": ""})
     if 0 <= stop_idx < n:
         plan[stop_idx]["driver_id"] = driver_id
+        # A pre-agreed clock time (e.g. from the paper turno sheet) beats the
+        # even split once someone has actually planned the stop by hand.
+        if time is not None:
+            plan[stop_idx]["time"] = time
     kv_set("pit_plan", json.dumps(plan[:n]))
 
 # ── Background worker ──────────────────────────────────────────────────────────
@@ -1976,7 +1980,8 @@ def make_snapshot() -> dict:
             "driver_id": did,
             "driver": drv_by_id.get(int(did), "") if did is not None else "",
             "planned_s": int((i + 1) * avg_stint_s),
-            "planned_fmt": fmt_duration((i + 1) * avg_stint_s),
+            # A hand-planned clock time (turno sheet) overrides the even split.
+            "planned_fmt": stop.get("time") or fmt_duration((i + 1) * avg_stint_s),
             "done": i < len(pit_history),
             "actual_end": actual["end"] if actual else "",
         })
@@ -2209,7 +2214,7 @@ def api_plan_set():
     data = request.json or {}
     stop = int(data.get("stop", 1)) - 1  # 1-indexed from client
     driver_id = data.get("driver_id")    # None to unassign
-    set_plan_stop(stop, driver_id)
+    set_plan_stop(stop, driver_id, data.get("time"))
     return jsonify(ok=True)
 
 @app.post("/api/plan/reset")
