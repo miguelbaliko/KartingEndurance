@@ -691,5 +691,46 @@ class TestFullPitCycleOnASecondTrack(unittest.TestCase):
         self.assertTrue(self._in_pit())
 
 
+BLANK_CATEGORY = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "testdata", "apex-cronosystem2-blank-category-column.raw")
+
+
+class TestHeaderTextFillsInABlankDataType(unittest.TestCase):
+    """cronosystem2, captured 2026-09-19 -- this is the actual feed for
+    tomorrow's 24 Horas de Portugal, not a KIP arrive-and-drive session.
+
+    Its category column (c16, "Categoría", PRO/AM) has an empty data-type:
+    ``<td data-id="c16" data-type="" ...>Categoría</td>``.  _CELL_MAP only
+    ever looks at data-type, so this column mapped to nothing and every
+    team's category vanished with no field left to blame -- the category
+    filter chips and the "Cat" column would have sat blank all race.
+    """
+
+    def setUp(self):
+        os.environ["WARROOM_NO_WORKER"] = "1"
+        self.addCleanup(os.environ.pop, "WARROOM_NO_WORKER", None)
+        import app
+        app._global_col_types.clear()
+        app._row_kart_map.clear()
+        self.app = app
+        with open(BLANK_CATEGORY, encoding="utf-8") as f:
+            grid = f.read()
+        self.rows, _cells, _meta = app._parse_apex_pipe(grid)
+
+    def test_the_column_resolves_from_its_own_header_text(self):
+        self.assertEqual(self.app._global_col_types.get("c16"), "category")
+
+    def test_every_row_gets_a_category(self):
+        cats = {r["kart"]: r.get("category") for r in self.rows}
+        self.assertEqual(cats["5"], "AM")     # our own kart, TPC CIAO CUORE
+        self.assertEqual(cats["1"], "PRO")
+        self.assertTrue(all(cats.values()), cats)
+
+    def test_a_column_the_header_already_named_is_not_overridden(self):
+        # c1 (data-type="grp") mapped to category first and carries no text
+        # of its own in this fixture -- the fallback must never look at it.
+        self.assertEqual(self.app._global_col_types.get("c1"), "category")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

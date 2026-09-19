@@ -251,6 +251,16 @@ _CELL_MAP = {
     "tb": "last_lap", "ti": "last_lap", "tn": "last_lap", "ib": "best_lap",
 }
 
+# Some installs leave data-type blank and put the same information in the
+# header's own text instead -- Cronosystem's "Categoría" column does this, so
+# without this fallback its PRO/AM values arrive on a column nothing maps and
+# vanish with no field to blame.  Checked only when data-type came back empty,
+# never as a second opinion on a column the header already named.
+_HEAD_TEXT_MAP = {
+    "categoría": "category", "categoria": "category", "category": "category",
+    "class": "category", "cat": "category",
+}
+
 # The last-lap cell's own class is Apex's verdict on that lap, sent for every
 # lap of every session in every fixture we have: purple against the field,
 # green against the kart's own best, or plain.  It was being read only to
@@ -341,6 +351,14 @@ class ApexParser(html.parser.HTMLParser):
             return
         if self._meta_id:
             self.meta.setdefault(self._meta_id, {})["text"] = v
+            # A header cell can leave data-type blank and put the same word in
+            # its own label instead; this has to resolve while the header row
+            # is still being read, before any data row asks what the column
+            # after it means.
+            if self._is_head and self._meta_id not in self.col_types:
+                label = v.strip().lower()
+                if label in _HEAD_TEXT_MAP:
+                    self.col_types[self._meta_id] = _HEAD_TEXT_MAP[label]
         if self._col and self._cur is not None:
             self._cur.setdefault(self._col, v)
             if self._col == "last_lap":
