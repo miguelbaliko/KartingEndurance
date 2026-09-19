@@ -677,6 +677,16 @@ class TestPersistence(PoolCase):
         self.assertEqual(self.pool.kart_of(), {})
         self.assertEqual(self.pool.snapshot()["lanes"][0]["karts"], [])
 
+    def test_reset_does_not_swallow_a_stop_landing_right_after_it(self):
+        self.pool.observe([row("9", "RIVAL", pits=0)])   # baseline seen
+        self.pool.reset()
+        # The stop happens right after the reset -- pits climbs from the
+        # baseline the pool already had, not from whatever it sees first.
+        self.pool.observe([row("9", "RIVAL", pits=1)])
+        pending = self.pool.pending()
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending[0]["team"], "RIVAL")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

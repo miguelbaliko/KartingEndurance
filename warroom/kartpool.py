@@ -1051,9 +1051,12 @@ class KartPool:
                 con.execute(f"DELETE FROM {table}")
             for lane in self._lanes(con):
                 self._save_queue(con, lane, [])
-        self._last_pits.clear()
-        self._last_laps.clear()
-        self._last_lap_s.clear()
+        # _last_pits/_last_laps/_last_lap_s are not fleet knowledge -- they are
+        # "has this team's counter moved since we last looked", independent of
+        # any kart identity. Clearing them here used to seed every team's next
+        # snapshot as a fresh baseline instead of a stop: whichever pit count
+        # the feed showed right after a reset was silently taken as "always
+        # been this many", so a stop that landed near the reset never asked.
         self._pending_teams.clear()
         self._skip.clear()
         self._in_box_since.clear()
