@@ -713,8 +713,14 @@ class KartPool:
                         stopped = True
                     self._last_pits[team_no] = pits
 
+                # A resolved stop's own out-lap is a whole pit lane slower by
+                # design -- the same reason _record_lap skips blaming it on
+                # the new kart means it must not be read as a second stop
+                # either, or a team gets asked "which lane?" again for a kart
+                # it was handed a lap ago.
                 if (not stopped and self.cfg["detect_by_lap_spike"]
-                        and fresh_lap and self._is_pit_lap(team_no, lap_s)):
+                        and fresh_lap and self._skip[team_no] == 0
+                        and self._is_pit_lap(team_no, lap_s)):
                     stopped = True
 
                 if stopped:

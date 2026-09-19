@@ -76,6 +76,21 @@ class TestStopDetection(PoolCase):
         pool.observe([row("1", "ALPHA", laps=8, lap_s=63.0 + 45)])
         self.assertEqual(len(pool.pending()), 1)
 
+    def test_a_resolved_stops_own_out_lap_is_not_a_second_stop(self):
+        """Nasser, 2026-09-19: pit column caught the real stop and the crew
+        answered it, then the slow out-lap the new kart owes the pit lane
+        tripped the spike detector a lap later and asked "which lane?" again
+        for a kart he had already been given."""
+        pool = self.make(lanes=2)
+        for kart in ("21", "22"):
+            pool.lane_add(1, kart)
+        for lap in range(1, 6):
+            pool.observe([row("1", "ALPHA", laps=lap, lap_s=63.0)])
+        pool.observe([row("1", "ALPHA", pits=1, laps=6)])   # the real stop
+        pool.resolve(pool.pending()[0]["id"], lane=1)
+        pool.observe([row("1", "ALPHA", pits=1, laps=7, lap_s=63.0 + 45)])  # out-lap
+        self.assertEqual(pool.pending(), [])
+
     def test_traffic_is_not_a_stop(self):
         pool = self.make(detect_by_pit_column=False)
         for lap in range(1, 8):
