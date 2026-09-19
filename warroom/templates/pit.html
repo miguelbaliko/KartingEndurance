@@ -14,6 +14,14 @@
   --blue:#3b82f6; --purple:#a855f7;
   --r:12px;
 }
+/* Read at arm's length in the sun; a manual pick, not prefers-color-scheme --
+   it's about the fence, not the phone's OS setting. */
+html[data-theme="light"]{
+  --bg:#f4f5f8; --bg2:#ffffff; --bg3:#e9ebf1; --line:#d7dae4;
+  --tx:#1a1e2c; --tx2:#565f7d; --tx3:#8991ab;
+  --red:#c62828; --grn:#1a8a44; --lime:#5a8f0a; --ylw:#9a6b00;
+  --blue:#2f6fe0; --purple:#8e24c2;
+}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--tx);
      font:14px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
@@ -123,6 +131,8 @@ dialog button{flex:1;padding:11px;border-radius:8px;border:none;font-size:13px;
   <div class="hd-row">
     <span class="hd-title" id="race">War Room</span>
     <span class="hd-tag">PIT LANE</span>
+    <button id="theme-btn" onclick="toggleTheme()" title="Light / dark"
+      style="margin-left:8px;background:none;border:none;color:var(--tx2);font-size:16px;cursor:pointer;padding:2px 4px">☀</button>
   </div>
   <div class="hd-sub">
     <span class="dot" id="dot"></span>
@@ -156,6 +166,17 @@ dialog button{flex:1;padding:11px;border-radius:8px;border:none;font-size:13px;
 
 <script>
 let POOL = null, STATE = null, _dlgDone = null, _picking = false;
+
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.getElementById('theme-btn').textContent = t === 'light' ? '☾' : '☀';
+}
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  try { localStorage.setItem('theme', next); } catch (e) {}
+  applyTheme(next);
+}
+try { applyTheme(localStorage.getItem('theme') || 'dark'); } catch (e) { applyTheme('dark'); }
 
 const CHIP = {
   'Rocket':'rocket', 'Very Good':'verygood', 'Good':'good',

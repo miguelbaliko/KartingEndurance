@@ -31,6 +31,15 @@
   --slow:#ffd740;
   --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,'Liberation Mono',monospace;
 }
+/* Sunlight at the pit wall washes out the dark theme; light mode is a manual
+   pick (not prefers-color-scheme), because it's about the fence, not the OS. */
+html[data-theme="light"]{
+  --bg0:#f4f5f8; --bg1:#ffffff; --bg2:#eef0f5; --bg3:#e3e6ee; --bg4:#d3d8e4;
+  --line:#d7dae4; --line2:#c3c8d6;
+  --tx:#1a1e2c; --tx2:#565f7d; --tx3:#8991ab;
+  --blue:#2f6fe0; --cyan:#0090b0; --grn:#12a150; --ylw:#b8860b; --org:#cc6d00;
+  --red:#d63030; --purple:#9333ea; --pb:#12a150; --slow:#b8860b;
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg0);color:var(--tx);
   font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;overflow:hidden}
@@ -685,6 +694,7 @@ tr.clickable{cursor:pointer}
     <button class="tb-btn go"  onclick="api('race/start')">START RACE</button>
     <button class="tb-btn"     onclick="api('race/stop')">STOP</button>
     <button class="tb-btn warn" onclick="api('race/reset')">RESET</button>
+    <button class="tb-btn" id="theme-btn" onclick="toggleTheme()" title="Light / dark">☀</button>
     <button class="tb-btn"     onclick="openCfg()">⚙</button>
   </div>
 
@@ -975,6 +985,20 @@ let _stateAt        = null;   // Date.now() when last state arrived
 let _autoPitFired   = false;
 let _planEdit       = null;
 let _nextDriverId   = null;
+
+// ═══ Theme ══════════════════════════════════════════════════════
+// Per-device preference (who's looking at this screen, not race state), so
+// browser storage is the right home for it — not the shared config.
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.getElementById('theme-btn').textContent = t === 'light' ? '☾' : '☀';
+}
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  try { localStorage.setItem('theme', next); } catch (e) {}
+  applyTheme(next);
+}
+try { applyTheme(localStorage.getItem('theme') || 'dark'); } catch (e) { applyTheme('dark'); }
 
 // ═══ Polling ════════════════════════════════════════════════════
 async function fetchState() {
