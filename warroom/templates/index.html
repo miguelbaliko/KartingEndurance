@@ -1590,8 +1590,10 @@ async function setLane(stopId, lane, noChange) {
   await api('kart/lane', {stop_id: stopId, lane: lane, no_change: !!noChange});
 }
 async function addKart(lane) {
-  const v = prompt('Kart number joining lane ' + lane);
-  if (v && v.trim()) await api('kart/add', {lane: lane, kart: v.trim()});
+  const v = prompt('Kart number(s) joining lane ' + lane + ' (e.g. 62 63 64, in order)');
+  if (!v) return;
+  const karts = v.split(/[\s,]+/).filter(Boolean);
+  for (const k of karts) await api('kart/add', {lane: lane, kart: k});
 }
 async function removeKart(lane, kart) {
   await api('kart/remove', {lane: lane, kart: kart});
