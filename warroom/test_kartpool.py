@@ -183,6 +183,19 @@ class TestLaneFlow(PoolCase):
         after = self.pool.snapshot()["lanes"][0]["karts"]
         self.assertEqual([k["num"] for k in before], [k["num"] for k in after])
 
+    def test_clear_pending_drops_unanswered_stops_only(self):
+        self.pool.set_kart("1", "ALPHA", "10")
+        stop = self._stop()
+        self.pool.clear_pending()
+        self.assertEqual(self.pool.pending(), [])
+        # A kart already handed out is untouched -- this clears the queue of
+        # questions, not what the pool has already learned.
+        self.assertEqual(self.pool.kart_of()["1"], "10")
+        # The cleared stop is really gone, not just hidden: answering its old
+        # id does nothing.
+        self.pool.resolve(stop, lane=1)
+        self.assertEqual(self.pool.kart_of()["1"], "10")
+
 
 class TestPendingStopsAgeOut(PoolCase):
     """One unresolved stop must not disable counting for the rest of the race.

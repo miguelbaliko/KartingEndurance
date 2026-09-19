@@ -40,6 +40,26 @@ html[data-theme="light"]{
   --blue:#2f6fe0; --cyan:#0090b0; --grn:#12a150; --ylw:#b8860b; --org:#cc6d00;
   --red:#d63030; --purple:#9333ea; --pb:#12a150; --slow:#b8860b;
 }
+/* Status badges, the strategy box and grade chips are hand-tuned gradients
+   against the dark palette, not the tokens above -- light mode needs its own
+   so text doesn't end up dark-on-dark against a background that never moved. */
+html[data-theme="light"] .s-racing {background:#e6f7ec;border-color:#a8dcb8}
+html[data-theme="light"] .s-pitting{background:#fdf0d9;border-color:#e8c98a}
+html[data-theme="light"] .drv-sel-btn.active{background:#dbe9fc}
+html[data-theme="light"] .dec-hold   {background:#e6f7ec;border-color:#a8dcb8}
+html[data-theme="light"] .dec-prepare{background:#fdf0d9;border-color:#e8c98a}
+html[data-theme="light"] .dec-box    {background:#fbe4e4;border-color:#e6a8a8}
+html[data-theme="light"] .pit-ok-tag {background:#e6f7ec;border-color:#a8dcb8}
+html[data-theme="light"] .mx-k.next .mx-q{border-color:#a9cdf0;background:#e3ecfa}
+html[data-theme="light"] .kchip.rocket{border-color:#d4b3ec;background:#f4e9fb}
+html[data-theme="light"] .kchip.verygood{border-color:#b7ddc4;background:#e9f8ee}
+html[data-theme="light"] .kchip.good{border-color:#cdddaa;background:#f2f8e5}
+html[data-theme="light"] .kchip.bad{border-color:#e6bcbc;background:#fbeaea}
+html[data-theme="light"] #ask-card{border-color:#e4c366;background:linear-gradient(180deg,#fdf3d9,var(--bg2))}
+html[data-theme="light"] .mx-k.grade-rocket{background:linear-gradient(90deg,#f4e9fb,var(--bg2) 62%)}
+html[data-theme="light"] .mx-k.grade-verygood{background:linear-gradient(90deg,#e9f8ee,var(--bg2) 62%)}
+html[data-theme="light"] .mx-k.grade-good{background:linear-gradient(90deg,#f2f8e5,var(--bg2) 62%)}
+html[data-theme="light"] .mx-k.grade-bad{background:linear-gradient(90deg,#fbeaea,var(--bg2) 62%)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg0);color:var(--tx);
   font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;overflow:hidden}
@@ -753,6 +773,7 @@ tr.clickable{cursor:pointer}
       <div class="card" id="ask-card" style="display:none">
         <div class="card-hd">
           Which lane?
+          <button class="card-hd-action" onclick="clearPending()">clear</button>
           <button class="card-hd-action" onclick="undoKart()">undo</button>
         </div>
         <div id="ask-body"></div>
@@ -1639,6 +1660,10 @@ async function askKartNumber(stopId) {
   if (v && v.trim()) await api('kart/lane', {stop_id: stopId, kart: v.trim()});
 }
 async function undoKart() { await api('kart/undo'); }
+async function clearPending() {
+  if (confirm('Drop every unanswered "which lane?" question? Ratings and kart holdings are untouched.'))
+    await api('kart/pending/clear');
+}
 
 /** The crew's own log: what a person saw that the timing feed never will. */
 async function addNote() {

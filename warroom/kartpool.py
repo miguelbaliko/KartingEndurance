@@ -505,6 +505,19 @@ class KartPool:
         return self._mutate(f"stop for {team or team_no}",
                             lambda con: self._open_stop(con, team_no, team, "manual"))
 
+    def clear_pending(self):
+        """Wipe every unanswered "which lane?" question without touching
+        ratings or who is holding which kart -- for when the queue has
+        filled up with noise (a testing session, a burst of feed glitches)
+        rather than real stops still worth answering."""
+        def go(con):
+            con.execute("DELETE FROM kart_stop WHERE state IN (?,?)",
+                        (PENDING, AWAIT_KART))
+            self._pending_teams.clear()
+            self._dropped.clear()
+            self._note("pit attribution cleared", tag="lane")
+        self._mutate("clear pit attribution", go)
+
     def _do_resolve(self, con, stop_id: int, lane: int):
         stop = con.execute("SELECT * FROM kart_stop WHERE id=?", (stop_id,)).fetchone()
         if not stop or stop["state"] not in (PENDING, AWAIT_KART):

@@ -2533,6 +2533,13 @@ def api_kart_lane():
                  kart_out=d.get("kart"))
     return jsonify(ok=True)
 
+@app.post("/api/kart/pending/clear")
+def api_kart_pending_clear():
+    """Drop every unanswered "which lane?" question — ratings and kart
+    holdings untouched, undo-able like any other kart pool mutation."""
+    POOL.clear_pending()
+    return jsonify(ok=True)
+
 @app.post("/api/kart/add")
 def api_kart_add():
     """Blank kart is deliberate: a placeholder holding the queue position

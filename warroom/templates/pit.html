@@ -22,6 +22,22 @@ html[data-theme="light"]{
   --red:#c62828; --grn:#1a8a44; --lime:#5a8f0a; --ylw:#9a6b00;
   --blue:#2f6fe0; --purple:#8e24c2;
 }
+/* These cards use hand-picked gradients tuned for the dark palette, not the
+   token colours above, so light mode needs its own versions rather than
+   inheriting text tokens onto a background that never changed. */
+html[data-theme="light"] .mine{background:linear-gradient(180deg,#eaf2fb,#dcebfa);border-color:#a9cdf0}
+html[data-theme="light"] .mine.box{background:linear-gradient(180deg,#fbe9e9,#f7d9d9);border-color:#e3a8a8}
+html[data-theme="light"] .ask{background:linear-gradient(180deg,#fdf3d9,#fbecc0);border-color:#e4c366}
+html[data-theme="light"] .ask.mine{background:linear-gradient(180deg,#eaf2fb,#dcebfa);border-color:#a9cdf0}
+html[data-theme="light"] .ask.mine .ask-hd{color:#2f6fe0}
+html[data-theme="light"] .lane-btn:active{background:#dbe4f0}
+html[data-theme="light"] .kart.next{border-color:var(--blue);background:#e3ecfa}
+html[data-theme="light"] .chip.rocket{border-color:#d4b3ec;background:#f4e9fb}
+html[data-theme="light"] .chip.verygood{border-color:#b7ddc4;background:#e9f8ee}
+html[data-theme="light"] .chip.good{border-color:#cdddaa;background:#f2f8e5}
+html[data-theme="light"] .chip.ok{color:var(--tx);border-color:var(--line);background:var(--bg2)}
+html[data-theme="light"] .chip.bad{border-color:#e6bcbc;background:#fbeaea}
+html[data-theme="light"] .chip.unknown{color:var(--tx2);border-color:var(--line)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--tx);
      font:14px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
@@ -335,7 +351,9 @@ function renderAsks(){
         </div>`;
     }
     return `<div class="ask">
-      ${i === 0 ? `<div class="ask-hd">${order ? 'WHO WENT OUT FIRST?' : 'WHICH LANE?'}</div>` : ''}
+      ${i === 0 ? `<div class="ask-hd">${order ? 'WHO WENT OUT FIRST?' : 'WHICH LANE?'}
+        <span style="float:right;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer;color:var(--tx3)"
+          onclick="clearPending()">clear all</span></div>` : ''}
       <div class="ask-team">#${esc(p.team_no)}${p.team ? ' · ' + esc(p.team) : ''}${
         p.kart_in ? ` · kart ${esc(p.kart_in)}` : ''}${
         p.category ? ` <span style="font-size:11px;color:var(--tx3)">${esc(p.category)}</span>` : ''}</div>
@@ -413,6 +431,10 @@ function askKart(stopId){
   dialog('Kart number they were given', v => post('kart/lane', {stop_id:stopId, kart:v}));
 }
 function undo(){ post('kart/undo'); }
+function clearPending(){
+  if (confirm('Drop every unanswered "which lane?" question? Ratings and kart holdings are untouched.'))
+    post('kart/pending/clear');
+}
 
 function missedStop(){
   const wrap = document.getElementById('pickwrap');
