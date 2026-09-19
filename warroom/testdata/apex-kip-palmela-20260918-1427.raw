@@ -1,0 +1,126 @@
+init|p|
+best|hide|
+css|no9|border-bottom-color:#400080 !important; color:#FFFFFF !important;
+css|no10|border-bottom-color:#F40000 !important; color:#FFFFFF !important;
+css|no11|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no12|border-bottom-color:#3E9EFF !important; color:#FFFFFF !important;
+css|no13|border-bottom-color:#000040 !important; color:#FFFFFF !important;
+css|no14|border-bottom-color:#80FF00 !important; color:#000000 !important;
+css|no15|border-bottom-color:#FF0080 !important; color:#FFFFFF !important;
+css|no16|border-bottom-color:#FF8040 !important; color:#000000 !important;
+css|no17|border-bottom-color:#804040 !important; color:#FFFFFF !important;
+css|no18|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no1|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no2|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no3|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no4|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no5|border-bottom-color:#FF0080 !important; color:#FFFFFF !important;
+css|no6|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no7|border-bottom-color:#FFFFFF !important; color:#000000 !important;
+css|no8|border-bottom-color:#0000A0 !important; color:#FFFFFF !important;
+css|pena1|color:#f00; font-size:11px; font-weight: bold; text-align:center;
+effects||Display Effects
+comments||Comments
+title1||
+title2||Session 29
+dyn1|countdown|26818
+light|lg|
+wth1||
+wth2||
+wth3||
+track||KIP (1270m)
+com||
+grid||<tbody><tr data-id="r0" class="head" data-pos="0"><td data-id="c1" data-type="grp" data-pr="6"></td><td data-id="c2" data-type="sta" data-pr="1"></td><td data-id="c3" data-type="rk" data-pr="1">Rnk</td><td data-id="c4" data-type="no" data-pr="1">Kart</td><td data-id="c5" data-type="dr" data-pr="1" data-width="20" data-min="16">Driver</td><td data-id="c6" data-type="s1" data-pr="3" data-width="11" data-min="6">S1</td><td data-id="c7" data-type="s2" data-pr="3" data-width="11" data-min="6">S2</td><td data-id="c8" data-type="s3" data-pr="3" data-width="11" data-min="6">S3</td><td data-id="c9" data-type="llp" data-pr="2" data-width="14" data-min="7">Last lap</td><td data-id="c10" data-type="blp" data-pr="1" data-width="14" data-min="7">Best lap</td><td data-id="c11" data-type="tlp" data-pr="5" data-width="5" data-min="4">Laps</td><td data-id="c12" data-type="gap" data-pr="4" data-width="10" data-min="7">Gap</td></tr><tr data-id="r54" data-pos="8"><td data-id="r54c1" class="gm"></td><td data-id="r54c2" class="in"></td><td class="rk"><div><p data-id="r54c3" class="">8</p></div></td><td class="no"><div data-id="r54c4" class="no10">60</div></td><td data-id="r54c5" class="dr">BERND J.</td><td data-id="r54c6" class="tn">21.122</td><td data-id="r54c7" class="tn">16.496</td><td data-id="r54c8" class=""></td><td data-id="r54c9" class="tn">1:04.460</td><td data-id="r54c10" class="ib">1:03.956</td><td data-id="r54c11" class="in">17</td><td data-id="r54c12" class="in">0.532</td></tr><tr data-id="r55" data-pos="10"><td data-id="r55c1" class="gm"></td><td data-id="r55c2" class="in"></td><td class="rk"><div><p data-id="r55c3" class="">10</p></div></td><td class="no"><div data-id="r55c4" class="no10">71</div></td><td data-id="r55c5" class="dr">ANDRE W.</td><td data-id="r55c6" class="tn">20.973</td><td data-id="r55c7" class="tn">16.366</td><td data-id="r55c8" class=""></td><td data-id="r55c9" class="tn">1:04.199</td><td data-id="r55c10" class="ib">1:04.009</td><td data-id="r55c11" class="in">17</td><td data-id="r55c12" class="in">0.585</td></tr><tr data-id="r57" data-pos="9"><td data-id="r57c1" class="gm"></td><td data-id="r57c2" class="in"></td><td class="rk"><div><p data-id="r57c3" class="">9</p></div></td><td class="no"><div data-id="r57c4" class="no10">58</div></td><td data-id="r57c5" class="dr">GRYM K.</td><td data-id="r57c6" class="tn">20.938</td><td data-id="r57c7" class="tn">16.438</td><td data-id="r57c8" class=""></td><td data-id="r57c9" class="tn">1:04.150</td><td data-id="r57c10" class="ib">1:03.982</td><td data-id="r57c11" class="in">17</td><td data-id="r57c12" class="in">0.558</td></tr><tr data-id="r59" data-pos="12"><td data-id="r59c1" class="gm"></td><td data-id="r59c2" class="in"></td><td class="rk"><div><p data-id="r59c3" class="">12</p></div></td><td class="no"><div data-id="r59c4" class="no10">80</div></td><td data-id="r59c5" class="dr">OLEKSANDR B.</td><td data-id="r59c6" class="tn">21.583</td><td data-id="r59c7" class="tn">16.371</td><td data-id="r59c8" class=""></td><td data-id="r59c9" class="tn">1:04.483</td><td data-id="r59c10" class="ib">1:04.034</td><td data-id="r59c11" class="in">17</td><td data-id="r59c12" class="in">0.610</td></tr><tr data-id="r60" data-pos="1"><td data-id="r60c1" class="gf"></td><td data-id="r60c2" class="in"></td><td class="rk"><div><p data-id="r60c3" class="">1</p></div></td><td class="no"><div data-id="r60c4" class="no10">78</div></td><td data-id="r60c5" class="dr">MIGUEL_SILVA_75</td><td data-id="r60c6" class="tn">20.945</td><td data-id="r60c7" class="tn">16.305</td><td data-id="r60c8" class=""></td><td data-id="r60c9" class="tn">1:03.809</td><td data-id="r60c10" class="ib">1:03.424</td><td data-id="r60c11" class="in">17</td><td data-id="r60c12" class="in"></td></tr><tr data-id="r61" data-pos="2"><td data-id="r61c1" class="gm"></td><td data-id="r61c2" class="in"></td><td class="rk"><div><p data-id="r61c3" class="">2</p></div></td><td class="no"><div data-id="r61c4" class="no10">73</div></td><td data-id="r61c5" class="dr">ADRIAN G.</td><td data-id="r61c6" class="tn">21.147</td><td data-id="r61c7" class="tn">16.358</td><td data-id="r61c8" class=""></td><td data-id="r61c9" class="tn">1:03.860</td><td data-id="r61c10" class="ib">1:03.660</td><td data-id="r61c11" class="in">17</td><td data-id="r61c12" class="in">0.236</td></tr><tr data-id="r62" data-pos="3"><td data-id="r62c1" class="gm"></td><td data-id="r62c2" class="in"></td><td class="rk"><div><p data-id="r62c3" class="">3</p></div></td><td class="no"><div data-id="r62c4" class="no10">69</div></td><td data-id="r62c5" class="dr">REMI L.</td><td data-id="r62c6" class="tn">21.538</td><td data-id="r62c7" class="tn">16.371</td><td data-id="r62c8" class=""></td><td data-id="r62c9" class="tn">1:04.138</td><td data-id="r62c10" class="ib">1:03.763</td><td data-id="r62c11" class="in">17</td><td data-id="r62c12" class="in">0.339</td></tr><tr data-id="r63" data-pos="11"><td data-id="r63c1" class="gm"></td><td data-id="r63c2" class="in"></td><td class="rk"><div><p data-id="r63c3" class="">11</p></div></td><td class="no"><div data-id="r63c4" class="no10">44</div></td><td data-id="r63c5" class="dr">PEDRINHO</td><td data-id="r63c6" class="tn">21.068</td><td data-id="r63c7" class="tn">16.313</td><td data-id="r63c8" class="tn">26.766</td><td data-id="r63c9" class="tn">1:04.147</td><td data-id="r63c10" class="ib">1:04.016</td><td data-id="r63c11" class="in">18</td><td data-id="r63c12" class="in">0.592</td></tr><tr data-id="r64" data-pos="5"><td data-id="r64c1" class="gm"></td><td data-id="r64c2" class="in"></td><td class="rk"><div><p data-id="r64c3" class="">5</p></div></td><td class="no"><div data-id="r64c4" class="no10">90</div></td><td data-id="r64c5" class="dr">DZIKOVSKYI R.</td><td data-id="r64c6" class="tn">22.570</td><td data-id="r64c7" class="tn">18.789</td><td data-id="r64c8" class=""></td><td data-id="r64c9" class="tn">1:04.314</td><td data-id="r64c10" class="ib">1:03.904</td><td data-id="r64c11" class="in">17</td><td data-id="r64c12" class="in">0.480</td></tr><tr data-id="r65" data-pos="17"><td data-id="r65c1" class="gm"></td><td data-id="r65c2" class="in"></td><td class="rk"><div><p data-id="r65c3" class="">17</p></div></td><td class="no"><div data-id="r65c4" class="no10">76</div></td><td data-id="r65c5" class="dr">YURII L.</td><td data-id="r65c6" class="tn">21.088</td><td data-id="r65c7" class="tn">16.722</td><td data-id="r65c8" class=""></td><td data-id="r65c9" class="tn">1:04.699</td><td data-id="r65c10" class="ib">1:04.326</td><td data-id="r65c11" class="in">16</td><td data-id="r65c12" class="in">0.902</td></tr><tr data-id="r66" data-pos="7"><td data-id="r66c1" class="gm"></td><td data-id="r66c2" class="in"></td><td class="rk"><div><p data-id="r66c3" class="">7</p></div></td><td class="no"><div data-id="r66c4" class="no10">59</div></td><td data-id="r66c5" class="dr">PEDRO M.</td><td data-id="r66c6" class="ti">20.960</td><td data-id="r66c7" class="tn">16.342</td><td data-id="r66c8" class=""></td><td data-id="r66c9" class="tn">1:14.528</td><td data-id="r66c10" class="ib">1:03.945</td><td data-id="r66c11" class="in">17</td><td data-id="r66c12" class="in">0.521</td></tr><tr data-id="r67" data-pos="6"><td data-id="r67c1" class="gm"></td><td data-id="r67c2" class="in"></td><td class="rk"><div><p data-id="r67c3" class="">6</p></div></td><td class="no"><div data-id="r67c4" class="no10">48</div></td><td data-id="r67c5" class="dr">NIKITA S.</td><td data-id="r67c6" class="tn">21.257</td><td data-id="r67c7" class="tn">16.325</td><td data-id="r67c8" class=""></td><td data-id="r67c9" class="tn">1:04.275</td><td data-id="r67c10" class="ib">1:03.907</td><td data-id="r67c11" class="in">17</td><td data-id="r67c12" class="in">0.483</td></tr><tr data-id="r69" data-pos="4"><td data-id="r69c1" class="gm"></td><td data-id="r69c2" class="in"></td><td class="rk"><div><p data-id="r69c3" class="">4</p></div></td><td class="no"><div data-id="r69c4" class="no10">46</div></td><td data-id="r69c5" class="dr">RODRIGO F.</td><td data-id="r69c6" class="ti">20.872</td><td data-id="r69c7" class="tn">16.361</td><td data-id="r69c8" class=""></td><td data-id="r69c9" class="tn">1:04.389</td><td data-id="r69c10" class="ib">1:03.859</td><td data-id="r69c11" class="in">17</td><td data-id="r69c12" class="in">0.435</td></tr><tr data-id="r70" data-pos="13"><td data-id="r70c1" class="gm"></td><td data-id="r70c2" class="in"></td><td class="rk"><div><p data-id="r70c3" class="">13</p></div></td><td class="no"><div data-id="r70c4" class="no10">42</div></td><td data-id="r70c5" class="dr">TIM</td><td data-id="r70c6" class="tn">20.897</td><td data-id="r70c7" class="tn">16.293</td><td data-id="r70c8" class="tn">26.946</td><td data-id="r70c9" class="tn">1:04.136</td><td data-id="r70c10" class="ib">1:04.050</td><td data-id="r70c11" class="in">18</td><td data-id="r70c12" class="in">0.626</td></tr><tr data-id="r71" data-pos="16"><td data-id="r71c1" class="gm"></td><td data-id="r71c2" class="in"></td><td class="rk"><div><p data-id="r71c3" class="">16</p></div></td><td class="no"><div data-id="r71c4" class="no10">57</div></td><td data-id="r71c5" class="dr">JULES V.</td><td data-id="r71c6" class="ti">20.984</td><td data-id="r71c7" class=""></td><td data-id="r71c8" class=""></td><td data-id="r71c9" class="tn">1:04.348</td><td data-id="r71c10" class="ib">1:04.295</td><td data-id="r71c11" class="in">17</td><td data-id="r71c12" class="in">0.871</td></tr><tr data-id="r72" data-pos="15"><td data-id="r72c1" class="gm"></td><td data-id="r72c2" class="in"></td><td class="rk"><div><p data-id="r72c3" class="">15</p></div></td><td class="no"><div data-id="r72c4" class="no10">66</div></td><td data-id="r72c5" class="dr">HORION V.</td><td data-id="r72c6" class="tn">21.204</td><td data-id="r72c7" class="tn">16.439</td><td data-id="r72c8" class=""></td><td data-id="r72c9" class="tn">1:04.334</td><td data-id="r72c10" class="ib">1:04.185</td><td data-id="r72c11" class="in">17</td><td data-id="r72c12" class="in">0.761</td></tr><tr data-id="r73" data-pos="18"><td data-id="r73c1" class="gl"></td><td data-id="r73c2" class="in"></td><td class="rk"><div><p data-id="r73c3" class="">18</p></div></td><td class="no"><div data-id="r73c4" class="no10">75</div></td><td data-id="r73c5" class="dr">SIEBERT V.</td><td data-id="r73c6" class="ti">20.936</td><td data-id="r73c7" class=""></td><td data-id="r73c8" class=""></td><td data-id="r73c9" class="ti">1:04.356</td><td data-id="r73c10" class="ib">1:04.356</td><td data-id="r73c11" class="in">18</td><td data-id="r73c12" class="in">0.932</td></tr><tr data-id="r74" data-pos="14"><td data-id="r74c1" class="gm"></td><td data-id="r74c2" class="in"></td><td class="rk"><div><p data-id="r74c3" class="">14</p></div></td><td class="no"><div data-id="r74c4" class="no10">63</div></td><td data-id="r74c5" class="dr">LEENDERS M.</td><td data-id="r74c6" class="tn">21.189</td><td data-id="r74c7" class="tn">16.439</td><td data-id="r74c8" class=""></td><td data-id="r74c9" class="tn">1:04.297</td><td data-id="r74c10" class="ib">1:04.159</td><td data-id="r74c11" class="in">17</td><td data-id="r74c12" class="in">0.735</td></tr></tbody>
+msg||
+
+ 
+light|lf|
+com||<p><b>15:25</b><span data-flag="chequered"></span>Finish</p>
+dyn1|text|
+
+ 
+r67c2|sf|
+r67c8|tn|27.980
+r67c9|tn|1:05.562
+r67c11|in|18
+r67|*||20988
+r63c6|tn|21.153
+r63c7||
+r63c8||
+r63|*i1|16274
+
+ 
+r70c6|tn|21.593
+r70c7||
+r70c8||
+r70|*i1|16273
+
+ 
+r71c7|tn|16.426
+r71|*i2|26825
+r73c7|tn|16.382
+r73|*i2|26833
+
+ 
+r63c7|tn|16.348
+r70c7|tn|16.268
+r63|*i2|26761
+r70|*i2|26880
+
+ 
+r57c2|sf|
+r57c6|ib|20.883
+r57c7|ib|16.274
+r57c8|ib|26.825
+r59c2|sf|
+r59c6|ib|20.897
+r59c7|ib|16.293
+r59c8|ib|26.844
+r74c2|sf|
+r74c6|ib|21.022
+r74c7|ib|16.310
+r74c8|ib|26.827
+r72c2|sf|
+r72c6|ib|20.984
+r72c7|ib|16.272
+r72c8|ib|26.929
+
+ 
+r60c2|sf|
+r60c6|ib|20.612
+r60c7|ib|16.159
+r60c8|ib|26.653
+r61c2|sf|
+r61c6|ib|20.735
+r61c7|ib|16.245
+r61c8|ib|26.680
+r62c2|sf|
+r62c6|ib|20.761
+r62c7|ib|16.187
+r62c8|ib|26.815
+
+ 
+r69c2|sf|
+r69c6|ib|20.994
+r69c7|ib|16.133
+r69c8|ib|26.732
+r64c2|sf|
+r64c6|ib|20.989
+r64c7|ib|16.202
+r64c8|ib|26.713
+r66c2|sf|
+r66c6|ib|21.031
+r66c7|ib|16.213
+r66c8|ib|26.701
+r65c2|sf|
+r65c6|ib|20.899
+r65c7|ib|16.327
+r65c8|ib|27.100
+r55c2|sf|
+r55c6|ib|20.981
+r55c7|ib|16.299
+r55c8|ib|26.729
+r54c2|sf|
+r54c6|ib|21.013
+r54c7|ib|16.245
+r54c8|ib|26.698

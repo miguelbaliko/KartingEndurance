@@ -126,6 +126,7 @@ os.makedirs(os.path.dirname(os.path.abspath(DB)), exist_ok=True)
 def init_db():
     os.makedirs(os.path.dirname(DB), exist_ok=True)
     with sqlite3.connect(DB) as con:
+        con.row_factory = sqlite3.Row
         con.execute("PRAGMA journal_mode=WAL")
         con.executescript("""
             CREATE TABLE IF NOT EXISTS drivers (
@@ -156,6 +157,52 @@ def init_db():
         # How long the box stop after this stint actually took. Without it
         # pit_loss_seconds can only ever be a guess.
         _add_column(con, "stints", "box_seconds", "REAL")
+        # init_db() runs on every import (gunicorn needs that too), which
+        # every test also triggers -- so seeding here unconditionally would
+        # plant 7 real drivers ahead of whatever id a test expects to create
+        # first.  Opt-in only: WARROOM_SEED_TURNO=1 python3 app.py, once, on
+        # a fresh checkout.
+        if os.environ.get("WARROOM_SEED_TURNO"):
+            _seed_turno_plan(con)
+
+# The turno sheet handed out before the race: 7 drivers and their planned
+# start time for each of the 35 stints (turn 1 is the starting driver, before
+# any stop; turns 2-35 are the 34 mandatory stops in order).  Seeded once, on
+# an empty database, so a fresh checkout on race day starts with the plan
+# already in instead of needing it typed in by hand under pressure.
+TURNO_DRIVER_ORDER = ["BALIKÓ", "CASINHA", "CONTENTE", "DINIS", "CAXI", "BERNA", "LOBO"]
+TURNO_TURNS = [
+    (1, "DINIS", "13:00"), (2, "BALIKÓ", "13:45"), (3, "BERNA", "14:26"),
+    (4, "CAXI", "15:09"), (5, "BALIKÓ", "15:52"), (6, "BERNA", "16:35"),
+    (7, "CAXI", "17:18"), (8, "BALIKÓ", "18:01"), (9, "BERNA", "18:44"),
+    (10, "CAXI", "19:27"), (11, "BALIKÓ", "20:10"), (12, "CASINHA", "20:53"),
+    (13, "CAXI", "21:36"), (14, "DINIS", "22:19"), (15, "LOBO", "23:02"),
+    (16, "CONTENTE", "23:45"), (17, "BERNA", "00:28"), (18, "DINIS", "01:11"),
+    (19, "LOBO", "01:54"), (20, "CONTENTE", "02:37"), (21, "BERNA", "03:20"),
+    (22, "CASINHA", "04:03"), (23, "BALIKÓ", "04:46"), (24, "CAXI", "05:29"),
+    (25, "DINIS", "06:12"), (26, "LOBO", "06:55"), (27, "CONTENTE", "07:38"),
+    (28, "CASINHA", "08:21"), (29, "LOBO", "09:04"), (30, "CONTENTE", "09:47"),
+    (31, "CASINHA", "10:30"), (32, "LOBO", "11:13"), (33, "CONTENTE", "11:56"),
+    (34, "CASINHA", "12:39"), (35, "DINIS", "13:22"),
+]
+
+def _seed_turno_plan(con):
+    """Load the turno sheet into an empty database. A no-op once any driver
+    already exists, so this never overwrites a plan the crew has edited."""
+    if con.execute("SELECT 1 FROM drivers LIMIT 1").fetchone():
+        return
+    for i, name in enumerate(TURNO_DRIVER_ORDER):
+        con.execute("INSERT INTO drivers(name, sort_order) VALUES (?,?)", (name, i))
+    ids = {r["name"]: r["id"] for r in con.execute("SELECT id, name FROM drivers")}
+    plan = [{"driver_id": None, "note": ""} for _ in range(len(TURNO_TURNS) - 1)]
+    for turn, name, time in TURNO_TURNS:
+        if turn == 1:
+            con.execute("INSERT OR REPLACE INTO kv VALUES ('driver_id', ?)",
+                        (str(ids[name]),))
+            continue
+        plan[turn - 2] = {"driver_id": ids[name], "note": "", "time": time}
+    con.execute("INSERT OR REPLACE INTO kv VALUES ('pit_plan', ?)",
+                (json.dumps(plan),))
 
 def _add_column(con, table: str, col: str, decl: str):
     """Add a column to an existing database, once. SQLite has no IF NOT EXISTS
@@ -815,6 +862,19 @@ def _parse_apex_pipe(msg: str) -> tuple:
                         # leave it glowing on a merge into the existing row.
                         cell_updates[kart]["last_lap_mark"] = LAP_MARK.get(mod, "")
 
+        elif re.match(r'^r\w+$', cmd) and mod in ('*out', '*in'):
+            # Some endurance events (lemans-karting2, 2026-09-18) push a pit
+            # lane entry/exit as a bare row command instead of resending the
+            # row's CSS class, which we otherwise only ever see once, in the
+            # opening grid.  Without this a kart's in_pit status freezes at
+            # whatever the grid said and never updates again for the rest of
+            # the session.  Routing it through row_cls means _enrich's
+            # existing _PIT_MARK check picks it up for free.
+            kart = _row_kart_map.get(cmd)
+            if kart:
+                cell_updates.setdefault(kart, {})["row_cls"] = (
+                    "pit" if mod == '*out' else "")
+
         elif cmd == 'C' and mod:
             # Incremental cell update: mod="r14915c6", val="<td ...>0:52.3</td>"
             m = re.match(r'(r\w+?)(c\d+)$', mod)
@@ -969,13 +1029,17 @@ def get_pit_plan() -> list:
     kv_set("pit_plan", json.dumps(plan))
     return plan
 
-def set_plan_stop(stop_idx: int, driver_id):
+def set_plan_stop(stop_idx: int, driver_id, time: str = None):
     plan = get_pit_plan()
     n = CFG["race"]["mandatory_pits"]
     while len(plan) < n:
         plan.append({"driver_id": None, "note": ""})
     if 0 <= stop_idx < n:
         plan[stop_idx]["driver_id"] = driver_id
+        # A pre-agreed clock time (e.g. from the paper turno sheet) beats the
+        # even split once someone has actually planned the stop by hand.
+        if time is not None:
+            plan[stop_idx]["time"] = time
     kv_set("pit_plan", json.dumps(plan[:n]))
 
 # ── Background worker ──────────────────────────────────────────────────────────
@@ -1976,7 +2040,8 @@ def make_snapshot() -> dict:
             "driver_id": did,
             "driver": drv_by_id.get(int(did), "") if did is not None else "",
             "planned_s": int((i + 1) * avg_stint_s),
-            "planned_fmt": fmt_duration((i + 1) * avg_stint_s),
+            # A hand-planned clock time (turno sheet) overrides the even split.
+            "planned_fmt": stop.get("time") or fmt_duration((i + 1) * avg_stint_s),
             "done": i < len(pit_history),
             "actual_end": actual["end"] if actual else "",
         })
@@ -2209,7 +2274,7 @@ def api_plan_set():
     data = request.json or {}
     stop = int(data.get("stop", 1)) - 1  # 1-indexed from client
     driver_id = data.get("driver_id")    # None to unassign
-    set_plan_stop(stop, driver_id)
+    set_plan_stop(stop, driver_id, data.get("time"))
     return jsonify(ok=True)
 
 @app.post("/api/plan/reset")
@@ -2464,11 +2529,17 @@ def api_kart_lane():
 
 @app.post("/api/kart/add")
 def api_kart_add():
+    """Blank kart is deliberate: a placeholder holding the queue position
+    until someone reads the number off the physical kart -- see lane_rename."""
     d = request.json or {}
-    kart = str(d.get("kart", "")).strip()
-    if not kart:
-        return jsonify(ok=False, error="Kart number required"), 400
-    POOL.lane_add(int(d.get("lane", 1)), kart)
+    POOL.lane_add(int(d.get("lane", 1)), str(d.get("kart", "")).strip())
+    return jsonify(ok=True)
+
+@app.post("/api/kart/rename")
+def api_kart_rename():
+    d = request.json or {}
+    POOL.lane_rename(int(d.get("lane", 1)), str(d.get("old", "")).strip(),
+                     str(d.get("new", "")).strip())
     return jsonify(ok=True)
 
 @app.post("/api/kart/remove")
