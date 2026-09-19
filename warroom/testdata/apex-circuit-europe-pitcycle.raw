@@ -1,0 +1,337 @@
+init|p|
+best|hide|
+css|no9|border-bottom-color:#00FF00 !important; color:#000000 !important;
+css|no10|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no2|border-bottom-color:#0000FF !important; color:#FFFFFF !important;
+css|no13|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no12|border-bottom-color:#808080 !important; color:#FFFFFF !important;
+css|no14|border-bottom-color:#FF00FF !important; color:#FFFFFF !important;
+css|no4|border-bottom-color:#0080FF !important; color:#FFFFFF !important;
+css|no5|border-bottom-color:#80FF80 !important; color:#000000 !important;
+css|no8|border-bottom-color:#535353 !important; color:#FFFFFF !important;
+css|no1|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no11|border-bottom-color:#008040 !important; color:#FFFFFF !important;
+css|no3|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|pena1|color:#f00; font-size:11px; font-weight: bold; text-align:center;
+effects||Effets
+comments||Commentaires
+title1||24 HEURES
+title2||Q1 CHRONOS
+dyn1|countdown|1129951
+light|lg|
+wth1||
+wth2||
+wth3||
+track||Piste Karting sens normal (1200m)
+com||
+grid||<tbody><tr data-id="r0" class="head" data-pos="0"><td data-id="c1" data-type="grp" data-pr="6"></td><td data-id="c2" data-type="sta" data-pr="1"></td><td data-id="c3" data-type="rk" data-pr="1">Clt</td><td data-id="c4" data-type="no" data-pr="1">Kart</td><td data-id="c5" data-type="dr" data-pr="1" data-width="29" data-min="16">Equipe</td><td data-id="c6" data-type="llp" data-pr="2" data-width="16" data-min="7">Dernier T.</td><td data-id="c7" data-type="blp" data-pr="1" data-width="16" data-min="7">Meilleur T.</td><td data-id="c8" data-type="gap" data-pr="4" data-width="11" data-min="7">Ecart</td><td data-id="c9" data-type="tlp" data-pr="5" data-width="6" data-min="4">Tours</td><td data-id="c10" data-type="otr" data-pr="2" data-width="11" data-min="4">En piste</td><td data-id="c11" data-type="pit" data-pr="2" data-width="8" data-min="7">Stands</td></tr><tr data-id="r90512" data-pos="6"><td data-id="r90512c1" class="gm"></td><td data-id="r90512c2" class="sr"></td><td class="rk"><div><p data-id="r90512c3" class="">6</p></div></td><td class="no"><div data-id="r90512c4" class="no13">47</div></td><td data-id="r90512c5" class="drteam">TANGUY [0:03]</td><td data-id="r90512c6" class="tn">1:10.642</td><td data-id="r90512c7" class="ib">1:10.082</td><td data-id="r90512c8" class="in">0.492</td><td data-id="r90512c9" class="in">9</td><td data-id="r90512c10" class="in">0:03</td><td data-id="r90512c11" class="in">1</td></tr><tr data-id="r90506" data-pos="5"><td data-id="r90506c1" class="gm"></td><td data-id="r90506c2" class="in"></td><td class="rk"><div><p data-id="r90506c3" class="">5</p></div></td><td class="no"><div data-id="r90506c4" class="no13">14</div></td><td data-id="r90506c5" class="drteam">QUENTIN [0:08]</td><td data-id="r90506c6" class="tn">1:10.880</td><td data-id="r90506c7" class="ib">1:09.993</td><td data-id="r90506c8" class="in">0.403</td><td data-id="r90506c9" class="in">9</td><td data-id="r90506c10" class="in">0:08</td><td data-id="r90506c11" class="in">1</td></tr><tr data-id="r90511" data-pos="18"><td data-id="r90511c1" class="gf"></td><td data-id="r90511c2" class="in"></td><td class="rk"><div><p data-id="r90511c3" class="">18</p></div></td><td class="no"><div data-id="r90511c4" class="no13">3</div></td><td data-id="r90511c5" class="drteam">RÉMY [0:08]</td><td data-id="r90511c6" class="ti">1:10.664</td><td data-id="r90511c7" class="ib">1:10.664</td><td data-id="r90511c8" class="in">1.074</td><td data-id="r90511c9" class="in">9</td><td data-id="r90511c10" class="in">0:08</td><td data-id="r90511c11" class="in">1</td></tr><tr data-id="r90505" data-pos="17"><td data-id="r90505c1" class="gl"></td><td data-id="r90505c2" class="in"></td><td class="rk"><div><p data-id="r90505c3" class="">17</p></div></td><td class="no"><div data-id="r90505c4" class="no13">9</div></td><td data-id="r90505c5" class="drteam">GUILLAUME [0:03]</td><td data-id="r90505c6" class="ti">1:10.581</td><td data-id="r90505c7" class="ib">1:10.581</td><td data-id="r90505c8" class="in">0.991</td><td data-id="r90505c9" class="in">8</td><td data-id="r90505c10" class="in">0:03</td><td data-id="r90505c11" class="in">1</td></tr><tr data-id="r90516" data-pos="14"><td data-id="r90516c1" class="gm"></td><td data-id="r90516c2" class="in"></td><td class="rk"><div><p data-id="r90516c3" class="">14</p></div></td><td class="no"><div data-id="r90516c4" class="no13">15</div></td><td data-id="r90516c5" class="drteam">JEROME [0:11]</td><td data-id="r90516c6" class="tn">1:10.516</td><td data-id="r90516c7" class="ib">1:10.504</td><td data-id="r90516c8" class="in">0.914</td><td data-id="r90516c9" class="in">10</td><td data-id="r90516c10" class="in">0:11</td><td data-id="r90516c11" class="in"></td></tr><tr data-id="r90507" data-pos="2"><td data-id="r90507c1" class="gm"></td><td data-id="r90507c2" class="in"></td><td class="rk"><div><p data-id="r90507c3" class="">2</p></div></td><td class="no"><div data-id="r90507c4" class="no13">28</div></td><td data-id="r90507c5" class="drteam">NICOLAS [0:06]</td><td data-id="r90507c6" class="tn">1:12.950</td><td data-id="r90507c7" class="ib">1:09.779</td><td data-id="r90507c8" class="in">0.189</td><td data-id="r90507c9" class="in">9</td><td data-id="r90507c10" class="in">0:06</td><td data-id="r90507c11" class="in">1</td></tr><tr data-id="r90490" data-pos="10"><td data-id="r90490c1" class="gm"></td><td data-id="r90490c2" class="sr"></td><td class="rk"><div><p data-id="r90490c3" class="">10</p></div></td><td class="no"><div data-id="r90490c4" class="no13">2</div></td><td data-id="r90490c5" class="drteam">QUENTIN [0:10]</td><td data-id="r90490c6" class="tn">1:11.190</td><td data-id="r90490c7" class="ib">1:10.390</td><td data-id="r90490c8" class="in">0.800</td><td data-id="r90490c9" class="in">10</td><td data-id="r90490c10" class="in">0:10</td><td data-id="r90490c11" class="in"></td></tr><tr data-id="r90491" data-pos="21"><td data-id="r90491c1" class="gm"></td><td data-id="r90491c2" class="in"></td><td class="rk"><div><p data-id="r90491c3" class="">21</p></div></td><td class="no"><div data-id="r90491c4" class="no13">4</div></td><td data-id="r90491c5" class="drteam">STEEVE [0:10]</td><td data-id="r90491c6" class="ti">1:10.978</td><td data-id="r90491c7" class="ib">1:10.978</td><td data-id="r90491c8" class="in">1.388</td><td data-id="r90491c9" class="in">10</td><td data-id="r90491c10" class="in">0:10</td><td data-id="r90491c11" class="in"></td></tr><tr data-id="r90492" data-pos="28"><td data-id="r90492c1" class="gm"></td><td data-id="r90492c2" class="si"></td><td class="rk"><div><p data-id="r90492c3" class="">28</p></div></td><td class="no"><div data-id="r90492c4" class="no13">25</div></td><td data-id="r90492c5" class="drteam">YANNICK  [0:11]</td><td data-id="r90492c6" class="tn">1:11.244</td><td data-id="r90492c7" class="ib">1:12.015</td><td data-id="r90492c8" class="in">2.425</td><td data-id="r90492c9" class="in">9</td><td data-id="r90492c10" class="to">01.</td><td data-id="r90492c11" class="in">1</td></tr><tr data-id="r90493" data-pos="29"><td data-id="r90493c1" class="gm"></td><td data-id="r90493c2" class="so"></td><td class="rk"><div><p data-id="r90493c3" class="">29</p></div></td><td class="no"><div data-id="r90493c4" class="no13">34</div></td><td data-id="r90493c5" class="drteam">JULIE [0:01]</td><td data-id="r90493c6" class="tn">1:13.842</td><td data-id="r90493c7" class="ib">1:12.050</td><td data-id="r90493c8" class="in">2.460</td><td data-id="r90493c9" class="in">7</td><td data-id="r90493c10" class="to">1:23.</td><td data-id="r90493c11" class="in">1</td></tr><tr data-id="r90494" data-pos="24"><td data-id="r90494c1" class="gl"></td><td data-id="r90494c2" class="so"></td><td class="rk"><div><p data-id="r90494c3" class="">24</p></div></td><td class="no"><div data-id="r90494c4" class="no13">6</div></td><td data-id="r90494c5" class="drteam">ALEXANDRE [0:00]</td><td data-id="r90494c6" class="tn">1:09.996</td><td data-id="r90494c7" class="ib">1:11.300</td><td data-id="r90494c8" class="in">1.710</td><td data-id="r90494c9" class="in">8</td><td data-id="r90494c10" class="to">1:12.</td><td data-id="r90494c11" class="in">2</td></tr><tr data-id="r90495" data-pos="8"><td data-id="r90495c1" class="gm"></td><td data-id="r90495c2" class="in"></td><td class="rk"><div><p data-id="r90495c3" class="">8</p></div></td><td class="no"><div data-id="r90495c4" class="no13">19</div></td><td data-id="r90495c5" class="drteam">VINCENT [0:01]</td><td data-id="r90495c6" class="tn">2:35.169</td><td data-id="r90495c7" class="ib">1:10.354</td><td data-id="r90495c8" class="in">0.764</td><td data-id="r90495c9" class="in">9</td><td data-id="r90495c10" class="in">0:01</td><td data-id="r90495c11" class="in">1</td></tr><tr data-id="r90496" data-pos="26"><td data-id="r90496c1" class="gm"></td><td data-id="r90496c2" class="in"></td><td class="rk"><div><p data-id="r90496c3" class="">26</p></div></td><td class="no"><div data-id="r90496c4" class="no13">27</div></td><td data-id="r90496c5" class="drteam">MICHAEL [0:02]</td><td data-id="r90496c6" class="tn">3:00.052</td><td data-id="r90496c7" class="ib">1:11.737</td><td data-id="r90496c8" class="in">2.147</td><td data-id="r90496c9" class="in">8</td><td data-id="r90496c10" class="in">0:02</td><td data-id="r90496c11" class="in">1</td></tr><tr data-id="r90497" data-pos="12"><td data-id="r90497c1" class="gm"></td><td data-id="r90497c2" class="in"></td><td class="rk"><div><p data-id="r90497c3" class="">12</p></div></td><td class="no"><div data-id="r90497c4" class="no13">16</div></td><td data-id="r90497c5" class="drteam">OLIVIER [0:02]</td><td data-id="r90497c6" class="tn">2:48.287</td><td data-id="r90497c7" class="ib">1:10.430</td><td data-id="r90497c8" class="in">0.840</td><td data-id="r90497c9" class="in">7</td><td data-id="r90497c10" class="in">0:02</td><td data-id="r90497c11" class="in">1</td></tr><tr data-id="r90498" data-pos="16"><td data-id="r90498c1" class="gm"></td><td data-id="r90498c2" class="in"></td><td class="rk"><div><p data-id="r90498c3" class="">16</p></div></td><td class="no"><div data-id="r90498c4" class="no13">21</div></td><td data-id="r90498c5" class="drteam">MANU [0:11]</td><td data-id="r90498c6" class="tn">1:10.689</td><td data-id="r90498c7" class="ib">1:10.564</td><td data-id="r90498c8" class="in">0.974</td><td data-id="r90498c9" class="in">9</td><td data-id="r90498c10" class="in">0:11</td><td data-id="r90498c11" class="in"></td></tr><tr data-id="r90499" data-pos="23"><td data-id="r90499c1" class="gm"></td><td data-id="r90499c2" class="so"></td><td class="rk"><div><p data-id="r90499c3" class="">23</p></div></td><td class="no"><div data-id="r90499c4" class="no13">46</div></td><td data-id="r90499c5" class="drteam">YANN [0:01]</td><td data-id="r90499c6" class="tn">1:13.287</td><td data-id="r90499c7" class="ib">1:11.229</td><td data-id="r90499c8" class="in">1.639</td><td data-id="r90499c9" class="in">8</td><td data-id="r90499c10" class="to">1:19.</td><td data-id="r90499c11" class="in">1</td></tr><tr data-id="r90500" data-pos="3"><td data-id="r90500c1" class="gm"></td><td data-id="r90500c2" class="si"></td><td class="rk"><div><p data-id="r90500c3" class="">3</p></div></td><td class="no"><div data-id="r90500c4" class="no13">40</div></td><td data-id="r90500c5" class="drteam">RAPHAEL [0:09]</td><td data-id="r90500c6" class="tn">1:05.839</td><td data-id="r90500c7" class="ib">1:09.849</td><td data-id="r90500c8" class="in">0.259</td><td data-id="r90500c9" class="in">9</td><td data-id="r90500c10" class="to">41.</td><td data-id="r90500c11" class="in">2</td></tr><tr data-id="r90501" data-pos="11"><td data-id="r90501c1" class="gm"></td><td data-id="r90501c2" class="in"></td><td class="rk"><div><p data-id="r90501c3" class="">11</p></div></td><td class="no"><div data-id="r90501c4" class="no13">31</div></td><td data-id="r90501c5" class="drteam">MATHIAS [0:09]</td><td data-id="r90501c6" class="tn">1:10.655</td><td data-id="r90501c7" class="ib">1:10.419</td><td data-id="r90501c8" class="in">0.829</td><td data-id="r90501c9" class="in">9</td><td data-id="r90501c10" class="in">0:09</td><td data-id="r90501c11" class="in">1</td></tr><tr data-id="r90502" data-pos="9"><td data-id="r90502c1" class="gm"></td><td data-id="r90502c2" class="in"></td><td class="rk"><div><p data-id="r90502c3" class="">9</p></div></td><td class="no"><div data-id="r90502c4" class="no13">44</div></td><td data-id="r90502c5" class="drteam">CAMERON [0:08]</td><td data-id="r90502c6" class="ti">1:10.369</td><td data-id="r90502c7" class="ib">1:10.369</td><td data-id="r90502c8" class="in">0.779</td><td data-id="r90502c9" class="in">8</td><td data-id="r90502c10" class="in">0:08</td><td data-id="r90502c11" class="in">1</td></tr><tr data-id="r90503" data-pos="25"><td data-id="r90503c1" class="gf"></td><td data-id="r90503c2" class="si"></td><td class="rk"><div><p data-id="r90503c3" class="">25</p></div></td><td class="no"><div data-id="r90503c4" class="no13">26</div></td><td data-id="r90503c5" class="drteam">MAX [0:09]</td><td data-id="r90503c6" class="tn">1:07.412</td><td data-id="r90503c7" class="ib">1:11.694</td><td data-id="r90503c8" class="in">2.104</td><td data-id="r90503c9" class="in">8</td><td data-id="r90503c10" class="to">21.</td><td data-id="r90503c11" class="in">1</td></tr><tr data-id="r90504" data-pos="30"><td data-id="r90504c1" class="gl"></td><td data-id="r90504c2" class="si"></td><td class="rk"><div><p data-id="r90504c3" class="">30</p></div></td><td class="no"><div data-id="r90504c4" class="no13">24</div></td><td data-id="r90504c5" class="drteam">FABRICE [0:00]</td><td data-id="r90504c6" class="tn">1:09.561</td><td data-id="r90504c7" class="ib">1:12.495</td><td data-id="r90504c8" class="in">2.905</td><td data-id="r90504c9" class="in">8</td><td data-id="r90504c10" class="to">1:43.</td><td data-id="r90504c11" class="in">1</td></tr><tr data-id="r90508" data-pos="27"><td data-id="r90508c1" class="gm"></td><td data-id="r90508c2" class="so"></td><td class="rk"><div><p data-id="r90508c3" class="">27</p></div></td><td class="no"><div data-id="r90508c4" class="no13">48</div></td><td data-id="r90508c5" class="drteam">FLORIAN [0:00]</td><td data-id="r90508c6" class="tn">1:08.160</td><td data-id="r90508c7" class="ib">1:11.786</td><td data-id="r90508c8" class="in">2.196</td><td data-id="r90508c9" class="in">7</td><td data-id="r90508c10" class="to">1:26.</td><td data-id="r90508c11" class="in">2</td></tr><tr data-id="r90509" data-pos="1"><td data-id="r90509c1" class="gf"></td><td data-id="r90509c2" class="in"></td><td class="rk"><div><p data-id="r90509c3" class="">1</p></div></td><td class="no"><div data-id="r90509c4" class="no13">18</div></td><td data-id="r90509c5" class="drteam">HARALD [0:05]</td><td data-id="r90509c6" class="tn">1:09.959</td><td data-id="r90509c7" class="ib">1:09.590</td><td data-id="r90509c8" class="in"></td><td data-id="r90509c9" class="in">7</td><td data-id="r90509c10" class="in">0:05</td><td data-id="r90509c11" class="in">1</td></tr><tr data-id="r90510" data-pos="19"><td data-id="r90510c1" class="gm"></td><td data-id="r90510c2" class="in"></td><td class="rk"><div><p data-id="r90510c3" class="">19</p></div></td><td class="no"><div data-id="r90510c4" class="no13">41</div></td><td data-id="r90510c5" class="drteam">BENJAMIN [0:02]</td><td data-id="r90510c6" class="tn">2:42.915</td><td data-id="r90510c7" class="ib">1:10.809</td><td data-id="r90510c8" class="in">1.219</td><td data-id="r90510c9" class="in">8</td><td data-id="r90510c10" class="in">0:02</td><td data-id="r90510c11" class="in">1</td></tr><tr data-id="r90513" data-pos="13"><td data-id="r90513c1" class="gm"></td><td data-id="r90513c2" class="in"></td><td class="rk"><div><p data-id="r90513c3" class="">13</p></div></td><td class="no"><div data-id="r90513c4" class="no13">50</div></td><td data-id="r90513c5" class="drteam">GASPARD [0:08]</td><td data-id="r90513c6" class="tn">1:10.531</td><td data-id="r90513c7" class="ib">1:10.434</td><td data-id="r90513c8" class="in">0.844</td><td data-id="r90513c9" class="in">8</td><td data-id="r90513c10" class="in">0:08</td><td data-id="r90513c11" class="in">1</td></tr><tr data-id="r90514" data-pos="15"><td data-id="r90514c1" class="gm"></td><td data-id="r90514c2" class="in"></td><td class="rk"><div><p data-id="r90514c3" class="">15</p></div></td><td class="no"><div data-id="r90514c4" class="no13">20</div></td><td data-id="r90514c5" class="drteam">TANGUY [0:10]</td><td data-id="r90514c6" class="tn">1:11.605</td><td data-id="r90514c7" class="ib">1:10.515</td><td data-id="r90514c8" class="in">0.925</td><td data-id="r90514c9" class="in">9</td><td data-id="r90514c10" class="in">0:10</td><td data-id="r90514c11" class="in">1</td></tr><tr data-id="r90515" data-pos="7"><td data-id="r90515c1" class="gm"></td><td data-id="r90515c2" class="si"></td><td class="rk"><div><p data-id="r90515c3" class="">7</p></div></td><td class="no"><div data-id="r90515c4" class="no13">17</div></td><td data-id="r90515c5" class="drteam">OLIVIER [0:11]</td><td data-id="r90515c6" class="tn">1:06.236</td><td data-id="r90515c7" class="ib">1:10.336</td><td data-id="r90515c8" class="in">0.746</td><td data-id="r90515c9" class="in">9</td><td data-id="r90515c10" class="to">54.</td><td data-id="r90515c11" class="in">1</td></tr><tr data-id="r90517" data-pos="20"><td data-id="r90517c1" class="gm"></td><td data-id="r90517c2" class="in"></td><td class="rk"><div><p data-id="r90517c3" class="">20</p></div></td><td class="no"><div data-id="r90517c4" class="no13">49</div></td><td data-id="r90517c5" class="drteam">LUDOVIC [0:05]</td><td data-id="r90517c6" class="ti">1:10.905</td><td data-id="r90517c7" class="ib">1:10.905</td><td data-id="r90517c8" class="in">1.315</td><td data-id="r90517c9" class="in">8</td><td data-id="r90517c10" class="in">0:05</td><td data-id="r90517c11" class="in">1</td></tr><tr data-id="r90518" data-pos="22"><td data-id="r90518c1" class="gm"></td><td data-id="r90518c2" class="so"></td><td class="rk"><div><p data-id="r90518c3" class="">22</p></div></td><td class="no"><div data-id="r90518c4" class="no13">45</div></td><td data-id="r90518c5" class="drteam">VALENTIN [0:01]</td><td data-id="r90518c6" class="tn">1:07.830</td><td data-id="r90518c7" class="ib">1:11.085</td><td data-id="r90518c8" class="in">1.495</td><td data-id="r90518c9" class="in">7</td><td data-id="r90518c10" class="to">1:25.</td><td data-id="r90518c11" class="in">1</td></tr><tr data-id="r90519" data-pos="4"><td data-id="r90519c1" class="gm"></td><td data-id="r90519c2" class="sr"></td><td class="rk"><div><p data-id="r90519c3" class="">4</p></div></td><td class="no"><div data-id="r90519c4" class="no13">11</div></td><td data-id="r90519c5" class="drteam">THÉOPHILE  [0:06]</td><td data-id="r90519c6" class="tn">1:10.789</td><td data-id="r90519c7" class="ib">1:09.977</td><td data-id="r90519c8" class="in">0.387</td><td data-id="r90519c9" class="in">9</td><td data-id="r90519c10" class="in">0:06</td><td data-id="r90519c11" class="in">1</td></tr></tbody>
+msg||
+
+ 
+r90515c10|to|1:02.
+r90500c10|to|49.
+r90511c2|si|
+r90511c6|tn|1:06.584
+r90511c9|in|10
+r90511c10|to|00.
+r90511c11|in|2
+r90511|*in|0
+r90503c10|to|29.
+r90499c2|sr|
+r90499c6|tn|2:33.734
+r90499c9|in|9
+r90499c10|in|0:01
+r90492c10|to|10.
+r90504c10|to|1:52.
+r90499|*|71324|
+r90515c10|to|1:03.
+r90500c10|to|50.
+r90513c2|sr|
+r90513c6|tn|1:11.340
+r90513c9|in|9
+r90511c10|to|01.
+r90513|*|70482|
+r90503c10|to|30.
+r90504c10|to|1:53.
+r90512c2|in|
+r90492c10|to|11.
+r90515c10|to|1:04.
+r90500c10|to|51.
+r90505c2|in|
+
+ 
+r90509c5|dr|ERK TEAM
+r90507c5|dr|BROUETTE RACING TEAM
+r90500c5|dr|T.O.M - RS1
+r90519c5|dr|NORMANDIE TEAM KART
+r90506c5|dr|LH RACING
+r90512c5|dr|ARNAGE
+r90515c5|dr|ARIES KART
+r90495c5|dr|TEAM KART HEROES
+r90502c5|dr|DIX DE DER
+r90490c5|dr|INFINY TEAM
+r90501c5|dr|T.O.M - RS2
+r90497c5|dr|ESRG CTA 2
+r90513c5|dr|ARNAGE JUNIOR
+r90516c5|dr|ORKA LIONS
+r90514c5|dr|AS FLEXI FRANCE
+r90498c5|dr|HANDOVER 24
+r90505c5|dr|TEAM V5
+r90511c5|dr|MATHILDE RACING
+r90510c5|dr|LES 20 PISTONS
+r90517c5|dr|ORKA TEAM
+r90491c5|dr|FULLREP RACING
+r90518c5|dr|FUN DESIGN RACING TEAM
+r90499c5|dr|ZIGZAG
+r90494c5|dr|QUINN KART
+r90503c5|dr|POUET POUET 8.0
+r90496c5|dr|ESRG CTA 1
+r90508c5|dr|NOOPY TEAM
+r90492c5|dr|LES VIKINGS
+r90493c5|dr|TEAM DRIVER FILLES
+r90504c5|dr|NEW POUET POUET 3.0
+r90501c10|to|43.
+r90511c10|to|57.
+r90492c10|to|1:07.
+r90491c10|to|17.
+r90501c10|to|44.
+r90511c10|to|58.
+r90490c2|su|
+r90490c3||8
+r90490c6|ti|1:10.352
+r90490c7|ib|1:10.352
+r90490c8|in|0.762
+r90490c9|in|11
+r90495c3||9
+r90502c3||10
+r90490|*|70352|
+r90490|#|8
+r90495|#|9
+r90502|#|10
+r90492c10|to|1:08.
+r90491c10|to|18.
+r90507c2|in|
+r90501c10|to|45.
+r90511c10|to|59.
+r90492c10|to|1:09.
+r90491c10|to|19.
+r90501c10|to|46.
+r90511c10|to|1:00.
+r90492c10|to|1:10.
+r90491c10|to|20.
+r90501c10|to|47.
+r90511c10|to|1:01.
+r90492c10|to|1:11.
+r90491c10|to|21.
+r90501c10|to|48.
+r90511c10|to|1:02.
+r90512c2|sr|
+r90512c6|tn|1:10.234
+r90512c9|in|10
+r90512|*|70191|
+r90492c10|to|1:12.
+r90491c10|to|22.
+r90519c2|in|
+r90505c1|gm|
+r90505c2|su|
+r90505c3||7
+r90505c6|ti|1:10.290
+r90505c7|ib|1:10.290
+r90505c8|in|0.700
+r90505c9|in|10
+r90515c3||8
+r90490c2|sr|
+r90490c3||9
+r90495c3||10
+r90502c3||11
+r90501c3||12
+r90497c3||13
+r90513c3||14
+r90516c3||15
+r90514c3||16
+r90498c1|gl|
+r90498c3||17
+r90505|*|70290|
+r90505|#|7
+r90516|#|15
+r90490|#|9
+r90495|#|10
+r90497|#|13
+r90498|#|17
+r90501|#|12
+r90502|#|11
+r90513|#|14
+r90514|#|16
+r90515|#|8
+r90501c10|to|49.
+r90511c10|to|1:03.
+r90492c10|to|1:13.
+r90491c10|to|23.
+r90501c10|to|50.
+r90511c2|so|
+r90511|*out|0
+r90492c10|to|1:14.
+r90491c10|to|24.
+r90501c10|to|51.
+r90492c10|to|1:15.
+r90491c10|to|25.
+r90501c10|to|52.
+r90492c10|to|1:16.
+r90491c10|to|26.
+r90493c2|sr|
+r90493c6|tn|1:12.883
+r90493c9|in|9
+r90493|*|72084|
+r90517c2|sr|
+r90517c6|tn|1:10.948
+r90517c9|in|10
+r90517|*|70926|
+r90501c10|to|53.
+r90492c10|to|1:17.
+r90491c10|to|27.
+r90490c2|in|
+r90501c10|to|54.
+r90492c10|to|1:18.
+r90490c10|in|0:12
+r90491c10|to|28.
+r90501c10|to|55.
+r90492c10|to|1:19.
+r90491c10|to|29.
+r90501c10|to|56.
+r90492c10|to|1:20.
+r90491c10|to|30.
+r90501c10|to|57.
+r90492c10|to|1:21.
+r90491c10|to|31.
+r90512c2|in|
+r90518c2|sr|
+r90518c6|tn|1:12.156
+r90518c9|in|9
+r90518|*|71333|
+r90501c10|to|58.
+r90505c2|in|
+r90492c10|to|1:22.
+r90491c10|to|32.
+r90513c2|sr|
+r90513c6|tn|1:11.605
+r90513c9|in|10
+r90499c2|sr|
+r90499c6|tn|1:12.308
+r90499c9|in|10
+r90499|*|71388|
+r90513|*|70911|
+r90502c2|si|
+r90502c6|tn|1:07.743
+r90502c9|in|10
+r90502c10|to|00.
+r90502c11|in|2
+r90501c10|to|59.
+r90502|*in|0
+r90512c10|in|0:05
+r90492c10|to|1:23.
+r90491c10|to|33.
+r90502c10|to|01.
+r90501c10|to|1:00.
+r90492c10|to|1:24.
+r90491c10|to|34.
+r90502c10|to|02.
+r90501c10|to|1:01.
+r90492c10|to|1:25.
+r90491c10|to|35.
+r90502c10|to|03.
+r90501c10|to|1:02.
+r90493c2|in|
+r90517c2|in|
+r90492c10|to|1:26.
+r90495c10|in|0:03
+r90491c10|to|36.
+r90509c5|drteam|HARALD [0:06]
+r90507c5|drteam|NICOLAS [0:07]
+r90500c5|drteam|TOM [0:00]
+r90519c5|drteam|THÉOPHILE  [0:07]
+r90506c5|drteam|QUENTIN [0:09]
+r90512c5|drteam|TANGUY [0:05]
+r90505c5|drteam|GUILLAUME [0:04]
+r90515c5|drteam|CLÉMENT  [0:00]
+r90490c5|drteam|QUENTIN [0:12]
+r90495c5|drteam|VINCENT [0:03]
+r90502c5|drteam|CAMERON [0:09]
+r90501c5|drteam|VINCENT [0:00]
+r90497c5|drteam|OLIVIER [0:03]
+r90513c5|drteam|GASPARD [0:09]
+r90516c5|drteam|JEROME [0:12]
+r90514c5|drteam|TANGUY [0:11]
+r90498c5|drteam|MANU [0:12]
+r90511c5|drteam|PIERRE-ANTOINE [0:00]
+r90510c5|drteam|BENJAMIN [0:03]
+r90517c5|drteam|LUDOVIC [0:07]
+r90491c5|drteam|STEEVE [0:12]
+r90518c5|drteam|VALENTIN [0:02]
+r90499c5|drteam|YANN [0:02]
+r90494c5|drteam|ALEXANDRE [0:01]
+r90503c5|drteam|YOHANN [0:00]
+r90496c5|drteam|MICHAEL [0:03]
+r90508c5|drteam|FLORIAN [0:01]
+r90492c5|drteam|BENJAMIN [0:00]
+r90493c5|drteam|JULIE [0:02]
+r90504c5|drteam|FABRICE [0:00]
+r90502c10|to|04.
+r90501c10|to|1:03.
+r90505c5|drteam|GUILLAUME [0:05]
+r90505c10|in|0:05
+r90492c10|to|1:27.
+r90491c10|to|37.
+r90502c10|to|05.
+r90501c10|to|1:04.
+r90509c5|drteam|HARALD [0:07]
+r90509c10|in|0:07
+r90514c2|sr|
+r90514c6|tn|1:10.926
+r90514c9|in|11
+r90492c10|to|1:28.
+r90514|*|70655|
+r90491c10|to|38.
+r90502c10|to|06.
+r90501c10|to|1:05.
+r90492c10|to|1:29.
+r90509c2|sr|
+r90509c6|tb|1:09.455
+r90509c7|ib|1:09.455
+r90509c9|in|9
+r90507c8|in|0.324
+r90500c8|in|0.394
+r90519c8|in|0.522
+r90506c8|in|0.538
+r90512c8|in|0.627
+r90505c8|in|0.835
+r90515c8|in|0.881
+r90490c8|in|0.897
+r90495c8|in|0.899
+r90502c8|in|0.914
+r90501c8|in|0.964
+r90497c8|in|0.975
+r90513c1|gl|
+r90513c8|in|0.979
+r90516c1|gf|
+r90516c8|in|1.049
+r90514c8|in|1.060
+r90498c1|gm|
+r90498c8|in|1.109
+r90511c1|gm|
+r90511c8|in|1.209
+r90510c8|in|1.354
+r90517c8|in|1.450
+r90491c8|in|1.523
+r90491c10|to|39.
+r90518c8|in|1.630
+r90499c8|in|1.774
+r90494c8|in|1.845
+r90503c8|in|2.239
+r90496c8|in|2.282
+r90508c8|in|2.331
+r90492c8|in|2.560
+r90493c1|gl|
+r90493c8|in|2.595
+r90504c1|gs|
+r90504c8|in|3.040
+r90509|*|69455|

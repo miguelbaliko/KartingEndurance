@@ -647,5 +647,49 @@ class TestBareRowPitMarker(unittest.TestCase):
         self.assertFalse(self._in_pit("38"))
 
 
+PITCYCLE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "testdata", "apex-circuit-europe-pitcycle.raw")
+
+
+class TestFullPitCycleOnASecondTrack(unittest.TestCase):
+    """circuit-europe, captured 2026-09-19: kart 3 leaves the pit (*in),
+    drives a 63s stint (its 'to' stint clock climbing to 1:03 in between),
+    then boxes again (*out) -- the first complete entry-and-exit cycle in
+    any fixture, and independent confirmation that *out/*in is an Apex
+    platform convention rather than something lemans-karting2 alone does.
+    """
+
+    def setUp(self):
+        os.environ["WARROOM_NO_WORKER"] = "1"
+        self.addCleanup(os.environ.pop, "WARROOM_NO_WORKER", None)
+        import app
+        app._global_col_types.clear()
+        app._row_kart_map.clear()
+        self.app = app
+        with open(PITCYCLE, encoding="utf-8") as f:
+            grid, self.in_frame, self.out_frame = f.read().split("\n\x00\n")
+        rows, _cells, _meta = app._parse_apex_pipe(grid)
+        app._process_rows(rows)
+
+    def _in_pit(self):
+        return next(t for t in self.app._teams
+                    if str(t.get("kart")) == "3")["in_pit"]
+
+    def test_starts_on_track(self):
+        self.assertFalse(self._in_pit())
+
+    def test_a_bare_in_command_leaves_it_on_track(self):
+        _rows, cells, _meta = self.app._parse_apex_pipe(self.in_frame)
+        self.app._apply_cell_updates(cells)
+        self.assertFalse(self._in_pit())
+
+    def test_a_bare_out_command_boxes_it(self):
+        _rows, cells, _meta = self.app._parse_apex_pipe(self.in_frame)
+        self.app._apply_cell_updates(cells)
+        _rows, cells, _meta = self.app._parse_apex_pipe(self.out_frame)
+        self.app._apply_cell_updates(cells)
+        self.assertTrue(self._in_pit())
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
