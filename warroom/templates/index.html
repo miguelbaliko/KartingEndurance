@@ -413,6 +413,8 @@ td{padding:7px 8px;white-space:nowrap}
 }
 .cfg-card h3{font-size:15px;font-weight:700;margin-bottom:18px;color:var(--tx)}
 .cfg-lbl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.cfg-help{font-size:11px;color:var(--tx3);line-height:1.5;margin:-2px 0 10px}
+.cfg-check{font-size:12px;color:var(--tx2);text-transform:none;letter-spacing:normal;margin-bottom:8px}
 /* At 4am the rota turns on who is rested, not on who is quickest. */
 .drv-rest{font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums;
   min-width:44px;text-align:right}
@@ -908,7 +910,7 @@ tr.clickable{cursor:pointer}
     <input id="cfg-url"   class="cfg-inp" placeholder="https://live.apex-timing.com/…">
     <div class="cfg-lbl">My team name</div>
     <input id="cfg-team"  class="cfg-inp" placeholder="TPC CIAO CUORE">
-    <div class="cfg-lbl" style="color:var(--tx3);font-size:10px;margin-top:-4px">
+    <div class="cfg-help">
       Our row is found by matching this against whatever name the feed sends,
       clipped or reordered.
     </div>
@@ -930,26 +932,26 @@ tr.clickable{cursor:pointer}
         <input id="cfg-lanes" class="cfg-inp" type="number" min="1" max="6" placeholder="2">
       </div>
     </div>
-    <label class="cfg-lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+    <label class="cfg-check" style="display:flex;align-items:center;gap:8px;cursor:pointer">
       <input id="cfg-autopit" type="checkbox" style="width:auto">
       Let the feed start and end our own pit stop
     </label>
-    <label class="cfg-lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+    <label class="cfg-check" style="display:flex;align-items:center;gap:8px;cursor:pointer">
       <input id="cfg-swap" type="checkbox" style="width:auto">
       Karts are swapped at every stop
     </label>
-    <label class="cfg-lbl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+    <label class="cfg-check" style="display:flex;align-items:center;gap:8px;cursor:pointer">
       <input id="cfg-practice" type="checkbox" style="width:auto">
       Practice: us alone on track, one kart
     </label>
-    <div class="cfg-lbl" style="color:var(--tx3);font-size:10px;margin-top:-4px">
+    <div class="cfg-help">
       Reads the laps as a driver comparison instead of a kart one. Karts stay
       Unknown — a kart is only scored by being shared with the field, which does
       not happen in practice. Turn it off before the race.
     </div>
     <div class="cfg-lbl">Ignore these teams when scoring karts (comma separated)</div>
     <input id="cfg-exclude" class="cfg-inp" placeholder="usually leave empty">
-    <div class="cfg-lbl" style="color:var(--tx3);font-size:10px;margin-top:-4px">
+    <div class="cfg-help">
       Measured: dropping a team is worse than keeping it. Their laps also link
       karts to drivers, which is how a slow kart is told from a slow driver.
       Erratic driving is already down-weighted automatically.
