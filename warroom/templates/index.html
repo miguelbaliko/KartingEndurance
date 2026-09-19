@@ -2113,7 +2113,7 @@ function openCfg() {
     document.getElementById('cfg-team').value = S.team_name || '';
     const pool = S.kartpool || {};
     document.getElementById('cfg-lanes').value   = (pool.lanes||[]).length || 2;
-    document.getElementById('cfg-exclude').value = (s.exclude_teams||[]).join(', ');
+    document.getElementById('cfg-exclude').value = (S.exclude_teams||[]).join(', ');
     document.getElementById('cfg-autopit').checked = !!S.auto_pit;
     document.getElementById('cfg-swap').checked    = pool.swap_every_stop !== false;
   document.getElementById('cfg-practice').checked = !!S.practice;
