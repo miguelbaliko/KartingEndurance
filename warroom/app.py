@@ -252,13 +252,15 @@ _CELL_MAP = {
 }
 
 # Some installs leave data-type blank and put the same information in the
-# header's own text instead -- Cronosystem's "Categoría" column does this, so
-# without this fallback its PRO/AM values arrive on a column nothing maps and
-# vanish with no field to blame.  Checked only when data-type came back empty,
-# never as a second opinion on a column the header already named.
+# header's own text instead -- Cronosystem's "Categoría" column does this for
+# category and korridas does it for best lap ("Melhor volta"), so without this
+# fallback the values arrive on a column nothing maps and vanish with no field
+# to blame.  Checked only when data-type came back empty, never as a second
+# opinion on a column the header already named.
 _HEAD_TEXT_MAP = {
     "categoría": "category", "categoria": "category", "category": "category",
     "class": "category", "cat": "category",
+    "melhor volta": "best_lap", "mejor vuelta": "best_lap", "best lap": "best_lap",
 }
 
 # The last-lap cell's own class is Apex's verdict on that lap, sent for every

@@ -732,5 +732,35 @@ class TestHeaderTextFillsInABlankDataType(unittest.TestCase):
         self.assertEqual(self.app._global_col_types.get("c1"), "category")
 
 
+BLANK_BEST_LAP = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "testdata", "apex-korridas-blank-bestlap-column.raw")
+
+
+class TestTheBlankColumnIsNotAlwaysCategory(unittest.TestCase):
+    """korridas, captured 2026-09-19, a 34-kart field on a different Apex
+    install: here it is best lap ("Melhor volta") that ships with an empty
+    data-type, not category -- confirms the fallback is a general header-text
+    lookup rather than something hard-coded to the one column already seen."""
+
+    def setUp(self):
+        os.environ["WARROOM_NO_WORKER"] = "1"
+        self.addCleanup(os.environ.pop, "WARROOM_NO_WORKER", None)
+        import app
+        app._global_col_types.clear()
+        app._row_kart_map.clear()
+        self.app = app
+        with open(BLANK_BEST_LAP, encoding="utf-8") as f:
+            grid = f.read()
+        self.rows, _cells, _meta = app._parse_apex_pipe(grid)
+
+    def test_the_column_resolves_from_its_own_header_text(self):
+        self.assertEqual(self.app._global_col_types.get("c7"), "best_lap")
+
+    def test_every_row_gets_a_best_lap(self):
+        laps = [r.get("best_lap") for r in self.rows]
+        self.assertEqual(len(laps), 34)
+        self.assertTrue(all(laps), laps)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
