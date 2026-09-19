@@ -727,10 +727,10 @@ tr.clickable{cursor:pointer}
             <th class="r sec-hd" title="Sector 1 — purple is the session's best, green this kart's own, yellow slower than its own">S1</th>
             <th class="r sec-hd" title="Sector 2 — purple is the session's best, green this kart's own, yellow slower than its own">S2</th>
             <th class="r sec-hd" title="Sector 3 — purple is the session's best, green this kart's own, yellow slower than its own">S3</th>
+            <th class="r sec-hd" title="FL marks whoever holds the outright fastest lap of the session">Best</th>
             <th class="r sec-hd" title="Purple is the session's fastest lap, green this kart's own best">Last Lap</th>
             <th class="r">Avg 5</th>
             <th class="r">Avg 10</th>
-            <th class="r sec-hd" title="FL marks whoever holds the outright fastest lap of the session">Best</th>
             <th class="r">Laps</th>
             <th class="r">Pits</th>
             <th class="r" title="Behind the leader">Gap</th>
@@ -1270,12 +1270,12 @@ function renderTable(allTeams) {
             : (t.my_kart ? `showKart('${esc(t.my_kart)}')` : '')}"
         >${kartChip(t.my_kart, t.kart_label, t.kart_delta, t.in_pit)}</td>
       ${secCell(t,'s1')}${secCell(t,'s2')}${secCell(t,'s3')}
+      <td class="td-best td-r${t.fastest_lap?' fl':''}">${esc(t.best_lap)}${
+          t.fastest_lap ? '<span class="fl-tag" title="Fastest lap of the session">FL</span>' : ''}</td>
       <td class="td-lap td-r ${t.last_lap_mark||''}">${t.in_pit
           ? '<span class="td-inpit">IN PIT</span>' : esc(t.last_lap)}</td>
       <td class="td-avg td-r">${esc(t.avg5)}</td>
       <td class="td-dim td-r">${esc(t.avg10)}</td>
-      <td class="td-best td-r${t.fastest_lap?' fl':''}">${esc(t.best_lap)}${
-          t.fastest_lap ? '<span class="fl-tag" title="Fastest lap of the session">FL</span>' : ''}</td>
       <td class="td-muted td-r">${esc(t.total_laps)}</td>
       <td class="td-muted td-r">${esc(t.pits)}</td>
       <td class="td-muted td-r">${esc(t.gap)}</td>
