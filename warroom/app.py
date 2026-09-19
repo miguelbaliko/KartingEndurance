@@ -15,6 +15,12 @@ from raceclock import ApexClock
 try:
     import websocket as _ws_mod
     _HAS_WS = True
+    # A port that is firewalled rather than refused never answers, so with no
+    # timeout the connect attempt hangs for however long the OS waits on a SYN
+    # nobody answers -- worker() then sits in it instead of falling back to
+    # AJAX. Every WS attempt this process makes is to an Apex feed, so one
+    # process-wide bound is enough.
+    _ws_mod.setdefaulttimeout(10)
 except ImportError:
     _HAS_WS = False
 
@@ -2582,15 +2588,22 @@ def api_kart_undo():
 def api_settings():
     data = request.json or {}
     if "apex_url" in data:
-        CFG["apex_url"] = data["apex_url"].strip()
-        global _ws_url_cache, _ws_url_checked_at, _ws_blocked
-        _ws_url_cache, _ws_url_checked_at = None, 0.0  # force re-scan on next cycle
-        # The new event has its own AJAX cursor and its own socket; carrying the
-        # old track's over would ask Apex to resume a stream that is not ours.
-        _reset_ajax_state()
-        # Another track's purple is not ours.
-        _reset_sector_best()
-        _ws_blocked = False
+        new_url = data["apex_url"].strip()
+        # Saving settings for any reason always resends the current URL, so
+        # only a real change should pay for a fresh WS probe -- otherwise
+        # ticking an unrelated checkbox re-blocks a connection that was
+        # already working AJAX-only and stalls the feed for no reason.
+        if new_url != CFG.get("apex_url", ""):
+            CFG["apex_url"] = new_url
+            global _ws_url_cache, _ws_url_checked_at, _ws_blocked
+            _ws_url_cache, _ws_url_checked_at = None, 0.0  # force re-scan next cycle
+            # The new event has its own AJAX cursor and its own socket; carrying
+            # the old track's over would ask Apex to resume a stream that is
+            # not ours.
+            _reset_ajax_state()
+            # Another track's purple is not ours.
+            _reset_sector_best()
+            _ws_blocked = False
     if "team_name" in data:
         CFG["team_name"] = data["team_name"].strip()
     if "duration_minutes" in data:
