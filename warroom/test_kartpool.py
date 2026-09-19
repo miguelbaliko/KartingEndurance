@@ -412,10 +412,15 @@ class TestLapAttribution(PoolCase):
         on_new = [l for l in self._laps() if l[0] == "21"]
         self.assertEqual([round(l[2], 1) for l in on_new], [63.4])
 
-    def test_unassigned_team_banks_no_laps(self):
+    def test_unassigned_team_banks_laps_under_a_placeholder_kart(self):
+        # A rival we never walk over and read a kart number off still gets a
+        # per-team history -- "show me this team's laps" should not depend on
+        # us having tracked their physical kart, only rating other karts does.
         self.pool.observe([row("9", "GHOST", laps=1, lap_s=63.0)])
         self.pool.observe([row("9", "GHOST", laps=2, lap_s=63.0)])
-        self.assertEqual(self._laps(), [])
+        laps = self._laps()
+        self.assertEqual(len(laps), 1)
+        self.assertEqual(laps[0][0], "team:9")
 
 
 class TestMyTeamHooks(PoolCase):

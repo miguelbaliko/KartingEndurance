@@ -835,9 +835,14 @@ class KartPool:
         if self._skip[team_no] > 0:
             self._skip[team_no] -= 1     # out-lap is not the kart's fault
             return
-        kart = self._held_by(con, team_no)
-        if not kart:
-            return
+        # A kart we manage (ours, or a rival stop we happened to answer) keeps
+        # its real identity, so its laps still count towards rating other
+        # karts.  One we have never tracked at all -- every rival we never
+        # walk over and read a number off -- gets a placeholder scoped to the
+        # team alone, so its laps stay in kart_lap for "this team's history"
+        # without ever pretending to know which physical kart it was in: a
+        # made-up id with exactly one team can never link to the real fleet.
+        kart = self._held_by(con, team_no) or f"team:{team_no}"
         driver = (row.get("driver") or "").strip()
         pilot = f"{team or team_no}|{driver}" if driver else (team or team_no)
         con.execute("INSERT INTO kart_lap(ts,team_no,pilot,kart,lap_s,ahead_s,"

@@ -297,7 +297,7 @@ function renderAsks(){
     if (p.state === 'await_kart'){
       return `<div class="ask">
         <div class="ask-hd">WHICH KART DID THEY GET?</div>
-        <div class="ask-team">${esc(p.team || ('#'+p.team_no))}</div>
+        <div class="ask-team">#${esc(p.team_no)}${p.team ? ' · ' + esc(p.team) : ''}</div>
         <div class="ask-meta">the lane was empty — read the number off the kart</div>
         <div class="ask-btns">
           <button class="lane-btn" onclick="askKart(${p.id})">Enter kart number</button>
@@ -322,7 +322,7 @@ function renderAsks(){
     if (p.mine) {
       return `<div class="ask mine">
         <div class="ask-hd">OUR KART — READ THE NUMBER OFF IT</div>
-        <div class="ask-team">${esc(p.team || ('#'+p.team_no))}${
+        <div class="ask-team">#${esc(p.team_no)}${p.team ? ' · ' + esc(p.team) : ''}${
           p.kart_in ? ` · handed over kart ${esc(p.kart_in)}` : ''}</div>
         <div class="ask-meta">${waiting}${also}</div>
         <div class="ask-btns">
@@ -336,7 +336,7 @@ function renderAsks(){
     }
     return `<div class="ask">
       ${i === 0 ? `<div class="ask-hd">${order ? 'WHO WENT OUT FIRST?' : 'WHICH LANE?'}</div>` : ''}
-      <div class="ask-team">${esc(p.team || ('#'+p.team_no))}${
+      <div class="ask-team">#${esc(p.team_no)}${p.team ? ' · ' + esc(p.team) : ''}${
         p.kart_in ? ` · kart ${esc(p.kart_in)}` : ''}${
         p.category ? ` <span style="font-size:11px;color:var(--tx3)">${esc(p.category)}</span>` : ''}</div>
       <div class="ask-meta">${waiting}${also}</div>

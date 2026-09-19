@@ -1264,8 +1264,10 @@ function renderTable(allTeams) {
           ? `<span class="cls-p">P${t.class_pos}</span>` : ''}</td>
       <td class="td-team" title="${esc(t.team)}">${esc(t.team)}</td>
       <td class="td-muted" title="${esc(t.driver)}">${esc(t.driver||'')}</td>
-      <td style="cursor:pointer" title="Click to set the kart this team is in"
-          onclick="event.stopPropagation();setTeamKart('${esc(t.kart)}','${esc(t.team)}','${esc(t.my_kart)}')"
+      <td style="cursor:pointer" title="${t.is_my_team ? 'Click to set the kart this team is in' : 'Click for this kart\'s lap history'}"
+          onclick="event.stopPropagation();${t.is_my_team
+            ? `setTeamKart('${esc(t.kart)}','${esc(t.team)}','${esc(t.my_kart)}')`
+            : (t.my_kart ? `showKart('${esc(t.my_kart)}')` : '')}"
         >${kartChip(t.my_kart, t.kart_label, t.kart_delta, t.in_pit)}</td>
       ${secCell(t,'s1')}${secCell(t,'s2')}${secCell(t,'s3')}
       <td class="td-lap td-r ${t.last_lap_mark||''}">${t.in_pit
