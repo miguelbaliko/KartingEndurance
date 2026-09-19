@@ -348,7 +348,9 @@ function kartRow(k, isNext, lane){
   const cls = CHIP[k.label] || 'unknown';
   const delta = k.delta == null ? '' : (k.delta > 0 ? '+' : '') + k.delta.toFixed(2);
   return `<div class="kart ${isNext?'next':''}">
-    <span class="kart-num">${esc(k.num)}</span>
+    <span class="kart-num" ${k.num.startsWith('?')
+      ? `style="text-decoration:underline dotted" onclick="renameKart(${lane},'${esc(k.num)}')"`
+      : ''}>${esc(k.num)}</span>
     <span class="chip ${cls}">${esc(k.label)}${delta ? ' '+delta : ''}</span>
     <span class="kart-lap">${lap(k.best_s)}</span>
     ${isNext ? '<span class="kart-next">NEXT</span>' : ''}
@@ -358,8 +360,10 @@ function kartRow(k, isNext, lane){
 }
 
 /* ── input ───────────────────────────────────────────────────────────── */
-function dialog(title, done){
+let _dlgAllowBlank = false;
+function dialog(title, done, allowBlank){
   _dlgDone = done;
+  _dlgAllowBlank = !!allowBlank;
   document.getElementById('dlg-title').textContent = title;
   const inp = document.getElementById('dlg-input');
   inp.value = '';
@@ -369,15 +373,20 @@ function dialog(title, done){
 function dlgOk(){
   const v = document.getElementById('dlg-input').value.trim();
   document.getElementById('kartdlg').close();
-  if (v && _dlgDone) _dlgDone(v);
+  if ((v || _dlgAllowBlank) && _dlgDone) _dlgDone(v);
 }
 document.getElementById('dlg-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') dlgOk();
 });
 
 function addKart(lane){
-  dialog('Kart number joining ' + (POOL.lanes.find(l=>l.lane===lane)||{}).name,
-         v => post('kart/add', {lane, kart:v}));
+  dialog('Kart number joining ' + (POOL.lanes.find(l=>l.lane===lane)||{}).name
+         + ' (leave blank if unknown)',
+         v => post('kart/add', {lane, kart:v}), true);
+}
+function renameKart(lane, oldNum){
+  dialog('Real number for ' + oldNum + '?',
+         v => post('kart/rename', {lane, old:oldNum, new:v}));
 }
 function askKart(stopId){
   dialog('Kart number they were given', v => post('kart/lane', {stop_id:stopId, kart:v}));
@@ -389,9 +398,9 @@ function missedStop(){
   _picking = !_picking;
   if (!_picking){ wrap.innerHTML = ''; return; }
   const teams = (STATE.teams||[]);
-  wrap.innerHTML = `<div class="pick">${teams.map(t => `
+  wrap.innerHTML = teams.length ? `<div class="pick">${teams.map(t => `
     <button onclick="pickTeam('${esc(t.kart)}')">#${esc(t.kart)} ${esc(t.team)}</button>`
-  ).join('')}</div>`;
+  ).join('')}</div>` : `<div class="pick">No teams yet — the feed has not shown any.</div>`;
 }
 function pickTeam(teamNo){
   _picking = false;

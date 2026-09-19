@@ -1538,7 +1538,9 @@ function renderLanes(pool) {
       <div class="lane-q">
         ${l.karts.map((k,i) => `
           <div class="lane-k ${i===0?'next':''}">
-            <span class="num">${esc(k.num)}</span>
+            <span class="num" ${k.num.startsWith('?')
+              ? `style="cursor:pointer;text-decoration:underline dotted" title="Tap to set the real kart number" onclick="renameKart(${l.lane},'${esc(k.num)}')"`
+              : ''}>${esc(k.num)}</span>
             <span class="kchip ${CHIP_CLS[k.label]||'unknown'}">${esc(k.label)}${thinMark(k)}${thinMark(k)}
               ${k.delta!=null ? `<span class="kd">${fmtDelta(k.delta)}</span>` : ''}</span>
             ${i===0 ? '<span class="nx">NEXT</span>' : ''}
@@ -1590,10 +1592,16 @@ async function setLane(stopId, lane, noChange) {
   await api('kart/lane', {stop_id: stopId, lane: lane, no_change: !!noChange});
 }
 async function addKart(lane) {
-  const v = prompt('Kart number(s) joining lane ' + lane + ' (e.g. 62 63 64, in order)');
-  if (!v) return;
+  const v = prompt('Kart number(s) joining lane ' + lane
+    + ' (e.g. 62 63 64, in order — leave blank if you don\'t know it yet)');
+  if (v === null) return;
   const karts = v.split(/[\s,]+/).filter(Boolean);
+  if (!karts.length) { await api('kart/add', {lane: lane, kart: ''}); return; }
   for (const k of karts) await api('kart/add', {lane: lane, kart: k});
+}
+async function renameKart(lane, oldNum) {
+  const v = prompt('Real number for ' + oldNum + '?');
+  if (v && v.trim()) await api('kart/rename', {lane: lane, old: oldNum, new: v.trim()});
 }
 async function removeKart(lane, kart) {
   await api('kart/remove', {lane: lane, kart: kart});

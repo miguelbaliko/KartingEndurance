@@ -357,27 +357,60 @@ class KartPool:
         self._mutate(f"set kart for {team or team_no}", go)
 
     # ── lanes ─────────────────────────────────────────────────────────────────
-    def lane_add(self, lane: int, kart: str):
+    def _next_placeholder(self, lanes: dict) -> str:
+        """A short label for a kart parked in a lane before anyone has read
+        its number off it -- holds the queue position, renamed in place once
+        it's known (see lane_rename)."""
+        seen = {int(k[1:]) for info in lanes.values() for k in info["queue"]
+                if k.startswith("?") and k[1:].isdigit()}
+        n = 1
+        while n in seen:
+            n += 1
+        return f"?{n}"
+
+    def lane_add(self, lane: int, kart: str = ""):
         def go(con):
             lanes = self._lanes(con)
             if lane not in lanes:
                 return
+            k = str(kart).strip() or self._next_placeholder(lanes)
             if con.execute("SELECT 1 FROM kart_out WHERE kart=?",
-                           (str(kart),)).fetchone():
-                self._note(f"kart {kart} is out of service — not queued",
+                           (k,)).fetchone():
+                self._note(f"kart {k} is out of service — not queued",
                            tag="warn")
                 return
-            queue = [k for k in lanes[lane]["queue"] if k != str(kart)] + [str(kart)]
+            queue = [x for x in lanes[lane]["queue"] if x != k] + [k]
             # A kart parked in a lane is not with a team any more.
             con.execute("UPDATE kart_assign SET end_ts=? WHERE kart=? AND end_ts IS NULL",
-                        (_now_iso(), str(kart)))
+                        (_now_iso(), k))
             for other, info in lanes.items():
-                if other != lane and str(kart) in info["queue"]:
+                if other != lane and k in info["queue"]:
                     self._save_queue(con, other,
-                                     [k for k in info["queue"] if k != str(kart)])
+                                     [x for x in info["queue"] if x != k])
             self._save_queue(con, lane, queue)
-            self._note(f"kart {kart} queued in lane {lane}", tag="lane")
-        self._mutate(f"add kart {kart} to lane {lane}", go)
+            self._note(f"kart {k} queued in lane {lane}"
+                       + (" — number unknown yet" if k.startswith("?") else ""),
+                       tag="lane")
+        self._mutate(f"add kart {kart or '?'} to lane {lane}", go)
+
+    def lane_rename(self, lane: int, old: str, new: str):
+        """Fill in a placeholder's real number once it has been read off the
+        kart, without losing its place in the queue."""
+        new = str(new).strip()
+        if not new:
+            return
+        def go(con):
+            lanes = self._lanes(con)
+            if lane not in lanes or old not in lanes[lane]["queue"]:
+                return
+            for other, info in lanes.items():
+                if other != lane and new in info["queue"]:
+                    self._save_queue(con, other,
+                                     [x for x in info["queue"] if x != new])
+            queue = [new if x == old else x for x in lanes[lane]["queue"]]
+            self._save_queue(con, lane, queue)
+            self._note(f"kart {old} identified as {new}", tag="lane")
+        self._mutate(f"rename {old} to {new} in lane {lane}", go)
 
     def lane_remove(self, lane: int, kart: str):
         def go(con):
