@@ -280,8 +280,20 @@ class TestUrls(unittest.TestCase):
             apex_dump.event_name("https://live.apex-timing.com/kip-palmela/#live"),
             "kip-palmela")
 
+    def test_the_event_name_survives_a_live_timing_path_segment(self):
+        # Cronosystem -- the real host for the 24 Horas de Portugal 2026,
+        # found 2026-09-19 -- puts a "live-timing" path segment before the
+        # slug, unlike every other install's live.apex-timing.com/<slug>/.
+        self.assertEqual(
+            apex_dump.event_name("https://www.apex-timing.com/live-timing/cronosystem2/"),
+            "cronosystem2")
+
     def test_palmela_is_watched_by_default(self):
         self.assertIn("kip-palmela", apex_dump.KNOWN_EVENTS)
+
+    def test_cronosystem_is_watched_by_default(self):
+        self.assertIn("https://www.apex-timing.com/live-timing/cronosystem2/",
+                      apex_dump.KNOWN_EVENTS)
 
 
 class TestAnalyse(unittest.TestCase):

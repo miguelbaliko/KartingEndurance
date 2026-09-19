@@ -54,10 +54,14 @@ import app as warroom
 
 # The events this war room follows.  Add a slug and --find will watch it too.
 #
-# The first two are ours.  The rest are other Apex tracks, kept here only so
-# there is something running to test the parser against midweek — ours are dark
-# except on race weekends, and a layout we have never parsed is the main risk.
-KNOWN_EVENTS = ["kip-palmela", "kartalcanede"]
+# The first two are ours.  kip-palmela is KIP's own everyday Apex install and
+# stays dark all raceweek; the actual timing for the 24 Horas de Portugal
+# 2026 turned out to run on a different host and URL shape entirely -- found
+# live on 2026-09-19, hours before the race, by a link the team was watching
+# in a browser. A full URL here is used as-is (see event_url), never
+# templated onto live.apex-timing.com.
+KNOWN_EVENTS = ["kip-palmela", "kartalcanede",
+                "https://www.apex-timing.com/live-timing/cronosystem2/"]
 
 # Other Apex installs, swept only when KIP is dark.  They are a parser
 # exercise, never the target — but the endurance ones are the exercise worth
@@ -74,8 +78,19 @@ OTHER_TRACKS = ["kartplanet", "kartodromodeviana", "wsk", "rgmmc", "rgmmc2",
 
 
 def event_name(url: str) -> str:
-    m = re.search(r'apex-timing\.com/([^/#?]+)', url)
-    return m.group(1) if m else "event"
+    """The event's own slug, whichever URL shape it's dressed up in.
+
+    Most installs are live.apex-timing.com/<slug>/, one segment after the
+    domain.  Cronosystem -- the actual host for this weekend's 24 Horas de
+    Portugal, not kip-palmela -- is www.apex-timing.com/live-timing/<slug>/,
+    where the first segment after the domain is the path, not the slug.  The
+    slug is always the last one either way.
+    """
+    if "apex-timing.com" not in url:
+        return "event"
+    path = url.split('#')[0].split('?')[0].rstrip('/')
+    seg = path.rsplit('/', 1)[-1]
+    return seg or "event"
 
 
 def event_url(slug: str) -> str:
