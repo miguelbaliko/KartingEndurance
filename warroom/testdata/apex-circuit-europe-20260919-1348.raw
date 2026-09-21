@@ -1,0 +1,2103 @@
+init|r|
+best|hide|
+css|no9|border-bottom-color:#00FF00 !important; color:#000000 !important;
+css|no10|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no2|border-bottom-color:#0000FF !important; color:#FFFFFF !important;
+css|no13|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|no12|border-bottom-color:#808080 !important; color:#FFFFFF !important;
+css|no14|border-bottom-color:#FF00FF !important; color:#FFFFFF !important;
+css|no4|border-bottom-color:#0080FF !important; color:#FFFFFF !important;
+css|no5|border-bottom-color:#80FF80 !important; color:#000000 !important;
+css|no8|border-bottom-color:#535353 !important; color:#FFFFFF !important;
+css|no1|border-bottom-color:#FFFF00 !important; color:#000000 !important;
+css|no11|border-bottom-color:#008040 !important; color:#FFFFFF !important;
+css|no3|border-bottom-color:#FF0000 !important; color:#FFFFFF !important;
+css|pena1|color:#f00; font-size:11px; font-weight: bold; text-align:center;
+effects||Effets
+comments||Commentaires
+title1||24 HEURES
+title2||COURSE 24H
+dyn1|countdown|80213113
+light|lg|
+wth1||
+wth2||
+wth3||
+track||Piste Karting sens normal (1200m)
+com||<p><b>14:00</b><span data-flag="green"></span>Départ</p>
+grid||<tbody><tr data-id="r0" class="head" data-pos="0"><td data-id="c1" data-type="sta" data-pr="1"></td><td data-id="c2" data-type="rk" data-pr="1">Clt</td><td data-id="c3" data-type="no" data-pr="1">Kart</td><td data-id="c4" data-type="dr" data-pr="1" data-width="27" data-min="16">Equipe</td><td data-id="c5" data-type="llp" data-pr="2" data-width="15" data-min="7">Dernier T.</td><td data-id="c6" data-type="gap" data-pr="1" data-width="15" data-min="8">Ecart</td><td data-id="c7" data-type="int" data-pr="5" data-width="10" data-min="7">Interv.</td><td data-id="c8" data-type="blp" data-pr="6" data-width="12" data-min="7">Meilleur T.</td><td data-id="c9" data-type="otr" data-pr="2" data-width="10" data-min="8">En piste</td><td data-id="c10" data-type="pit" data-pr="2" data-width="7" data-min="7">Stands</td></tr><tr data-id="r90490" data-pos="2"><td data-id="r90490c1" class="sr"></td><td class="rk"><div><p data-id="r90490c2" class="">2</p></div></td><td class="no"><div data-id="r90490c3" class="no13">2</div></td><td data-id="r90490c4" class="dr">INFINY TEAM</td><td data-id="r90490c5" class="tn">1:11.157</td><td data-id="r90490c6" class="ib">10.103</td><td data-id="r90490c7" class="in">10.103</td><td data-id="r90490c8" class="in">1:10.144</td><td data-id="r90490c9" class="in">0:12</td><td data-id="r90490c10" class="in">1</td></tr><tr data-id="r90491" data-pos="30"><td data-id="r90491c1" class="sr"></td><td class="rk"><div><p data-id="r90491c2" class="">30</p></div></td><td class="no"><div data-id="r90491c3" class="no13">4</div></td><td data-id="r90491c4" class="dr">FULLREP RACING</td><td data-id="r90491c5" class="tn">1:11.955</td><td data-id="r90491c6" class="ib">6 Tours</td><td data-id="r90491c7" class="in">1:12.029</td><td data-id="r90491c8" class="in">1:11.376</td><td data-id="r90491c9" class="in">0:11</td><td data-id="r90491c10" class="in">3</td></tr><tr data-id="r90492" data-pos="17"><td data-id="r90492c1" class="sd"></td><td class="rk"><div><p data-id="r90492c2" class="">17</p></div></td><td class="no"><div data-id="r90492c3" class="no13">25</div></td><td data-id="r90492c4" class="dr">LES VIKINGS</td><td data-id="r90492c5" class="tn">1:13.941</td><td data-id="r90492c6" class="ib">27.387</td><td data-id="r90492c7" class="in">1.448</td><td data-id="r90492c8" class="in">1:10.846</td><td data-id="r90492c9" class="in">0:45</td><td data-id="r90492c10" class="in">1</td></tr><tr data-id="r90493" data-pos="28"><td data-id="r90493c1" class="sr"></td><td class="rk"><div><p data-id="r90493c2" class="">28</p></div></td><td class="no"><div data-id="r90493c3" class="no13">34</div></td><td data-id="r90493c4" class="dr">TEAM DRIVER FILLES</td><td data-id="r90493c5" class="tn">1:13.617</td><td data-id="r90493c6" class="ib">45.212</td><td data-id="r90493c7" class="in">34.473</td><td data-id="r90493c8" class="in">1:11.567</td><td data-id="r90493c9" class="in">0:07</td><td data-id="r90493c10" class="in">2</td></tr><tr data-id="r90494" data-pos="27"><td data-id="r90494c1" class="sr"></td><td class="rk"><div><p data-id="r90494c2" class="">27</p></div></td><td class="no"><div data-id="r90494c3" class="no13">6</div></td><td data-id="r90494c4" class="dr">QUINN KART</td><td data-id="r90494c5" class="tn">1:13.226</td><td data-id="r90494c6" class="ib">10.739</td><td data-id="r90494c7" class="in">10.589</td><td data-id="r90494c8" class="in">1:10.881</td><td data-id="r90494c9" class="in">0:15</td><td data-id="r90494c10" class="in">2</td></tr><tr data-id="r90495" data-pos="25"><td data-id="r90495c1" class="sr"></td><td class="rk"><div><p data-id="r90495c2" class="">25</p></div></td><td class="no"><div data-id="r90495c3" class="no13">19</div></td><td data-id="r90495c4" class="dr">TEAM KART HEROES</td><td data-id="r90495c5" class="tn">1:12.816</td><td data-id="r90495c6" class="ib">4 Tours</td><td data-id="r90495c7" class="in">9.459</td><td data-id="r90495c8" class="in">1:10.852</td><td data-id="r90495c9" class="in">0:11</td><td data-id="r90495c10" class="in">2</td></tr><tr data-id="r90496" data-pos="26"><td data-id="r90496c1" class="sr"></td><td class="rk"><div><p data-id="r90496c2" class="">26</p></div></td><td class="no"><div data-id="r90496c3" class="no13">27</div></td><td data-id="r90496c4" class="dr">ESRG CTA 1</td><td data-id="r90496c5" class="tn">1:12.375</td><td data-id="r90496c6" class="ib">0.150</td><td data-id="r90496c7" class="in">0.150</td><td data-id="r90496c8" class="in">1:10.523</td><td data-id="r90496c9" class="in">0:17</td><td data-id="r90496c10" class="in">2</td></tr><tr data-id="r90497" data-pos="12"><td data-id="r90497c1" class="sr"></td><td class="rk"><div><p data-id="r90497c2" class="">12</p></div></td><td class="no"><div data-id="r90497c3" class="no13">16</div></td><td data-id="r90497c4" class="dr">ESRG CTA 2</td><td data-id="r90497c5" class="tn">1:12.277</td><td data-id="r90497c6" class="ib">30.877</td><td data-id="r90497c7" class="in">3.095</td><td data-id="r90497c8" class="in">1:11.003</td><td data-id="r90497c9" class="in">0:24</td><td data-id="r90497c10" class="in">1</td></tr><tr data-id="r90498" data-pos="6"><td data-id="r90498c1" class="sr"></td><td class="rk"><div><p data-id="r90498c2" class="">6</p></div></td><td class="no"><div data-id="r90498c3" class="no13">21</div></td><td data-id="r90498c4" class="dr">HANDOVER 24</td><td data-id="r90498c5" class="tn">1:11.853</td><td data-id="r90498c6" class="ib">52.989</td><td data-id="r90498c7" class="in">4.154</td><td data-id="r90498c8" class="in">1:10.082</td><td data-id="r90498c9" class="in">0:31</td><td data-id="r90498c10" class="in">1</td></tr><tr data-id="r90499" data-pos="23"><td data-id="r90499c1" class="so"></td><td class="rk"><div><p data-id="r90499c2" class="">23</p></div></td><td class="no"><div data-id="r90499c3" class="no13">46</div></td><td data-id="r90499c4" class="dr">ZIGZAG</td><td data-id="r90499c5" class="tn">1:11.247</td><td data-id="r90499c6" class="ib"></td><td data-id="r90499c7" class="in"></td><td data-id="r90499c8" class="in">1:10.987</td><td data-id="r90499c9" class="to">2:23.</td><td data-id="r90499c10" class="in">2</td></tr><tr data-id="r90500" data-pos="3"><td data-id="r90500c1" class="sr"></td><td class="rk"><div><p data-id="r90500c2" class="">3</p></div></td><td class="no"><div data-id="r90500c3" class="no13">22</div></td><td data-id="r90500c4" class="dr">T.O.M - RS1</td><td data-id="r90500c5" class="tn">1:11.595</td><td data-id="r90500c6" class="ib">19.133</td><td data-id="r90500c7" class="in">9.030</td><td data-id="r90500c8" class="in">1:10.063</td><td data-id="r90500c9" class="in">0:14</td><td data-id="r90500c10" class="in">1</td></tr><tr data-id="r90501" data-pos="5"><td data-id="r90501c1" class="sr"></td><td class="rk"><div><p data-id="r90501c2" class="">5</p></div></td><td class="no"><div data-id="r90501c3" class="no13">31</div></td><td data-id="r90501c4" class="dr">T.O.M - RS2</td><td data-id="r90501c5" class="tn">1:11.385</td><td data-id="r90501c6" class="ib">48.835</td><td data-id="r90501c7" class="in">4.984</td><td data-id="r90501c8" class="in">1:10.363</td><td data-id="r90501c9" class="in">0:10</td><td data-id="r90501c10" class="in">1</td></tr><tr data-id="r90502" data-pos="14"><td data-id="r90502c1" class="in"></td><td class="rk"><div><p data-id="r90502c2" class="">14</p></div></td><td class="no"><div data-id="r90502c3" class="no13">44</div></td><td data-id="r90502c4" class="dr">DIX DE DER</td><td data-id="r90502c5" class="tn">1:12.427</td><td data-id="r90502c6" class="ib">51.590</td><td data-id="r90502c7" class="in">8.408</td><td data-id="r90502c8" class="in">1:10.635</td><td data-id="r90502c9" class="in">0:41</td><td data-id="r90502c10" class="in">1</td></tr><tr data-id="r90503" data-pos="21"><td data-id="r90503c1" class="su"></td><td class="rk"><div><p data-id="r90503c2" class="">21</p></div></td><td class="no"><div data-id="r90503c3" class="no13">26</div></td><td data-id="r90503c4" class="dr">POUET POUET 8.0</td><td data-id="r90503c5" class="tn">1:12.637</td><td data-id="r90503c6" class="ib">40.845</td><td data-id="r90503c7" class="in">40.129</td><td data-id="r90503c8" class="in">1:11.002</td><td data-id="r90503c9" class="in">0:16</td><td data-id="r90503c10" class="in">2</td></tr><tr data-id="r90504" data-pos="29"><td data-id="r90504c1" class="sr"></td><td class="rk"><div><p data-id="r90504c2" class="">29</p></div></td><td class="no"><div data-id="r90504c3" class="no13">24</div></td><td data-id="r90504c4" class="dr">NEW POUET POUET 3.0</td><td data-id="r90504c5" class="tn">1:20.678</td><td data-id="r90504c6" class="ib">5 Tours</td><td data-id="r90504c7" class="in">57.955</td><td data-id="r90504c8" class="in">1:10.912</td><td data-id="r90504c9" class="in">0:11</td><td data-id="r90504c10" class="in">2</td></tr><tr data-id="r90505" data-pos="8"><td data-id="r90505c1" class="in"></td><td class="rk"><div><p data-id="r90505c2" class="">8</p></div></td><td class="no"><div data-id="r90505c3" class="no13">9</div></td><td data-id="r90505c4" class="dr">TEAM V5</td><td data-id="r90505c5" class="tn">1:11.590</td><td data-id="r90505c6" class="ib">1:05.672</td><td data-id="r90505c7" class="in">8.822</td><td data-id="r90505c8" class="in">1:10.779</td><td data-id="r90505c9" class="in">0:40</td><td data-id="r90505c10" class="in">1</td></tr><tr data-id="r90506" data-pos="20"><td data-id="r90506c1" class="sr"></td><td class="rk"><div><p data-id="r90506c2" class="">20</p></div></td><td class="no"><div data-id="r90506c3" class="no13">14</div></td><td data-id="r90506c4" class="dr">LH RACING</td><td data-id="r90506c5" class="tn">1:11.712</td><td data-id="r90506c6" class="ib">0.716</td><td data-id="r90506c7" class="in">0.716</td><td data-id="r90506c8" class="in">1:10.076</td><td data-id="r90506c9" class="in">0:17</td><td data-id="r90506c10" class="in">2</td></tr><tr data-id="r90507" data-pos="16"><td data-id="r90507c1" class="su"></td><td class="rk"><div><p data-id="r90507c2" class="">16</p></div></td><td class="no"><div data-id="r90507c3" class="no13">28</div></td><td data-id="r90507c4" class="dr">BROUETTE RACING TEAM</td><td data-id="r90507c5" class="tn">1:12.363</td><td data-id="r90507c6" class="ib">25.939</td><td data-id="r90507c7" class="in">25.939</td><td data-id="r90507c8" class="in">1:10.017</td><td data-id="r90507c9" class="in">0:22</td><td data-id="r90507c10" class="in">2</td></tr><tr data-id="r90508" data-pos="22"><td data-id="r90508c1" class="su"></td><td class="rk"><div><p data-id="r90508c2" class="">22</p></div></td><td class="no"><div data-id="r90508c3" class="no13">30</div></td><td data-id="r90508c4" class="dr">NOOPY TEAM</td><td data-id="r90508c5" class="tn">1:12.529</td><td data-id="r90508c6" class="ib">53.827</td><td data-id="r90508c7" class="in">12.982</td><td data-id="r90508c8" class="in">1:10.439</td><td data-id="r90508c9" class="in">0:02</td><td data-id="r90508c10" class="in">2</td></tr><tr data-id="r90509" data-pos="1"><td data-id="r90509c1" class="sr"></td><td class="rk"><div><p data-id="r90509c2" class="">1</p></div></td><td class="no"><div data-id="r90509c3" class="no13">18</div></td><td data-id="r90509c4" class="dr">ERK TEAM</td><td data-id="r90509c5" class="tn">1:10.957</td><td data-id="r90509c6" class="in">Tour 85</td><td data-id="r90509c7" class="in"></td><td data-id="r90509c8" class="in">1:09.752</td><td data-id="r90509c9" class="in">0:36</td><td data-id="r90509c10" class="in">1</td></tr><tr data-id="r90510" data-pos="4"><td data-id="r90510c1" class="sr"></td><td class="rk"><div><p data-id="r90510c2" class="">4</p></div></td><td class="no"><div data-id="r90510c3" class="no13">41</div></td><td data-id="r90510c4" class="dr">LES 20 PISTONS</td><td data-id="r90510c5" class="tn">1:11.253</td><td data-id="r90510c6" class="ib">43.851</td><td data-id="r90510c7" class="in">24.718</td><td data-id="r90510c8" class="in">1:10.068</td><td data-id="r90510c9" class="in">0:42</td><td data-id="r90510c10" class="in">1</td></tr><tr data-id="r90511" data-pos="10"><td data-id="r90511c1" class="sr"></td><td class="rk"><div><p data-id="r90511c2" class="">10</p></div></td><td class="no"><div data-id="r90511c3" class="no13">43</div></td><td data-id="r90511c4" class="dr">MATHILDE RACING</td><td data-id="r90511c5" class="tn">1:10.915</td><td data-id="r90511c6" class="ib">0.882</td><td data-id="r90511c7" class="in">0.882</td><td data-id="r90511c8" class="in">1:10.244</td><td data-id="r90511c9" class="in">0:57</td><td data-id="r90511c10" class="in">1</td></tr><tr data-id="r90512" data-pos="13"><td data-id="r90512c1" class="sr"></td><td class="rk"><div><p data-id="r90512c2" class="">13</p></div></td><td class="no"><div data-id="r90512c3" class="no13">36</div></td><td data-id="r90512c4" class="dr">ARNAGE</td><td data-id="r90512c5" class="tn">1:10.741</td><td data-id="r90512c6" class="ib">42.603</td><td data-id="r90512c7" class="in">11.726</td><td data-id="r90512c8" class="tb">1:09.480</td><td data-id="r90512c9" class="in">0:29</td><td data-id="r90512c10" class="in">2</td></tr><tr data-id="r90513" data-pos="19"><td data-id="r90513c1" class="sr"></td><td class="rk"><div><p data-id="r90513c2" class="">19</p></div></td><td class="no"><div data-id="r90513c3" class="no13">50</div></td><td data-id="r90513c4" class="dr">ARNAGE JUNIOR</td><td data-id="r90513c5" class="tn">1:12.525</td><td data-id="r90513c6" class="ib">3 Tours</td><td data-id="r90513c7" class="in">12.315</td><td data-id="r90513c8" class="in">1:10.452</td><td data-id="r90513c9" class="in">0:19</td><td data-id="r90513c10" class="in">2</td></tr><tr data-id="r90514" data-pos="7"><td data-id="r90514c1" class="in"></td><td class="rk"><div><p data-id="r90514c2" class="">7</p></div></td><td class="no"><div data-id="r90514c3" class="no13">20</div></td><td data-id="r90514c4" class="dr">AS FLEXI FRANCE</td><td data-id="r90514c5" class="tn">1:11.703</td><td data-id="r90514c6" class="ib">56.850</td><td data-id="r90514c7" class="in">4.757</td><td data-id="r90514c8" class="in">1:10.129</td><td data-id="r90514c9" class="in">0:40</td><td data-id="r90514c10" class="in">1</td></tr><tr data-id="r90515" data-pos="9"><td data-id="r90515c1" class="sr"></td><td class="rk"><div><p data-id="r90515c2" class="">9</p></div></td><td class="no"><div data-id="r90515c3" class="no13">17</div></td><td data-id="r90515c4" class="dr">ARIES KART</td><td data-id="r90515c5" class="tn">1:11.320</td><td data-id="r90515c6" class="ib">1 Tour</td><td data-id="r90515c7" class="in">14.671</td><td data-id="r90515c8" class="in">1:10.673</td><td data-id="r90515c9" class="in">0:25</td><td data-id="r90515c10" class="in">1</td></tr><tr data-id="r90516" data-pos="11"><td data-id="r90516c1" class="sr"></td><td class="rk"><div><p data-id="r90516c2" class="">11</p></div></td><td class="no"><div data-id="r90516c3" class="no13">15</div></td><td data-id="r90516c4" class="dr">ORKA LIONS</td><td data-id="r90516c5" class="tn">1:11.642</td><td data-id="r90516c6" class="ib">27.782</td><td data-id="r90516c7" class="in">26.900</td><td data-id="r90516c8" class="in">1:10.854</td><td data-id="r90516c9" class="in">0:41</td><td data-id="r90516c10" class="in">1</td></tr><tr data-id="r90517" data-pos="18"><td data-id="r90517c1" class="in"></td><td class="rk"><div><p data-id="r90517c2" class="">18</p></div></td><td class="no"><div data-id="r90517c3" class="no13">49</div></td><td data-id="r90517c4" class="dr">ORKA TEAM</td><td data-id="r90517c5" class="tn">1:13.857</td><td data-id="r90517c6" class="ib">37.608</td><td data-id="r90517c7" class="in">12.947</td><td data-id="r90517c8" class="in">1:11.045</td><td data-id="r90517c9" class="in">0:42</td><td data-id="r90517c10" class="in">1</td></tr><tr data-id="r90518" data-pos="24"><td data-id="r90518c1" class="in"></td><td class="rk"><div><p data-id="r90518c2" class="">24</p></div></td><td class="no"><div data-id="r90518c3" class="no13">45</div></td><td data-id="r90518c4" class="dr">FUN DESIGN RACING TEAM</td><td data-id="r90518c5" class="tn">1:11.819</td><td data-id="r90518c6" class="ib">1:05.272</td><td data-id="r90518c7" class="in">2:19.281</td><td data-id="r90518c8" class="in">1:10.682</td><td data-id="r90518c9" class="in">0:09</td><td data-id="r90518c10" class="in">2</td></tr><tr data-id="r90519" data-pos="15"><td data-id="r90519c1" class="sr"></td><td class="rk"><div><p data-id="r90519c2" class="">15</p></div></td><td class="no"><div data-id="r90519c3" class="no13">11</div></td><td data-id="r90519c4" class="dr">NORMANDIE TEAM KART</td><td data-id="r90519c5" class="tn">1:11.215</td><td data-id="r90519c6" class="ib">2 Tours</td><td data-id="r90519c7" class="in">32.046</td><td data-id="r90519c8" class="in">1:10.163</td><td data-id="r90519c9" class="in">0:19</td><td data-id="r90519c10" class="in">2</td></tr></tbody>
+msg||
+
+ 
+r90500c9|in|0:15
+r90514c1|sr|
+r90514c5|tn|1:12.563
+r90514c6|ib|58.456
+r90514c7|in|5.467
+r90514|*|71675|
+r90507c9|in|0:23
+r90501c9|in|0:11
+r90503c1|sr|
+r90495c9|in|0:12
+r90515c9|in|0:26
+r90517c1|sr|
+r90517c5|tn|1:14.082
+r90517c6|ib|40.475
+r90517c7|in|13.088
+r90517|*|73670|
+r90502c1|sr|
+r90502c5|tn|1:13.472
+r90502c6|ib|53.742
+r90502c7|in|11.139
+r90502|*|72394|
+r90496c9|in|0:18
+r90506c9|in|0:18
+r90514c9|in|0:41
+r90518c1|su|
+r90518c2||23
+r90518c5|tn|1:12.999
+r90518c6|ib|1:05.746
+r90518c7|in|11.919
+r90499c2||24
+r90495c7|in|2:28.740
+r90499|#|24
+r90518|*|71805|
+r90518|#|23
+r90505c1|sr|
+r90505c5|tn|1:11.621
+r90505c6|ib|1:06.336
+r90505c7|in|7.880
+r90505|*|71590|
+r90492c9|in|0:46
+r90507c1|sr|
+r90492c1|sr|
+dyn1|countdown|80183089
+
+ 
+r90509c4|drteam|QUENTIN  [0:36]
+r90509c5|tn|1:10.877
+r90509c6|in|Tour 86
+r90490c1|in|
+r90490c4|drteam|GRÉGORY [0:12]
+r90500c1|in|
+r90500c4|drteam|SACHA [0:15]
+r90510c1|in|
+r90510c4|drteam|GUILLAUME [0:42]
+r90501c1|in|
+r90501c4|drteam|MAXIME [0:11]
+r90498c1|in|
+r90498c4|drteam|MAÏWENN [0:31]
+r90514c1|in|
+r90514c4|drteam|KRISTOF [0:41]
+r90505c1|in|
+r90505c4|drteam|ALEX [0:40]
+r90515c1|in|
+r90515c4|drteam|CLÉMENT  [0:26]
+r90511c1|in|
+r90511c4|drteam|RÉMY [1:07]
+r90516c1|in|
+r90516c4|drteam|JEROME [0:41]
+r90497c1|in|
+r90497c4|drteam|LOÏC [0:24]
+r90512c1|in|
+r90512c4|drteam|ARNAUD  [0:29]
+r90502c1|in|
+r90502c4|drteam|YVES [0:41]
+r90519c1|in|
+r90519c4|drteam|THÉOPHILE  [0:19]
+r90507c1|in|
+r90507c4|drteam|DYLAN [0:23]
+r90492c1|in|
+r90492c4|drteam|NICOLAS  [0:46]
+r90517c1|in|
+r90517c4|drteam|CHRISTOPHE [0:42]
+r90513c1|in|
+r90513c4|drteam|ARTHUR [0:19]
+r90506c1|in|
+r90506c4|drteam|BAPTISTE [0:18]
+r90503c1|in|
+r90503c4|drteam|AMINE [0:16]
+r90508c4|drteam|ROBIN [0:02]
+r90518c4|drteam|YANN [0:09]
+r90499c4|drteam|FÉLIX [0:01]
+r90499c6|ib|4 Tours
+r90495c1|in|
+r90495c4|drteam|ÉRIC [0:12]
+r90495c6|ib|2:28.740
+r90496c1|in|
+r90496c4|drteam|NICOLAS [0:18]
+r90496c6|ib|2:28.890
+r90494c1|in|
+r90494c4|drteam|ELISA [0:15]
+r90494c6|ib|2:39.479
+r90493c1|in|
+r90493c4|drteam|KARINE [0:07]
+r90493c6|ib|3:13.952
+r90504c1|in|
+r90504c4|drteam|ALEXANDRE  [0:11]
+r90491c1|in|
+r90491c4|drteam|CLEMENT [0:11]
+r90509|*|70796|
+r90506c1|su|
+r90506c2||19
+r90506c5|tn|1:11.954
+r90506c6|ib|3 Tours
+r90506c7|in|10.903
+r90513c1|sd|
+r90513c2||20
+r90513c6|ib|
+r90513c7|in|
+r90503c6|ib|40.129
+r90503c7|in|40.845
+r90508c6|ib|53.111
+r90518c6|ib|1:05.030
+r90506|*|71668|
+r90506|#|19
+r90513|#|20
+r90513c5|tn|1:12.801
+r90513c6|ib|0.131
+r90513c7|in|0.131
+r90513|*|72342|
+r90490c4|drteam|GRÉGORY [0:13]
+r90490c9|in|0:13
+r90499c1|sd|
+r90499c5|tn|3:40.208
+r90499c7|in|7.928
+r90499c9|in|0:01
+r90499|*|71557|
+r90508c1|in|
+r90496c1|su|
+r90496c2||25
+r90496c5|tn|1:12.197
+r90496c6|ib|0.879
+r90496c7|in|0.879
+r90495c1|sd|
+r90495c2||26
+r90495c7|in|
+r90494c7|in|10.739
+r90495|#|26
+r90496|*|72170|
+r90496|#|25
+r90495c5|tn|1:13.055
+r90495c6|ib|1.587
+r90495c7|in|0.708
+r90495|*|72816|
+r90511c4|drteam|RÉMY [1:08]
+r90511c9|in|0:58
+r90519c4|drteam|THÉOPHILE  [0:20]
+r90519c9|in|0:20
+r90504c4|drteam|ALEXANDRE  [0:12]
+r90504c9|in|0:12
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90500c4|dr|T.O.M - RS1
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90515c1|sr|
+r90515c4|dr|ARIES KART
+r90515c5|tn|1:11.661
+r90515c7|in|14.711
+r90511c4|dr|MATHILDE RACING
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90506c4|dr|LH RACING
+r90513c4|dr|ARNAGE JUNIOR
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90499c4|dr|ZIGZAG
+r90496c4|dr|ESRG CTA 1
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90515|*|71320|
+r90512c9|in|0:30
+
+ 
+r90493c9|in|0:08
+r90490c1|sr|
+r90490c5|tn|1:12.568
+r90490c6|ib|11.794
+r90490c7|in|11.794
+r90490|*|71115|
+r90511c1|sr|
+r90511c5|tn|1:12.682
+r90511c6|ib|1.903
+r90511c7|in|1.903
+r90511|*|70915|
+r90508c9|in|0:03
+
+ 
+r90518c9|in|0:10
+r90494c9|in|0:16
+r90518c1|in|
+
+ 
+r90499c1|sr|
+r90498c9|in|0:32
+r90494c1|sr|
+r90494c5|tn|1:13.554
+r90494c6|ib|12.825
+r90494c7|in|11.238
+r90494|*|73159|
+
+ 
+r90505c9|in|0:41
+r90500c1|sr|
+
+ 
+r90500c5|tn|1:12.251
+r90500c6|ib|20.507
+r90500c7|in|8.713
+r90500|*|71570|
+r90491c9|in|0:12
+r90506c1|sr|
+r90513c1|sr|
+r90519c1|sr|
+r90519c5|tn|1:11.567
+r90519c7|in|30.141
+r90519|*|71174|
+
+ 
+r90496c1|sr|
+r90495c1|sr|
+r90491c1|sr|
+r90491c5|tn|1:12.164
+r90491c7|in|1:03.515
+r90491|*|71945|
+
+ 
+r90509c9|in|0:37
+dyn1|countdown|80152947
+
+ 
+r90497c9|in|0:25
+r90509c4|drteam|QUENTIN  [0:37]
+r90490c4|drteam|GRÉGORY [0:13]
+r90500c4|drteam|SACHA [0:15]
+r90510c4|drteam|GUILLAUME [0:42]
+r90501c4|drteam|MAXIME [0:11]
+r90498c4|drteam|MAÏWENN [0:32]
+r90514c4|drteam|KRISTOF [0:41]
+r90505c4|drteam|ALEX [0:41]
+r90515c4|drteam|CLÉMENT  [0:26]
+r90511c4|drteam|RÉMY [1:08]
+r90516c4|drteam|JEROME [0:41]
+r90497c4|drteam|LOÏC [0:25]
+r90512c4|drteam|ARNAUD  [0:30]
+r90502c4|drteam|YVES [0:41]
+r90519c4|drteam|THÉOPHILE  [0:20]
+r90507c4|drteam|DYLAN [0:23]
+r90492c4|drteam|NICOLAS  [0:46]
+r90517c4|drteam|CHRISTOPHE [0:42]
+r90506c4|drteam|BAPTISTE [0:18]
+r90513c4|drteam|ARTHUR [0:19]
+r90503c4|drteam|AMINE [0:16]
+r90508c4|drteam|ROBIN [0:03]
+r90518c4|drteam|YANN [0:10]
+r90499c4|drteam|FÉLIX [0:01]
+r90496c4|drteam|NICOLAS [0:18]
+r90495c4|drteam|ÉRIC [0:12]
+r90494c4|drteam|ELISA [0:16]
+r90493c4|drteam|KARINE [0:08]
+r90504c4|drteam|ALEXANDRE  [0:12]
+r90491c4|drteam|CLEMENT [0:12]
+
+ 
+r90502c4|drteam|YVES [0:42]
+r90502c9|in|0:42
+
+ 
+r90503c4|drteam|AMINE [0:17]
+r90503c9|in|0:17
+
+ 
+r90516c1|sr|
+r90516c5|tn|1:12.867
+r90516c6|ib|28.988
+r90516c7|in|27.085
+r90516|*|71615|
+r90504c1|sr|
+r90504c5|tn|1:18.504
+r90504c7|in|1:02.842
+r90504|*|77904|
+
+ 
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90500c4|dr|T.O.M - RS1
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90515c4|dr|ARIES KART
+r90511c4|dr|MATHILDE RACING
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90506c4|dr|LH RACING
+r90513c4|dr|ARNAGE JUNIOR
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90499c4|dr|ZIGZAG
+r90496c4|dr|ESRG CTA 1
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90497c1|sr|
+r90497c5|tn|1:11.800
+r90497c6|ib|31.016
+r90497c7|in|2.028
+r90497|*|71788|
+r90516c9|in|0:42
+
+ 
+r90503c1|sr|
+r90503c5|tn|1:12.405
+r90503c6|ib|40.580
+r90503c7|in|40.449
+r90503|*|72321|
+r90510c9|in|0:43
+r90513c9|in|0:20
+r90510c1|sr|
+r90510c5|tn|1:11.522
+r90510c6|ib|44.496
+r90510c7|in|23.989
+r90510|*|71253|
+
+ 
+r90517c9|in|0:43
+r90499c9|in|0:02
+r90500c9|in|0:16
+r90507c9|in|0:24
+r90507c1|sr|
+r90507c5|tn|1:11.571
+r90507c6|ib|25.943
+r90507c7|in|25.943
+r90507|*|71571|
+r90501c9|in|0:12
+r90501c1|sr|
+r90501c5|tn|1:11.856
+r90501c6|ib|49.814
+r90501c7|in|5.318
+r90501|*|71385|
+r90495c9|in|0:13
+r90493c1|sr|
+r90493c5|tn|1:13.510
+r90493c6|ib|47.254
+r90493c7|in|34.429
+r90493|*|73302|
+r90515c9|in|0:27
+r90512c1|sr|
+r90512c5|tn|1:10.510
+r90512c6|ib|41.452
+r90512c7|in|10.436
+r90512|*|70510|
+r90492c1|sr|
+r90492c5|tn|1:13.777
+r90492c6|ib|29.597
+r90492c7|in|3.654
+r90492|*|73612|
+r90496c9|in|0:19
+r90506c9|in|0:19
+r90498c1|sr|
+r90498c5|tn|1:11.955
+r90498c6|ib|54.067
+r90498c7|in|4.253
+r90498|*|71832|
+r90514c9|in|0:42
+r90508c1|sr|
+r90508c5|tn|1:12.092
+r90508c6|ib|53.249
+r90508c7|in|12.669
+r90508|*|71849|
+r90492c9|in|0:47
+dyn1|countdown|80122929
+
+ 
+r90514c1|sr|
+r90514c5|tn|1:11.891
+r90514c6|ib|59.470
+r90514c7|in|5.403
+r90514|*|71797|
+
+ 
+r90509c4|drteam|QUENTIN  [0:37]
+r90490c4|drteam|GRÉGORY [0:13]
+r90500c4|drteam|SACHA [0:16]
+r90510c4|drteam|GUILLAUME [0:43]
+r90501c4|drteam|MAXIME [0:12]
+r90498c4|drteam|MAÏWENN [0:32]
+r90514c4|drteam|KRISTOF [0:42]
+r90505c4|drteam|ALEX [0:41]
+r90515c4|drteam|CLÉMENT  [0:27]
+r90511c4|drteam|RÉMY [1:08]
+r90516c4|drteam|JEROME [0:42]
+r90497c4|drteam|LOÏC [0:25]
+r90512c4|drteam|ARNAUD  [0:30]
+r90502c4|drteam|YVES [0:42]
+r90519c4|drteam|THÉOPHILE  [0:20]
+r90507c4|drteam|DYLAN [0:24]
+r90492c4|drteam|NICOLAS  [0:47]
+r90517c4|drteam|CHRISTOPHE [0:43]
+r90506c4|drteam|BAPTISTE [0:19]
+r90513c4|drteam|ARTHUR [0:20]
+r90503c4|drteam|AMINE [0:17]
+r90508c4|drteam|ROBIN [0:03]
+r90518c4|drteam|YANN [0:10]
+r90499c4|drteam|FÉLIX [0:02]
+r90496c4|drteam|NICOLAS [0:19]
+r90495c4|drteam|ÉRIC [0:13]
+r90494c4|drteam|ELISA [0:16]
+r90493c4|drteam|KARINE [0:08]
+r90504c4|drteam|ALEXANDRE  [0:12]
+r90491c4|drteam|CLEMENT [0:12]
+
+ 
+r90490c4|drteam|GRÉGORY [0:14]
+r90490c9|in|0:14
+
+ 
+r90517c1|sr|
+r90517c5|tn|1:13.700
+r90517c6|ib|42.608
+r90517c7|in|13.011
+r90517|*|73668|
+r90502c1|sr|
+r90502c5|tn|1:12.858
+r90502c6|ib|54.939
+r90502c7|in|13.487
+r90502|*|72641|
+r90511c4|drteam|RÉMY [1:09]
+
+ 
+r90518c1|sr|
+r90518c5|tn|1:12.294
+r90518c6|ib|1:05.370
+r90518c7|in|12.121
+r90518|*|72053|
+r90505c1|sr|
+r90505c5|tn|1:12.386
+r90505c6|ib|1:07.845
+r90505c7|in|8.375
+r90505|*|71605|
+r90511c9|in|0:59
+r90519c4|drteam|THÉOPHILE  [0:21]
+r90519c9|in|0:21
+r90504c4|drteam|ALEXANDRE  [0:13]
+r90504c9|in|0:13
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90500c4|dr|T.O.M - RS1
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90515c4|dr|ARIES KART
+r90511c4|dr|MATHILDE RACING
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90506c4|dr|LH RACING
+r90513c4|dr|ARNAGE JUNIOR
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90499c4|dr|ZIGZAG
+r90496c4|dr|ESRG CTA 1
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90509c5|tn|1:10.464
+r90509c6|in|Tour 87
+r90490c1|in|
+r90500c1|in|
+r90510c1|in|
+r90501c1|in|
+r90498c1|in|
+r90514c1|in|
+r90505c1|in|
+r90515c1|in|
+r90511c1|in|
+r90516c1|in|
+r90497c1|in|
+r90512c1|in|
+r90512c9|in|0:31
+r90502c1|in|
+r90519c1|in|
+r90507c1|in|
+r90492c1|in|
+r90517c1|in|
+r90506c1|in|
+r90513c1|in|
+r90503c1|in|
+r90508c1|in|
+r90518c1|in|
+r90499c1|in|
+r90496c1|in|
+r90495c1|in|
+r90494c1|in|
+r90493c1|in|
+r90504c1|in|
+r90491c1|in|
+r90509|*|70464|
+r90493c9|in|0:09
+r90508c9|in|0:04
+r90506c1|sr|
+r90506c5|tn|1:11.800
+r90506c7|in|9.003
+r90506|*|71740|
+r90518c9|in|0:11
+r90494c9|in|0:17
+r90513c1|sr|
+r90513c5|tn|1:11.890
+r90513c6|ib|0.221
+r90513c7|in|0.221
+r90513|*|71890|
+r90498c9|in|0:33
+r90499c1|sr|
+r90499c5|tn|1:13.371
+r90499c7|in|9.005
+r90499|*|71557|
+r90496c1|sr|
+r90496c5|tn|1:12.685
+r90496c6|ib|0.193
+r90496c7|in|0.193
+r90496|*|72181|
+r90495c1|sr|
+r90495c5|tn|1:12.810
+r90495c6|ib|1.026
+r90495c7|in|0.833
+r90495|*|72810|
+r90505c9|in|0:42
+r90491c9|in|0:13
+r90515c1|sr|
+r90515c5|tn|1:11.399
+r90515c7|in|13.724
+r90515|*|71359|
+r90490c1|sr|
+r90490c5|tn|1:11.704
+r90490c6|ib|13.034
+r90490c7|in|13.034
+r90490|*|71418|
+r90511c1|sr|
+r90511c5|tn|1:11.704
+r90511c6|ib|2.208
+r90511c7|in|2.208
+r90511|*|71312|
+r90500c1|si|
+r90500c5|tn|1:05.980
+r90500c6|ib|16.023
+r90500c7|in|2.989
+r90500c9|to|00.
+r90500c10|in|2
+r90500|*in|0
+r90509c9|in|0:38
+r90500c9|to|01.
+dyn1|countdown|80092845
+r90497c9|in|0:26
+r90500c9|to|02.
+r90494c1|sr|
+r90494c5|tn|1:13.378
+r90494c6|ib|12.832
+r90494c7|in|11.806
+r90494|*|73284|
+r90500c9|to|03.
+
+ 
+r90509c4|drteam|QUENTIN  [0:38]
+r90490c4|drteam|GRÉGORY [0:14]
+r90500c4|drteam|SACHA [0:16]
+r90500c9|to|04.
+r90510c4|drteam|GUILLAUME [0:43]
+r90501c4|drteam|MAXIME [0:12]
+r90498c4|drteam|MAÏWENN [0:33]
+r90514c4|drteam|KRISTOF [0:42]
+r90505c4|drteam|ALEX [0:42]
+r90515c4|drteam|CLÉMENT  [0:27]
+r90511c4|drteam|RÉMY [1:09]
+r90516c4|drteam|JEROME [0:42]
+r90497c4|drteam|LOÏC [0:26]
+r90512c4|drteam|ARNAUD  [0:31]
+r90502c4|drteam|YVES [0:42]
+r90519c4|drteam|THÉOPHILE  [0:21]
+r90507c4|drteam|DYLAN [0:24]
+r90492c4|drteam|NICOLAS  [0:47]
+r90517c4|drteam|CHRISTOPHE [0:43]
+r90506c4|drteam|BAPTISTE [0:19]
+r90513c4|drteam|ARTHUR [0:20]
+r90503c4|drteam|AMINE [0:17]
+r90508c4|drteam|ROBIN [0:04]
+r90518c4|drteam|YANN [0:11]
+r90499c4|drteam|FÉLIX [0:02]
+r90496c4|drteam|NICOLAS [0:19]
+r90495c4|drteam|ÉRIC [0:13]
+r90494c4|drteam|ELISA [0:17]
+r90493c4|drteam|KARINE [0:09]
+r90504c4|drteam|ALEXANDRE  [0:13]
+r90491c4|drteam|CLEMENT [0:13]
+r90500c9|to|05.
+r90500c9|to|06.
+
+ 
+r90500c9|to|07.
+r90502c4|drteam|YVES [0:43]
+r90502c9|in|0:43
+r90519c1|sr|
+r90519c5|tn|1:11.322
+r90519c7|in|28.605
+r90519|*|71254|
+r90500c9|to|08.
+
+ 
+r90500c9|to|09.
+r90503c4|drteam|AMINE [0:18]
+r90503c9|in|0:18
+r90500c9|to|10.
+r90491c1|sr|
+r90491c5|tn|1:12.386
+r90491c7|in|57.397
+r90491|*|72055|
+r90500c9|to|11.
+
+ 
+r90500c9|to|12.
+r90500c9|to|13.
+
+ 
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90500c4|dr|T.O.M - RS1
+r90500c9|to|14.
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90515c4|dr|ARIES KART
+r90511c4|dr|MATHILDE RACING
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90506c4|dr|LH RACING
+r90513c4|dr|ARNAGE JUNIOR
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90499c4|dr|ZIGZAG
+r90496c4|dr|ESRG CTA 1
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90500c9|to|15.
+r90516c9|in|0:43
+r90500c9|to|16.
+r90500c9|to|17.
+r90510c9|in|0:44
+r90513c9|in|0:21
+r90500c9|to|18.
+r90517c9|in|0:44
+r90500c9|to|19.
+r90499c9|in|0:03
+r90500c9|to|20.
+r90500c9|to|21.
+r90507c9|in|0:25
+r90500c9|to|22.
+r90501c9|in|0:13
+r90500c9|to|23.
+r90500c9|to|24.
+r90495c9|in|0:14
+r90516c1|sr|
+r90516c5|tn|1:11.504
+r90516c6|ib|29.093
+r90516c7|in|26.885
+r90516|*|71504|
+r90515c9|in|0:28
+r90500c9|to|25.
+r90500c9|to|26.
+
+ 
+r90496c9|in|0:20
+r90500c9|to|27.
+r90506c9|in|0:20
+r90497c1|sr|
+r90497c5|tn|1:12.691
+r90497c6|ib|32.308
+r90497c7|in|3.215
+r90497|*|71800|
+r90500c9|to|28.
+r90514c9|in|0:43
+
+ 
+r90500c9|to|29.
+r90503c1|sr|
+r90503c5|tn|1:12.696
+r90503c6|ib|41.476
+r90503c7|in|41.255
+r90503|*|72357|
+r90504c1|sr|
+r90504c5|tn|1:15.962
+r90504c7|in|1:05.294
+r90504|*|75962|
+r90510c1|sr|
+r90510c5|tn|1:11.282
+r90510c6|ib|45.314
+r90510c7|in|29.291
+r90510|*|71267|
+r90492c9|in|0:48
+r90500c9|to|30.
+r90500c9|to|31.
+dyn1|countdown|80062770
+r90500c9|to|32.
+
+ 
+r90500c9|to|33.
+r90507c1|sr|
+r90507c5|tn|1:11.490
+r90507c6|ib|26.111
+r90507c7|in|26.111
+r90507|*|71490|
+r90500c9|to|34.
+r90509c4|drteam|QUENTIN  [0:38]
+r90490c4|drteam|GRÉGORY [0:14]
+r90500c4|drteam|SACHA [0:17]
+r90510c4|drteam|GUILLAUME [0:44]
+r90501c4|drteam|MAXIME [0:13]
+r90498c4|drteam|MAÏWENN [0:33]
+r90514c4|drteam|KRISTOF [0:43]
+r90505c4|drteam|ALEX [0:42]
+r90515c4|drteam|CLÉMENT  [0:28]
+r90511c4|drteam|RÉMY [1:09]
+r90516c4|drteam|JEROME [0:43]
+r90497c4|drteam|LOÏC [0:26]
+r90512c4|drteam|ARNAUD  [0:31]
+r90502c4|drteam|YVES [0:43]
+r90519c4|drteam|THÉOPHILE  [0:21]
+r90507c4|drteam|DYLAN [0:25]
+r90492c4|drteam|NICOLAS  [0:48]
+r90517c4|drteam|CHRISTOPHE [0:44]
+r90506c4|drteam|BAPTISTE [0:20]
+r90513c4|drteam|ARTHUR [0:21]
+r90503c4|drteam|AMINE [0:18]
+r90508c4|drteam|ROBIN [0:04]
+r90518c4|drteam|YANN [0:11]
+r90499c4|drteam|FÉLIX [0:03]
+r90496c4|drteam|NICOLAS [0:20]
+r90495c4|drteam|ÉRIC [0:14]
+r90494c4|drteam|ELISA [0:17]
+r90493c4|drteam|KARINE [0:09]
+r90504c4|drteam|ALEXANDRE  [0:13]
+r90491c4|drteam|CLEMENT [0:13]
+
+ 
+r90500c9|to|35.
+r90501c1|sr|
+r90501c5|tn|1:11.899
+r90501c6|ib|51.249
+r90501c7|in|5.935
+r90501|*|71622|
+r90500c9|to|36.
+r90490c4|drteam|GRÉGORY [0:15]
+r90490c9|in|0:15
+r90512c1|sr|
+r90512c5|tn|1:11.423
+r90512c6|ib|41.476
+r90512c7|in|9.168
+r90512|*|70510|
+r90500c9|to|37.
+r90493c1|sr|
+r90493c5|tn|1:12.993
+r90493c6|ib|46.876
+r90493c7|in|34.044
+r90493|*|72993|
+r90500c9|to|38.
+r90492c1|sr|
+r90492c5|tn|1:13.437
+r90492c6|ib|31.712
+r90492c7|in|5.601
+r90492|*|73437|
+r90500c9|to|39.
+r90498c1|sr|
+r90498c5|tn|1:12.017
+r90498c6|ib|55.620
+r90498c7|in|4.371
+r90498|*|71904|
+r90500c9|to|40.
+r90511c4|drteam|RÉMY [1:10]
+r90500c9|to|41.
+r90508c1|sr|
+r90508c5|tn|1:12.237
+r90508c6|ib|53.686
+r90508c7|in|12.210
+r90508|*|71995|
+r90511c9|in|1:00
+r90500c9|to|42.
+r90519c4|drteam|THÉOPHILE  [0:22]
+r90519c9|in|0:22
+r90500c9|to|43.
+r90504c4|drteam|ALEXANDRE  [0:14]
+r90504c9|in|0:14
+r90500c9|to|44.
+r90512c4|drteam|ARNAUD  [0:32]
+r90512c9|in|0:32
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90500c4|dr|T.O.M - RS1
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90515c4|dr|ARIES KART
+r90511c4|dr|MATHILDE RACING
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90506c4|dr|LH RACING
+r90513c4|dr|ARNAGE JUNIOR
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90499c4|dr|ZIGZAG
+r90496c4|dr|ESRG CTA 1
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90493c9|in|0:10
+r90500c9|to|45.
+r90514c1|sr|
+r90514c5|tn|1:12.119
+r90514c6|ib|1:01.125
+r90514c7|in|5.505
+r90514|*|71838|
+r90500c9|to|46.
+r90508c9|in|0:05
+r90500c9|to|47.
+
+ 
+r90518c9|in|0:12
+r90494c9|in|0:18
+r90500c9|to|48.
+r90500c9|to|49.
+r90498c9|in|0:34
+r90500c9|to|50.
+r90500c9|to|51.
+r90500c9|to|52.
+r90502c1|sr|
+r90502c5|tn|1:13.444
+r90502c6|ib|56.984
+r90502c7|in|15.508
+r90502|*|72736|
+r90517c1|sr|
+r90517c5|tn|1:14.242
+r90517c6|ib|45.528
+r90517c7|in|13.816
+r90517|*|73693|
+r90500c9|to|53.
+r90505c1|sr|
+r90505c5|tn|1:11.718
+r90505c6|ib|1:09.099
+r90505c7|in|7.974
+r90505|*|71661|
+r90505c9|in|0:43
+r90518c1|sr|
+r90518c5|tn|1:12.315
+r90518c6|ib|1:05.885
+r90518c7|in|12.199
+r90518|*|72160|
+
+ 
+r90500c9|to|54.
+r90509c5|tn|1:10.426
+r90509c6|in|Tour 88
+r90490c1|in|
+r90510c1|in|
+r90501c1|in|
+r90498c1|in|
+r90514c1|in|
+r90505c1|in|
+r90515c1|in|
+r90511c1|in|
+r90516c1|in|
+r90497c1|in|
+r90512c1|in|
+r90502c1|in|
+r90519c1|in|
+r90507c1|in|
+r90492c1|in|
+r90517c1|in|
+r90506c1|in|
+r90513c1|in|
+r90503c1|in|
+r90508c1|in|
+r90518c1|in|
+r90499c1|in|
+r90496c1|in|
+r90495c1|in|
+r90494c1|in|
+r90493c1|in|
+r90504c1|in|
+r90491c1|in|
+r90509|*|70426|
+r90491c9|in|0:14
+r90500c9|to|55.
+r90500c9|to|56.
+
+ 
+r90500c9|to|57.
+r90500c9|to|58.
+
+ 
+r90500c9|to|59.
+r90513c1|su|
+r90513c2||19
+r90513c5|tn|1:12.213
+r90513c6|ib|3 Tours
+r90513c7|in|7.195
+r90506c1|sd|
+r90506c2||20
+r90506c6|ib|
+r90506c7|in|
+r90503c6|ib|41.255
+r90503c7|in|41.476
+r90508c6|ib|53.465
+r90518c6|ib|1:05.664
+r90506|#|20
+r90513|*|71890|
+r90513|#|19
+r90500c9|to|1:00.
+r90506c5|tn|1:12.491
+r90506c6|ib|0.057
+r90506c7|in|0.057
+r90506|*|71775|
+r90509c9|in|0:39
+
+ 
+r90500c9|to|1:01.
+dyn1|countdown|80032765
+r90497c9|in|0:27
+r90500c9|to|1:02.
+r90500c9|to|1:03.
+
+ 
+r90496c1|su|
+r90496c2||24
+r90496c5|tn|1:13.078
+r90496c6|ib|4 Tours
+r90496c7|in|9.961
+r90499c1|sd|
+r90499c2||25
+r90499c6|ib|
+r90499c7|in|
+r90495c6|ib|0.833
+r90495c7|in|1.026
+r90494c6|ib|12.639
+r90493c6|ib|46.683
+r90496|*|72437|
+r90496|#|24
+r90499|#|25
+r90511c1|si|
+r90511c2||9
+r90511c5|tn|1:06.431
+r90511c6|ib|1 Tour
+r90511c7|in|10.645
+r90511c9|to|00.
+r90511c10|in|
+r90515c1|sd|
+r90515c2||10
+r90515c6|ib|
+r90515c7|in|
+r90516c6|ib|26.885
+r90516c7|in|29.093
+r90497c6|ib|30.100
+r90512c6|ib|39.268
+r90502c6|ib|54.776
+r90499c5|tn|1:13.550
+r90499c6|ib|0.279
+r90499c7|in|0.279
+r90499|*|72471|
+r90511|*in|0
+r90511|#|9
+r90515|#|10
+r90495c1|sr|
+r90495c5|tn|1:12.742
+r90495c6|ib|0.497
+r90495c7|in|0.218
+r90495|*|72742|
+r90500c9|to|1:04.
+r90509c4|drteam|QUENTIN  [0:39]
+r90490c4|drteam|GRÉGORY [0:15]
+r90500c4|drteam|SACHA [0:16]
+r90510c4|drteam|GUILLAUME [0:44]
+r90501c4|drteam|MAXIME [0:13]
+r90498c4|drteam|MAÏWENN [0:34]
+r90514c4|drteam|KRISTOF [0:43]
+r90505c4|drteam|ALEX [0:43]
+r90511c4|drteam|RÉMY [1:10]
+r90515c4|drteam|CLÉMENT  [0:28]
+r90516c4|drteam|JEROME [0:43]
+r90497c4|drteam|LOÏC [0:27]
+r90512c4|drteam|ARNAUD  [0:32]
+r90502c4|drteam|YVES [0:43]
+r90519c4|drteam|THÉOPHILE  [0:22]
+r90507c4|drteam|DYLAN [0:25]
+r90492c4|drteam|NICOLAS  [0:48]
+r90517c4|drteam|CHRISTOPHE [0:44]
+r90513c4|drteam|ARTHUR [0:21]
+r90506c4|drteam|BAPTISTE [0:20]
+r90503c4|drteam|AMINE [0:18]
+r90508c4|drteam|ROBIN [0:05]
+r90518c4|drteam|YANN [0:12]
+r90496c4|drteam|NICOLAS [0:20]
+r90499c4|drteam|FÉLIX [0:03]
+r90495c4|drteam|ÉRIC [0:14]
+r90494c4|drteam|ELISA [0:18]
+r90493c4|drteam|KARINE [0:10]
+r90504c4|drteam|ALEXANDRE  [0:14]
+r90491c4|drteam|CLEMENT [0:14]
+r90511c9|to|01.
+r90500c4|drteam|SACHA [0:17]
+r90500c9|to|1:05.
+
+ 
+r90511c9|to|02.
+r90500c9|to|1:06.
+r90515c5|tn|1:11.541
+r90515c6|ib|2.902
+r90515c7|in|2.902
+r90515|*|71376|
+r90511c9|to|03.
+r90500c9|to|1:07.
+r90502c4|drteam|YVES [0:44]
+r90502c9|in|0:44
+r90511c9|to|04.
+r90500c9|to|1:08.
+
+ 
+r90490c1|sr|
+r90490c5|tn|1:11.399
+r90490c6|ib|14.007
+r90490c7|in|14.007
+r90490|*|71331|
+r90511c9|to|05.
+r90500c9|to|1:09.
+r90503c4|drteam|AMINE [0:19]
+r90503c9|in|0:19
+r90511c9|to|06.
+r90500c9|to|1:10.
+
+ 
+r90511c9|to|07.
+r90500c9|to|1:11.
+r90511c9|to|08.
+r90500c9|to|1:12.
+r90511c9|to|09.
+
+ 
+r90500c9|to|1:13.
+r90511c9|to|10.
+r90500c9|to|1:14.
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90500c4|dr|T.O.M - RS1
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90511c4|dr|MATHILDE RACING
+r90515c4|dr|ARIES KART
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90513c4|dr|ARNAGE JUNIOR
+r90506c4|dr|LH RACING
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90496c4|dr|ESRG CTA 1
+r90499c4|dr|ZIGZAG
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90511c9|to|11.
+r90500c9|to|1:15.
+r90516c9|in|0:44
+r90511c9|to|12.
+r90500c9|to|1:16.
+r90494c1|sr|
+r90494c5|tn|1:13.361
+r90494c6|ib|12.922
+r90494c7|in|12.425
+r90494|*|73323|
+r90511c9|to|13.
+r90500c9|to|1:17.
+r90510c9|in|0:45
+r90513c9|in|0:22
+r90511c9|to|14.
+r90500c9|to|1:18.
+r90519c1|sr|
+r90519c5|tn|1:11.375
+r90519c7|in|26.536
+r90517c9|in|0:45
+r90519|*|71286|
+r90511c9|to|15.
+r90500c9|to|1:19.
+r90499c9|in|0:04
+
+ 
+r90511c9|to|16.
+r90500c9|to|1:20.
+r90513c1|sr|
+r90506c1|sr|
+r90511c9|to|17.
+r90500c9|to|1:21.
+r90511c9|to|18.
+r90507c9|in|0:26
+r90500c9|to|1:22.
+
+ 
+r90501c9|in|0:14
+r90511c9|to|19.
+r90500c9|to|1:23.
+r90491c1|sr|
+r90491c5|tn|1:12.306
+r90491c7|in|53.741
+r90491|*|72175|
+r90496c1|sr|
+r90499c1|sr|
+r90511c9|to|20.
+r90515c1|sr|
+r90500c9|to|1:24.
+r90495c9|in|0:15
+
+ 
+r90515c9|in|0:29
+r90511c9|to|21.
+r90500c9|to|1:25.
+r90511c9|to|22.
+r90500c9|to|1:26.
+r90496c9|in|0:21
+r90511c9|to|23.
+
+ 
+r90500c9|to|1:27.
+r90506c9|in|0:21
+r90511c9|to|24.
+r90500c9|to|1:28.
+r90514c9|in|0:44
+r90511c9|to|25.
+r90500c9|to|1:29.
+r90492c9|in|0:49
+r90511c9|to|26.
+r90500c9|to|1:30.
+r90511c9|to|27.
+r90500c9|to|1:31.
+dyn1|countdown|80002694
+r90511c9|to|28.
+r90500c9|to|1:32.
+r90511c9|to|29.
+r90500c9|to|1:33.
+r90511c9|to|30.
+r90500c9|to|1:34.
+r90509c4|drteam|QUENTIN  [0:39]
+r90490c4|drteam|GRÉGORY [0:15]
+r90500c4|drteam|SACHA [0:17]
+r90510c4|drteam|GUILLAUME [0:45]
+r90501c4|drteam|MAXIME [0:14]
+r90498c4|drteam|MAÏWENN [0:34]
+r90514c4|drteam|KRISTOF [0:44]
+r90505c4|drteam|ALEX [0:43]
+r90511c4|drteam|RÉMY [1:10]
+r90515c4|drteam|CLÉMENT  [0:29]
+r90516c4|drteam|JEROME [0:44]
+r90497c4|drteam|LOÏC [0:27]
+r90512c4|drteam|ARNAUD  [0:32]
+r90502c4|drteam|YVES [0:44]
+r90519c4|drteam|THÉOPHILE  [0:22]
+r90507c4|drteam|DYLAN [0:26]
+r90492c4|drteam|NICOLAS  [0:49]
+r90517c4|drteam|CHRISTOPHE [0:45]
+r90513c4|drteam|ARTHUR [0:22]
+r90506c4|drteam|BAPTISTE [0:21]
+r90503c4|drteam|AMINE [0:19]
+r90508c4|drteam|ROBIN [0:05]
+r90518c4|drteam|YANN [0:12]
+r90496c4|drteam|NICOLAS [0:21]
+r90499c4|drteam|FÉLIX [0:04]
+r90495c4|drteam|ÉRIC [0:15]
+r90494c4|drteam|ELISA [0:18]
+r90493c4|drteam|KARINE [0:10]
+r90504c4|drteam|ALEXANDRE  [0:14]
+r90491c4|drteam|CLEMENT [0:14]
+r90511c9|to|31.
+r90500c9|to|1:35.
+r90511c9|to|32.
+r90500c9|to|1:36.
+r90490c4|drteam|GRÉGORY [0:16]
+r90490c9|in|0:16
+r90516c1|sr|
+r90516c5|tn|1:11.898
+r90516c6|ib|32.352
+r90516c7|in|29.450
+r90516|*|71504|
+r90511c9|to|33.
+r90500c9|to|1:37.
+r90511c9|to|34.
+r90500c9|to|1:38.
+r90511c9|to|35.
+r90500c9|to|1:39.
+r90497c1|sr|
+r90497c5|tn|1:11.927
+r90497c6|ib|35.596
+r90497c7|in|3.244
+r90497|*|71864|
+
+ 
+r90511c9|to|36.
+r90511c4|drteam|RÉMY [1:11]
+r90500c9|to|1:40.
+r90511c9|to|37.
+r90500c9|to|1:41.
+r90510c1|su|
+r90510c2||3
+r90510c5|tn|1:12.214
+r90510c6|ib|47.102
+r90510c7|in|33.095
+r90500c2||4
+r90500c7|in|
+r90501c7|in|35.226
+r90500|#|4
+r90510|*|71273|
+r90510|#|3
+r90511c9|to|38.
+
+ 
+r90500c9|to|1:42.
+r90503c1|sr|
+r90503c5|tn|1:13.063
+r90503c6|ib|42.105
+r90503c7|in|42.048
+r90503|*|72534|
+r90519c4|drteam|THÉOPHILE  [0:23]
+r90519c9|in|0:23
+r90511c9|to|39.
+r90500c9|to|1:43.
+r90504c4|drteam|ALEXANDRE  [0:15]
+r90504c9|in|0:15
+r90511c9|to|40.
+r90500c9|to|1:44.
+r90512c4|drteam|ARNAUD  [0:33]
+r90512c9|in|0:33
+
+ 
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90510c4|dr|LES 20 PISTONS
+r90500c4|dr|T.O.M - RS1
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90511c4|dr|MATHILDE RACING
+r90515c4|dr|ARIES KART
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90513c4|dr|ARNAGE JUNIOR
+r90506c4|dr|LH RACING
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90496c4|dr|ESRG CTA 1
+r90499c4|dr|ZIGZAG
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90511c9|to|41.
+r90493c9|in|0:11
+r90500c9|to|1:45.
+r90507c1|sr|
+r90507c5|tn|1:12.078
+r90507c6|ib|26.814
+r90507c7|in|26.814
+r90507|*|71490|
+r90511c9|to|42.
+r90500c9|to|1:46.
+r90504c1|sr|
+r90504c5|tn|1:16.841
+r90504c7|in|1:09.142
+r90504|*|75962|
+r90511c9|to|43.
+
+ 
+r90501c1|su|
+r90501c2||4
+r90501c5|tn|1:11.615
+r90501c6|ib|52.438
+r90501c7|in|5.336
+r90500c2||5
+r90498c7|in|39.597
+r90508c9|in|0:06
+r90500|#|5
+r90501|*|71550|
+r90501|#|4
+r90500c9|to|1:47.
+r90512c1|sr|
+r90512c5|tn|1:10.713
+r90512c6|ib|43.550
+r90512c7|in|7.954
+r90512|*|70612|
+r90518c9|in|0:13
+r90511c9|to|44.
+r90494c9|in|0:19
+r90500c9|to|1:48.
+r90511c9|to|45.
+r90500c9|to|1:49.
+
+ 
+r90498c9|in|0:35
+r90511c9|to|46.
+r90500c9|to|1:50.
+r90493c1|sr|
+r90493c5|tn|1:13.233
+r90493c6|ib|46.838
+r90493c7|in|33.916
+r90493|*|72993|
+r90511c9|to|47.
+r90500c9|to|1:51.
+
+ 
+r90498c1|su|
+r90498c2||5
+r90498c5|tn|1:12.047
+r90498c6|ib|57.241
+r90498c7|in|4.803
+r90500c2||6
+r90514c7|in|45.102
+r90511c9|to|48.
+r90498|*|71957|
+r90498|#|5
+r90500|#|6
+r90500c9|to|1:52.
+r90511c9|to|49.
+r90492c1|sr|
+r90492c5|tn|1:13.907
+r90492c6|ib|34.244
+r90492c7|in|7.430
+r90492|*|73437|
+r90500c9|to|1:53.
+r90505c9|in|0:44
+r90511c9|to|50.
+r90508c1|sr|
+r90508c5|tn|1:12.497
+r90508c6|ib|53.749
+r90508c7|in|11.644
+r90508|*|72130|
+r90500c9|to|1:54.
+
+ 
+r90511c9|to|51.
+r90491c9|in|0:15
+r90500c9|to|1:55.
+r90511c9|to|52.
+r90500c9|to|1:56.
+r90511c9|to|53.
+r90514c1|su|
+r90514c2||6
+r90514c5|tn|1:11.631
+r90514c6|ib|1:02.330
+r90514c7|in|5.089
+r90500c2||7
+r90505c7|in|53.076
+r90500|#|7
+r90514|*|71631|
+r90514|#|6
+r90500c9|to|1:57.
+r90511c9|to|54.
+r90500c9|to|1:58.
+r90511c9|to|55.
+r90500c9|to|1:59.
+r90511c9|to|56.
+r90500c9|to|2:00.
+r90511c9|to|57.
+r90509c9|in|0:40
+r90500c9|to|2:01.
+dyn1|countdown|79972610
+r90497c9|in|0:28
+r90510c1|sr|
+r90511c9|to|58.
+r90500c9|to|2:02.
+r90511c9|to|59.
+r90500c9|to|2:03.
+r90511c9|to|1:00.
+r90500c9|to|2:04.
+r90509c4|drteam|QUENTIN  [0:40]
+r90490c4|drteam|GRÉGORY [0:16]
+r90510c4|drteam|GUILLAUME [0:45]
+r90501c4|drteam|MAXIME [0:14]
+r90498c4|drteam|MAÏWENN [0:35]
+r90514c4|drteam|KRISTOF [0:44]
+r90500c4|drteam|SACHA [0:17]
+r90505c4|drteam|ALEX [0:44]
+r90511c4|drteam|RÉMY [1:11]
+r90515c4|drteam|CLÉMENT  [0:29]
+r90516c4|drteam|JEROME [0:44]
+r90497c4|drteam|LOÏC [0:28]
+r90512c4|drteam|ARNAUD  [0:33]
+r90502c4|drteam|YVES [0:44]
+r90519c4|drteam|THÉOPHILE  [0:23]
+r90507c4|drteam|DYLAN [0:26]
+r90492c4|drteam|NICOLAS  [0:49]
+r90517c4|drteam|CHRISTOPHE [0:45]
+r90513c4|drteam|ARTHUR [0:22]
+r90506c4|drteam|BAPTISTE [0:21]
+r90503c4|drteam|AMINE [0:19]
+r90508c4|drteam|ROBIN [0:06]
+r90518c4|drteam|YANN [0:13]
+r90496c4|drteam|NICOLAS [0:21]
+r90499c4|drteam|FÉLIX [0:04]
+r90495c4|drteam|ÉRIC [0:15]
+r90494c4|drteam|ELISA [0:19]
+r90493c4|drteam|KARINE [0:11]
+r90504c4|drteam|ALEXANDRE  [0:15]
+r90491c4|drteam|CLEMENT [0:15]
+r90511c9|to|1:01.
+r90500c4|drteam|SACHA [0:18]
+r90500c9|to|2:05.
+r90502c1|sr|
+r90502c5|tn|1:12.955
+r90502c6|ib|1:01.300
+r90502c7|in|17.750
+r90502|*|72863|
+r90505c1|su|
+r90505c2||7
+r90505c5|tn|1:12.022
+r90505c6|ib|1:10.695
+r90505c7|in|8.365
+r90500c2||8
+r90511c7|in|1:03.721
+r90500|#|8
+r90505|*|71687|
+r90505|#|7
+r90511c9|to|1:02.
+r90518c1|sr|
+r90518c5|tn|1:12.427
+r90518c6|ib|1:05.878
+r90518c7|in|12.129
+r90518|*|72257|
+r90509c5|tn|1:11.656
+r90509c6|in|Tour 89
+r90490c1|in|
+r90510c1|in|
+r90500c6|ib|1 Tour
+r90500c9|to|2:06.
+r90511c6|ib|1:03.721
+r90515c1|in|
+r90515c6|ib|1:06.623
+r90516c1|in|
+r90516c6|ib|1:36.073
+r90497c1|in|
+r90497c6|ib|1:39.317
+r90512c1|in|
+r90512c6|ib|1:47.271
+r90502c1|in|
+r90502c6|ib|2:05.021
+r90519c1|in|
+r90507c1|in|
+r90492c1|in|
+r90517c6|ib|3 Tours
+r90513c1|in|
+r90513c6|ib|7.195
+r90506c1|in|
+r90506c6|ib|7.252
+r90503c1|in|
+r90503c6|ib|49.300
+r90508c1|in|
+r90508c6|ib|1:00.944
+r90518c1|in|
+r90518c6|ib|1:13.073
+r90496c1|in|
+r90499c1|in|
+r90495c1|in|
+r90494c1|in|
+r90493c1|in|
+r90504c1|in|
+r90491c1|in|
+r90509|*|70426|
+r90511c9|to|1:03.
+r90501c1|in|
+r90500c9|to|2:07.
+r90502c4|drteam|YVES [0:45]
+r90502c9|in|0:45
+r90517c1|sr|
+r90517c5|tn|1:14.558
+r90517c7|in|14.467
+r90517|*|73973|
+r90511c9|to|1:04.
+r90500c9|to|2:08.
+r90511c9|to|1:05.
+r90500c9|to|2:09.
+r90503c4|drteam|AMINE [0:20]
+r90503c9|in|0:20
+r90511c9|to|1:06.
+r90500c9|to|2:10.
+r90511c9|to|1:07.
+r90500c9|to|2:11.
+r90498c1|in|
+r90511c9|to|1:08.
+r90506c1|su|
+r90506c2||19
+r90506c5|tn|1:11.762
+r90506c6|ib|4.456
+r90506c7|in|4.456
+r90513c1|sd|
+r90513c2||20
+r90513c7|in|
+r90503c7|in|42.105
+r90506|*|71756|
+r90506|#|19
+r90513|#|20
+r90500c9|to|2:12.
+r90513c5|tn|1:12.163
+r90513c6|ib|4.800
+r90513c7|in|0.344
+r90513|*|72027|
+r90511c9|to|1:09.
+r90500c9|to|2:13.
+r90511c9|to|1:10.
+r90500c9|to|2:14.
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90500c4|dr|T.O.M - RS1
+r90511c4|dr|MATHILDE RACING
+r90511c9|to|1:11.
+r90515c4|dr|ARIES KART
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90506c4|dr|LH RACING
+r90513c4|dr|ARNAGE JUNIOR
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90496c4|dr|ESRG CTA 1
+r90499c4|dr|ZIGZAG
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90500c9|to|2:15.
+r90516c9|in|0:45
+r90496c1|sr|
+r90496c5|tn|1:12.014
+r90496c7|in|9.548
+r90496|*|72014|
+r90511c9|to|1:12.
+r90500c9|to|2:16.
+r90514c1|in|
+r90511c9|to|1:13.
+r90499c1|sr|
+r90499c5|tn|1:13.033
+r90499c6|ib|1.298
+r90499c7|in|1.298
+r90499|*|72619|
+r90500c9|to|2:17.
+r90495c1|sr|
+r90495c5|tn|1:13.170
+r90495c6|ib|1.653
+r90495c7|in|0.355
+r90495|*|72742|
+r90510c9|in|0:46
+r90513c9|in|0:23
+r90511c9|to|1:14.
+r90515c1|su|
+r90515c2||8
+r90515c5|tn|1:11.251
+r90515c6|ib|1 Tour
+r90515c7|in|12.776
+r90500c2||9
+r90500c6|ib|
+r90500c9|to|2:18.
+r90511c2||10
+r90511c6|ib|
+r90516c6|ib|29.450
+r90516c7|in|32.352
+r90497c6|ib|32.694
+r90512c6|ib|40.648
+r90502c6|ib|58.398
+r90500|#|9
+r90511|#|10
+r90515|*|71251|
+r90515|#|8
+r90517c9|in|0:46
+r90511c9|to|1:15.
+r90500c9|to|2:19.
+r90499c9|in|0:05
+r90511c9|to|1:16.
+r90490c1|sr|
+r90490c5|tn|1:11.388
+r90490c6|ib|13.739
+r90490c7|in|13.739
+r90490|*|71364|
+r90500c9|to|2:20.
+r90511c9|to|1:17.
+r90500c9|to|2:21.
+r90511c9|to|1:18.
+r90507c9|in|0:27
+r90500c9|to|2:22.
+r90500c1|so|
+r90500|*out|0
+r90501c9|in|0:15
+r90511c9|to|1:19.
+r90511c9|to|1:20.
+r90495c9|in|0:16
+r90515c9|in|0:30
+r90511c9|to|1:21.
+r90505c1|in|
+r90511c9|to|1:22.
+r90496c9|in|0:22
+r90511c9|to|1:23.
+r90506c9|in|0:22
+
+ 
+r90511c9|to|1:24.
+r90514c9|in|0:45
+r90511c9|to|1:25.
+r90492c9|in|0:50
+r90494c1|sr|
+r90494c5|tn|1:13.103
+r90494c6|ib|14.011
+r90494c7|in|12.358
+r90494|*|73103|
+r90519c1|sr|
+r90519c5|tn|1:11.058
+r90519c7|in|24.639
+r90519|*|71058|
+
+ 
+r90511c9|to|1:26.
+r90511c9|to|1:27.
+dyn1|countdown|79942630
+r90511c9|to|1:28.
+r90506c1|sr|
+r90513c1|sr|
+
+ 
+r90511c9|to|1:29.
+r90511c9|to|1:30.
+
+ 
+r90509c4|drteam|QUENTIN  [0:40]
+r90490c4|drteam|GRÉGORY [0:16]
+r90510c4|drteam|GUILLAUME [0:46]
+r90501c4|drteam|MAXIME [0:15]
+r90498c4|drteam|MAÏWENN [0:35]
+r90514c4|drteam|KRISTOF [0:45]
+r90505c4|drteam|ALEX [0:44]
+r90515c4|drteam|CLÉMENT  [0:30]
+r90500c4|drteam|SACHA [0:16]
+r90511c4|drteam|STÉPHANE [0:00]
+r90511c9|to|1:31.
+r90516c4|drteam|JEROME [0:45]
+r90497c4|drteam|LOÏC [0:28]
+r90512c4|drteam|ARNAUD  [0:33]
+r90502c4|drteam|YVES [0:45]
+r90519c4|drteam|THÉOPHILE  [0:23]
+r90507c4|drteam|DYLAN [0:27]
+r90492c4|drteam|NICOLAS  [0:50]
+r90517c4|drteam|CHRISTOPHE [0:46]
+r90506c4|drteam|BAPTISTE [0:22]
+r90513c4|drteam|ARTHUR [0:23]
+r90503c4|drteam|AMINE [0:20]
+r90508c4|drteam|ROBIN [0:06]
+r90518c4|drteam|YANN [0:13]
+r90496c4|drteam|NICOLAS [0:22]
+r90499c4|drteam|FÉLIX [0:05]
+r90495c4|drteam|ÉRIC [0:16]
+r90494c4|drteam|ELISA [0:19]
+r90493c4|drteam|KARINE [0:11]
+r90504c4|drteam|ALEXANDRE  [0:15]
+r90491c4|drteam|CLEMENT [0:15]
+r90491c1|sr|
+r90491c5|tn|1:12.237
+r90491c7|in|49.137
+r90491|*|72195|
+r90511c9|to|1:32.
+r90490c4|drteam|GRÉGORY [0:17]
+r90490c9|in|0:17
+r90511c9|to|1:33.
+
+ 
+r90511c9|to|1:34.
+r90515c1|sr|
+r90511c9|to|1:35.
+
+ 
+r90511c9|to|1:36.
+r90511c9|to|1:37.
+r90500c4|drteam|SACHA [0:17]
+r90511c9|to|1:38.
+r90519c4|drteam|THÉOPHILE  [0:24]
+r90519c9|in|0:24
+r90511c9|to|1:39.
+r90504c4|drteam|ALEXANDRE  [0:16]
+r90504c9|in|0:16
+r90511c9|to|1:40.
+r90512c4|drteam|ARNAUD  [0:34]
+r90512c9|in|0:34
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90515c4|dr|ARIES KART
+r90500c4|dr|T.O.M - RS1
+r90511c4|dr|MATHILDE RACING
+r90511c9|to|1:41.
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90506c4|dr|LH RACING
+r90513c4|dr|ARNAGE JUNIOR
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90496c4|dr|ESRG CTA 1
+r90499c4|dr|ZIGZAG
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+r90493c9|in|0:12
+r90511c9|to|1:42.
+r90511c9|to|1:43.
+r90508c9|in|0:07
+r90511c9|to|1:44.
+r90518c9|in|0:14
+r90494c9|in|0:20
+r90516c1|su|
+r90516c2||9
+r90516c5|tn|1:11.732
+r90516c6|ib|29.931
+r90516c7|in|29.931
+r90500c2||10
+r90511c2||11
+r90497c7|in|35.596
+r90500|#|10
+r90511|#|11
+r90516|*|71618|
+r90516|#|9
+r90511c9|to|1:45.
+r90498c9|in|0:36
+r90511c9|to|1:46.
+r90511c9|to|1:47.
+r90497c1|su|
+r90497c2||10
+r90497c5|tn|1:12.199
+r90497c6|ib|33.642
+r90497c7|in|3.711
+r90500c2||11
+r90511c2||12
+r90512c7|in|43.550
+r90497|*|71891|
+r90497|#|10
+r90500|#|11
+r90511|#|12
+r90511c9|to|1:48.
+
+ 
+r90511c9|to|1:49.
+r90505c9|in|0:45
+r90510c1|sr|
+r90510c5|tn|1:12.047
+r90510c6|ib|47.493
+r90510c7|in|33.754
+r90510|*|71664|
+r90511c9|to|1:50.
+
+ 
+r90503c1|sr|
+r90503c5|tn|1:12.633
+r90503c6|ib|47.375
+r90503c7|in|42.575
+r90503|*|72569|
+r90511c9|to|1:51.
+r90491c9|in|0:16
+r90511c9|to|1:52.
+r90511c9|to|1:53.
+
+ 
+r90507c1|sr|
+r90507c5|tn|1:11.716
+r90507c6|ib|27.472
+r90507c7|in|27.472
+r90507|*|71603|
+r90511c9|to|1:54.
+r90512c1|su|
+r90512c2||11
+r90512c5|tn|1:11.466
+r90512c6|ib|40.863
+r90512c7|in|7.221
+r90500c2||12
+r90511c2||13
+r90511c9|to|1:55.
+r90502c7|in|1:01.300
+r90500|#|12
+r90511|#|13
+r90512|*|70656|
+r90512|#|11
+r90501c1|sr|
+r90501c5|tn|1:12.092
+r90501c6|ib|52.874
+r90501c7|in|5.381
+r90501|*|71591|
+
+ 
+r90511c9|to|1:56.
+r90511c9|to|1:57.
+r90509c9|in|0:41
+dyn1|countdown|79912567
+r90497c9|in|0:29
+
+ 
+r90511c9|to|1:58.
+r90504c1|sr|
+r90504c5|tn|1:15.704
+r90504c7|in|1:11.613
+r90504|*|75704|
+r90511c9|to|1:59.
+r90511c9|to|2:00.
+
+ 
+r90493c1|sr|
+r90493c5|tn|1:13.911
+r90493c6|ib|48.735
+r90493c7|in|34.724
+r90493|*|73113|
+r90498c1|sr|
+r90498c5|tn|1:12.710
+r90498c6|ib|58.295
+r90498c7|in|5.421
+r90498|*|72004|
+r90509c4|drteam|QUENTIN  [0:41]
+r90490c4|drteam|GRÉGORY [0:17]
+r90510c4|drteam|GUILLAUME [0:46]
+r90501c4|drteam|MAXIME [0:15]
+r90498c4|drteam|MAÏWENN [0:36]
+r90514c4|drteam|KRISTOF [0:45]
+r90505c4|drteam|ALEX [0:45]
+r90515c4|drteam|CLÉMENT  [0:30]
+r90516c4|drteam|JEROME [0:45]
+r90497c4|drteam|LOÏC [0:29]
+r90512c4|drteam|ARNAUD  [0:34]
+r90500c4|drteam|SACHA [0:17]
+r90511c4|drteam|STÉPHANE [0:00]
+r90511c9|to|2:01.
+r90502c4|drteam|YVES [0:45]
+r90519c4|drteam|THÉOPHILE  [0:24]
+r90507c4|drteam|DYLAN [0:27]
+r90492c4|drteam|NICOLAS  [0:50]
+r90517c4|drteam|CHRISTOPHE [0:46]
+r90506c4|drteam|BAPTISTE [0:22]
+r90513c4|drteam|ARTHUR [0:23]
+r90503c4|drteam|AMINE [0:20]
+r90508c4|drteam|ROBIN [0:07]
+r90518c4|drteam|YANN [0:14]
+r90496c4|drteam|NICOLAS [0:22]
+r90499c4|drteam|FÉLIX [0:05]
+r90495c4|drteam|ÉRIC [0:16]
+r90494c4|drteam|ELISA [0:20]
+r90493c4|drteam|KARINE [0:12]
+r90504c4|drteam|ALEXANDRE  [0:16]
+r90491c4|drteam|CLEMENT [0:16]
+r90511c9|to|2:02.
+r90508c1|sr|
+r90508c5|tn|1:12.668
+r90508c6|ib|59.054
+r90508c7|in|11.679
+r90508|*|72327|
+r90492c1|sr|
+r90492c5|tn|1:13.740
+r90492c6|ib|36.926
+r90492c7|in|9.454
+r90492|*|73589|
+r90511c9|to|2:03.
+r90502c4|drteam|YVES [0:46]
+r90502c9|in|0:46
+r90511c9|to|2:04.
+
+ 
+r90516c1|sr|
+r90514c1|sr|
+r90514c5|tn|1:11.883
+r90514c6|ib|1:02.557
+r90514c7|in|4.262
+r90514|*|71631|
+r90511c9|to|2:05.
+r90503c4|drteam|AMINE [0:21]
+r90503c9|in|0:21
+r90511c9|to|2:06.
+
+ 
+r90511c9|to|2:07.
+r90497c1|sr|
+r90511c9|to|2:08.
+
+ 
+r90511c9|to|2:09.
+r90511c9|to|2:10.
+r90511c9|to|2:11.
+r90509c4|dr|ERK TEAM
+r90490c4|dr|INFINY TEAM
+r90510c4|dr|LES 20 PISTONS
+r90501c4|dr|T.O.M - RS2
+r90498c4|dr|HANDOVER 24
+r90514c4|dr|AS FLEXI FRANCE
+r90505c4|dr|TEAM V5
+r90515c4|dr|ARIES KART
+r90516c4|dr|ORKA LIONS
+r90497c4|dr|ESRG CTA 2
+r90512c4|dr|ARNAGE
+r90500c4|dr|T.O.M - RS1
+r90511c4|dr|MATHILDE RACING
+r90502c4|dr|DIX DE DER
+r90519c4|dr|NORMANDIE TEAM KART
+r90507c4|dr|BROUETTE RACING TEAM
+r90492c4|dr|LES VIKINGS
+r90517c4|dr|ORKA TEAM
+r90506c4|dr|LH RACING
+r90513c4|dr|ARNAGE JUNIOR
+r90503c4|dr|POUET POUET 8.0
+r90508c4|dr|NOOPY TEAM
+r90518c4|dr|FUN DESIGN RACING TEAM
+r90496c4|dr|ESRG CTA 1
+r90499c4|dr|ZIGZAG
+r90495c4|dr|TEAM KART HEROES
+r90494c4|dr|QUINN KART
+r90493c4|dr|TEAM DRIVER FILLES
+r90504c4|dr|NEW POUET POUET 3.0
+r90491c4|dr|FULLREP RACING
+
+ 
+r90516c9|in|0:46
+r90511c9|to|2:12.
+r90511c9|to|2:13.
+r90509c5|tn|1:10.926
+r90509c6|in|Tour 90
+r90490c1|in|
+r90510c1|in|
+r90501c1|in|
+r90498c1|in|
+r90514c1|in|
+r90505c6|ib|1 Tour
+r90515c1|in|
+r90515c6|ib|12.776
+r90516c1|in|
+r90516c6|ib|42.707
+r90497c1|in|
+r90497c6|ib|46.418
+r90512c6|ib|53.639
+r90500c6|ib|2 Tours
+r90511c6|ib|1:03.721
+r90502c6|ib|2:05.021
+r90519c1|in|
+r90519c6|ib|2:29.660
+r90507c1|in|
+r90507c6|ib|2:57.132
+r90492c1|in|
+r90492c6|ib|3:06.586
+r90517c1|in|
+r90506c1|in|
+r90513c1|in|
+r90503c1|in|
+r90508c1|in|
+r90518c6|ib|4 Tours
+r90496c1|in|
+r90496c6|ib|9.548
+r90499c1|in|
+r90499c6|ib|10.846
+r90495c1|in|
+r90495c6|ib|11.201
+r90494c1|in|
+r90494c6|ib|23.559
+r90493c1|in|
+r90493c6|ib|58.283
+r90504c1|in|
+r90491c1|in|
+r90509|*|70677|
+r90510c9|in|0:47
