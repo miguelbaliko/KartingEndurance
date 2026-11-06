@@ -207,6 +207,9 @@ async def archiver(app):
                 note(f"archive: {len(sessions)} sessions listed")
                 async with pool.acquire() as c:
                     have = {r["sid"] for r in await c.fetch("select sid from archive")}
+                    for r in await c.fetch("select sid, name, kart, team, best_lap, cells->>'tlp' laps from archive_rows "
+                                           "order by sid, best_lap nulls last"):
+                        print(f"ARCHIVE {r['sid']} | {r['name']} | best {r['best_lap']} | no {r['kart']} | {r['team']} | laps {r['laps']}", flush=True)
                 for sid, _, name in sessions:
                     if not sid or sid in have:
                         continue
