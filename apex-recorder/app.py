@@ -222,10 +222,41 @@ async def archiver(app):
                             best = secs(st.get("blp", "")) or secs(st.get("llp", ""))
                             await c.execute("insert into archive_rows(sid,name,row_id,kart,team,best_lap,cells) values($1,$2,$3,$4,$5,$6,$7)",
                                             sid, name, r, st.get("no", ""), st.get("dr", ""), best, json.dumps(st))
+                    top = sorted(((st.get("blp") or st.get("llp") or "", st.get("no", ""), st.get("dr", ""), st.get("tlp", ""))
+                                  for st in f.rows.values()), key=lambda x: secs(x[0]) or 999)
+                    print(f"ARCHIVE {sid} | {name} | {len(f.rows)} rows | cols {sorted(set(f.cols.values()))}", flush=True)
+                    for b, k, t, n in top[:40]:
+                        print(f"ARCHIVE {sid} | best {b} | no {k} | {t} | laps {n}", flush=True)
                     await asyncio.sleep(1)
             except Exception as e:
                 note(f"archive failed {type(e).__name__} {e}"[:200])
             await asyncio.sleep(3 * 3600)
+
+
+async def summary(app):
+    """Every 15 min, log a compact summary so it can be read from the Render logs."""
+    pool = app["pool"]
+    while True:
+        await asyncio.sleep(900)
+        try:
+            async with pool.acquire() as c:
+                n = {t: await c.fetchval(f"select count(*) from {t}") for t in ("raw", "laps", "pits", "events")}
+                last = await c.fetchval("select max(ts) from raw")
+                sess = await c.fetch("select session, count(*) n, min(lap_s) best, percentile_cont(0.25) within group (order by lap_s) p25, "
+                                     "percentile_cont(0.5) within group (order by lap_s) med from laps "
+                                     "where ts > now() - interval '15 minutes' group by session")
+                sec = await c.fetchrow("select min(nullif(replace(s1,',','.'),'')::float) s1, min(nullif(replace(s2,',','.'),'')::float) s2, "
+                                       "min(nullif(replace(s3,',','.'),'')::float) s3 from laps where s1 ~ '^[0-9.,]+$' and s2 ~ '^[0-9.,]+$' and s3 ~ '^[0-9.,]+$'")
+                ev = await c.fetch("select ts, kind, left(text,120) t from events where ts > now() - interval '15 minutes' order by id")
+            print(f"SUMMARY counts {n} last_frame {last} ws {STATE['connected'] and 'up' or 'down'} msgs {STATE['msgs']}", flush=True)
+            for r in sess:
+                print(f"SUMMARY 15min {r['session']} | laps {r['n']} | best {r['best']:.3f} | p25 {r['p25']:.3f} | median {r['med']:.3f}", flush=True)
+            if sec and sec["s1"]:
+                print(f"SUMMARY sector bests S1 {sec['s1']} S2 {sec['s2']} S3 {sec['s3']}", flush=True)
+            for e in ev:
+                print(f"SUMMARY event {e['ts']:%H:%M} {e['kind']} {e['t']}", flush=True)
+        except Exception as e:
+            print("summary failed", e, flush=True)
 
 
 async def keepalive(app):
@@ -248,7 +279,7 @@ async def on_start(app):
         await c.execute(SCHEMA)
     STATE["started"] = datetime.now(timezone.utc).isoformat()
     app["tasks"] = [asyncio.create_task(recorder(app)), asyncio.create_task(keepalive(app)),
-                   asyncio.create_task(archiver(app))]
+                   asyncio.create_task(archiver(app)), asyncio.create_task(summary(app))]
 
 
 async def status(request):
