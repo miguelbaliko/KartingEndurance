@@ -19,6 +19,7 @@ import aiohttp
 import asyncpg
 from aiohttp import web
 import team
+import live
 
 HOST = os.environ.get("APEX_HOST", "live-data.apex-timing.com")
 BASE = int(os.environ.get("APEX_PORT", "9740"))   # kartalcanede/javascript/config.js
