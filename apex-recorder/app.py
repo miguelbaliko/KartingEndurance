@@ -154,6 +154,7 @@ async def recorder(app):
     import websockets
     pool = app["pool"]
     feed = Feed(pool)
+    app["feed"] = feed
     ctx = ssl.create_default_context()
     hdrs = {"User-Agent": UA, "Referer": PAGE}
     while True:
@@ -438,7 +439,7 @@ def main():
     app = web.Application()
     app.on_startup.append(on_start)
     app.add_routes([web.get("/", status), web.get("/health", health), web.get("/report", report),
-                    web.get("/team", team.team_page), web.get("/team.json", team.team_json),
+                    web.get("/team", team.team_page), web.get("/live", live.live_page), web.get("/live.json", live.live_json), web.get("/team.json", team.team_json),
                     web.post("/team/driver", team.set_driver), web.get("/{t}.csv", csv_out)])
     web.run_app(app, port=int(os.environ.get("PORT", "10000")))
 
