@@ -121,6 +121,7 @@ class Feed:
                             st.get("s1", ""), st.get("s2", ""), st.get("s3", ""), st.get("rk", ""),
                             st.get("gap", ""), st.get("tlp", ""), st.get("otr", ""), self.flag, json.dumps(st))
             elif kind in ("*in", "*out"):
+                print(f"PIT {datetime.now():%H:%M:%S} {kind[1:].upper():3} no {st.get('no','')} {st.get('dr','')} pos {st.get('rk','')}", flush=True)
                 await self.ex("insert into pits(session,row_id,kart,team,event) values($1,$2,$3,$4,$5)",
                               self.session, r, st.get("no", ""), st.get("dr", ""), kind[1:])
 
