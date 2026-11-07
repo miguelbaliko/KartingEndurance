@@ -277,6 +277,13 @@ async def summary(app):
         await asyncio.sleep(900)
         await our_stats(pool)
         try:
+            d = await team.build(pool)
+            print("TEAMCHECK", "ok" if "stints" in d else d, "stints", len(d.get("stints", [])), "current", d.get("current"), flush=True)
+            for s in d.get("stints", []):
+                print(f"TEAMSTINT {s['n']} {s['driver']} len {s['length_s']} laps {s['laps']} best {s['best']} avg10 {s['avg10']} med {s['median']} sd {s['sd']} vsfield {s['vs_field']} fade {s['fade']} stop {s['stop_s']} pos {s['pos_end']}", flush=True)
+        except Exception as e:
+            print("TEAMCHECK failed", repr(e), flush=True)
+        try:
             async with pool.acquire() as c:
                 n = {t: await c.fetchval(f"select count(*) from {t}") for t in ("raw", "laps", "pits", "events")}
                 last = await c.fetchval("select max(ts) from raw")
@@ -345,6 +352,11 @@ async def on_start(app):
     STATE["started"] = datetime.now(timezone.utc).isoformat()
     await team.setup(app["pool"])
     await our_stats(app["pool"])
+    try:
+        d = await team.build(app["pool"])
+        print("TEAMCHECK start", "ok" if "stints" in d else d, len(d.get("stints", [])), flush=True)
+    except Exception as e:
+        print("TEAMCHECK failed", repr(e), flush=True)
     app["tasks"] = [asyncio.create_task(recorder(app)), asyncio.create_task(keepalive(app)),
                    asyncio.create_task(archiver(app)), asyncio.create_task(summary(app)), asyncio.create_task(weather(app))]
 
