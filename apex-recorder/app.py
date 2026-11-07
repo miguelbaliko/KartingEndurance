@@ -271,6 +271,25 @@ async def summary(app):
             print("summary failed", e, flush=True)
 
 
+async def weather(app):
+    """Every hour, log the hourly forecast for the track (Open-Meteo) so the race page can be refreshed from the logs."""
+    url = ("https://api.open-meteo.com/v1/forecast?latitude=39.415&longitude=-8.83&timezone=Europe/Lisbon&forecast_days=3"
+           "&hourly=temperature_2m,apparent_temperature,precipitation,precipitation_probability,wind_speed_10m,wind_direction_10m,cloud_cover")
+    while True:
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
+                    d = (await r.json())["hourly"]
+            now = datetime.now().strftime("%Y-%m-%dT%H")
+            for i, t in enumerate(d["time"]):
+                if t[:13] >= now and t[:10] <= "2026-11-08" and (t[:10] < "2026-11-08" or t[11:13] <= "15"):
+                    print(f"WX {t} t={d['temperature_2m'][i]} feel={d['apparent_temperature'][i]} wind={d['wind_speed_10m'][i]} "
+                          f"dir={d['wind_direction_10m'][i]} mm={d['precipitation'][i]} pop={d['precipitation_probability'][i]} cloud={d['cloud_cover'][i]}", flush=True)
+        except Exception as e:
+            print("weather failed", e, flush=True)
+        await asyncio.sleep(3600)
+
+
 async def keepalive(app):
     """Free Render instances sleep after 15 min without inbound HTTP. Ping ourselves."""
     if not SELF_URL:
@@ -291,7 +310,7 @@ async def on_start(app):
         await c.execute(SCHEMA)
     STATE["started"] = datetime.now(timezone.utc).isoformat()
     app["tasks"] = [asyncio.create_task(recorder(app)), asyncio.create_task(keepalive(app)),
-                   asyncio.create_task(archiver(app)), asyncio.create_task(summary(app))]
+                   asyncio.create_task(archiver(app)), asyncio.create_task(summary(app)), asyncio.create_task(weather(app))]
 
 
 async def status(request):
