@@ -14,7 +14,7 @@ from aiohttp import web
 PRO_STOPS, AM_STOPS = 34, 40
 AM_KARTS = set(os.environ.get("AM_KARTS", "64").split(","))
 MARK = set(os.environ.get("TEAMS", "56,64").split(","))
-STOP_LOSS = float(os.environ.get("STOP_LOSS_S", "228"))   # 3:33 minimum + in/out lane loss
+STOP_LOSS = float(os.environ.get("STOP_LOSS_S", "213.5"))   # measured: stop lap 260.7 s - normal lap 47.3 s
 RACE_SESSION = os.environ.get("RACE_SESSION", "Final")
 
 
