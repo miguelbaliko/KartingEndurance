@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 import aiohttp
 import asyncpg
 from aiohttp import web
+import team
 
 HOST = os.environ.get("APEX_HOST", "live-data.apex-timing.com")
 BASE = int(os.environ.get("APEX_PORT", "9740"))   # kartalcanede/javascript/config.js
@@ -342,6 +343,7 @@ async def on_start(app):
     async with app["pool"].acquire() as c:
         await c.execute(SCHEMA)
     STATE["started"] = datetime.now(timezone.utc).isoformat()
+    await team.setup(app["pool"])
     await our_stats(app["pool"])
     app["tasks"] = [asyncio.create_task(recorder(app)), asyncio.create_task(keepalive(app)),
                    asyncio.create_task(archiver(app)), asyncio.create_task(summary(app)), asyncio.create_task(weather(app))]
@@ -410,7 +412,8 @@ def main():
     app = web.Application()
     app.on_startup.append(on_start)
     app.add_routes([web.get("/", status), web.get("/health", health), web.get("/report", report),
-                    web.get("/{t}.csv", csv_out)])
+                    web.get("/team", team.team_page), web.get("/team.json", team.team_json),
+                    web.post("/team/driver", team.set_driver), web.get("/{t}.csv", csv_out)])
     web.run_app(app, port=int(os.environ.get("PORT", "10000")))
 
 
