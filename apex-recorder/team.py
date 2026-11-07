@@ -12,8 +12,8 @@ from aiohttp import web
 
 OUR = os.environ.get("OUR_NO", "56")
 PIN = os.environ.get("TEAM_PIN", "jurassic")
-SEED = os.environ.get("TEAM_DRIVERS", "56/1:Balikó,56/2:Lança,56/3:Luís Diogo,56/4:Carvalho,56/5:Ode,56/6:Ode,56/7:Balikó,56/10:Lança,"
-                      "64/1:Aílton,64/2:Florentino,64/3:Florentino,64/4:Assunção,64/5:Assunção,64/6:Fábio,64/7:Fábio,64/8:Aílton,64/9:Maciel")
+SEED = os.environ.get("TEAM_DRIVERS", "56/1:Balikó,56/2:Lança,56/3:Luís Diogo,56/4:Carvalho,56/5:Ode,56/6:Ode,56/7:Balikó,56/8:Lança,56/9:Lança,56/10:Lança,"
+                      "64/1:Aílton,64/2:Florentino,64/3:Florentino,64/4:Assunção,64/5:Assunção,64/6:Fábio,64/7:Fábio,64/8:Aílton,64/9:Rui Filipe")
 TEAMS = os.environ.get("TEAMS", "56,64").split(",")
 RACE_SESSION = os.environ.get("RACE_SESSION", "Final")
 RACE_HOURS = 26
@@ -31,7 +31,7 @@ async def setup(pool):
             key, _, name = pair.partition(":")
             team, _, n = key.strip().partition("/")
             if n.isdigit():
-                await c.execute("insert into team_drivers(team, stint, driver) values($1,$2,$3) on conflict do nothing", team, int(n), name.strip())
+                await c.execute("insert into team_drivers(team, stint, driver) values($1,$2,$3) on conflict (team, stint) do update set driver=excluded.driver", team, int(n), name.strip())
 
 
 def med(xs):
