@@ -30,6 +30,7 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120"
 WS_URL = f"wss://{HOST}:{BASE + 3}/"
 DB_URL = os.environ["DATABASE_URL"]
 SELF_URL = os.environ.get("RENDER_EXTERNAL_URL")
+OUR = os.environ.get("OUR_NO", "56")   # our team number on the timing
 
 STATE = {"connected": None, "url": None, "last_msg": None, "msgs": 0, "started": None, "tries": []}
 
@@ -113,6 +114,8 @@ class Feed:
                 st[t] = text(val)
                 if t == "llp":
                     lap = secs(st[t])
+                    if lap and lap > 0 and st.get("no", "") == OUR:
+                        print(f"OUR lap {datetime.now():%H:%M:%S} {lap:.3f} pos {st.get('rk','')} gap {st.get('gap','')} laps {st.get('tlp','')} best {st.get('blp','')}", flush=True)
                     if lap and lap > 0:
                         await self.ex(
                             "insert into laps(session,row_id,kart,team,lap_s,s1,s2,s3,pos,gap,laps,on_track,flag,cells)"
@@ -121,6 +124,8 @@ class Feed:
                             st.get("s1", ""), st.get("s2", ""), st.get("s3", ""), st.get("rk", ""),
                             st.get("gap", ""), st.get("tlp", ""), st.get("otr", ""), self.flag, json.dumps(st))
             elif kind in ("*in", "*out"):
+                if st.get("no", "") == OUR:
+                    print(f"OUR pit {datetime.now():%H:%M:%S} {kind[1:]}", flush=True)
                 print(f"PIT {datetime.now():%H:%M:%S} {kind[1:].upper():3} no {st.get('no','')} {st.get('dr','')} pos {st.get('rk','')}", flush=True)
                 await self.ex("insert into pits(session,row_id,kart,team,event) values($1,$2,$3,$4,$5)",
                               self.session, r, st.get("no", ""), st.get("dr", ""), kind[1:])
@@ -313,6 +318,11 @@ async def on_start(app):
     async with app["pool"].acquire() as c:
         await c.execute(SCHEMA)
     STATE["started"] = datetime.now(timezone.utc).isoformat()
+    async with app["pool"].acquire() as c:
+        for r in await c.fetch("select ts, lap_s, pos, gap from laps where kart=$1 and ts > now() - interval '30 hours' order by id", OUR):
+            print(f"OURHIST lap {r['ts']:%Y-%m-%d %H:%M:%S} {r['lap_s']:.3f} pos {r['pos']} gap {r['gap']}", flush=True)
+        for r in await c.fetch("select ts, event from pits where kart=$1 and ts > now() - interval '30 hours' order by id", OUR):
+            print(f"OURHIST pit {r['ts']:%Y-%m-%d %H:%M:%S} {r['event']}", flush=True)
     app["tasks"] = [asyncio.create_task(recorder(app)), asyncio.create_task(keepalive(app)),
                    asyncio.create_task(archiver(app)), asyncio.create_task(summary(app)), asyncio.create_task(weather(app))]
 
