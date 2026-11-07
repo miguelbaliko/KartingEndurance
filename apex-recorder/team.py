@@ -12,7 +12,7 @@ from aiohttp import web
 
 OUR = os.environ.get("OUR_NO", "56")
 PIN = os.environ.get("TEAM_PIN", "jurassic")
-SEED = os.environ.get("TEAM_DRIVERS", "56/1:Balikó,56/2:Lança,56/3:Luís Diogo,56/4:Carvalho,56/5:Ode,56/6:Ode,56/7:Balikó,56/8:Lança,56/9:Lança,56/10:Lança,"
+SEED = os.environ.get("TEAM_DRIVERS", "56/1:Balikó,56/2:Lança,56/3:Luís Diogo,56/4:Carvalho,56/5:Ode,56/6:Ode,56/7:Balikó,56/8:Lança,56/9:Lança,56/10:Lança,56/11:Luís Diogo,"
                       "64/1:Aílton,64/2:Florentino,64/3:Florentino,64/4:Assunção,64/5:Assunção,64/6:Fábio,64/7:Fábio,64/8:Aílton,64/9:Rui Filipe")
 TEAMS = os.environ.get("TEAMS", "56,64").split(",")
 RACE_SESSION = os.environ.get("RACE_SESSION", "Final")
