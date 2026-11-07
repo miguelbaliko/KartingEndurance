@@ -76,7 +76,11 @@ class Feed:
             typ = re.search(r'data-type="([^"]*)"', attrs)
             if cid and typ:
                 self.cols[cid.group(1)] = typ.group(1)
-        for m in re.finditer(r'<td[^>]*data-id="(r\d+)(c\d+)"[^>]*>(.*?)</td>', g, re.S):
+        # Cells sometimes carry data-id on an inner <p>/<div> (rank, kart number), so match any tag.
+        for m in re.finditer(r'<(td|p|div)[^>]*data-id="(r\d+)(c\d+)"[^>]*>(.*?)</\1>', g, re.S):
+            _, r, c, v = m.groups()
+            self.rows[r][self.cols.get(c, c)] = text(v)
+        for m in []:
             r, c, v = m.groups()
             self.rows[r][self.cols.get(c, c)] = text(v)
 
@@ -256,6 +260,11 @@ async def summary(app):
                 print(f"SUMMARY 15min {r['session']} | laps {r['n']} | best {r['best']:.3f} | p25 {r['p25']:.3f} | median {r['med']:.3f}", flush=True)
             if sec and sec["s1"]:
                 print(f"SUMMARY sector bests S1 {sec['s1']} S2 {sec['s2']} S3 {sec['s3']}", flush=True)
+            async with pool.acquire() as c:
+                for r in await c.fetch("select ts, kart, team, lap_s, s1, s2, s3 from laps order by id desc limit 5"):
+                    print(f"SUMMARY lap {r['ts']:%H:%M:%S} kart {r['kart']} {r['team']} {r['lap_s']} | {r['s1']} {r['s2']} {r['s3']}", flush=True)
+                for r in await c.fetch("select left(msg,300) m from raw order by id desc limit 2"):
+                    print(f"SUMMARY raw {r['m']!r}", flush=True)
             for e in ev:
                 print(f"SUMMARY event {e['ts']:%H:%M} {e['kind']} {e['t']}", flush=True)
         except Exception as e:
