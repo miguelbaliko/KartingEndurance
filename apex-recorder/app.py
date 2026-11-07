@@ -246,11 +246,35 @@ async def archiver(app):
             await asyncio.sleep(3 * 3600)
 
 
+async def our_stats(pool):
+    """Log our team's stints (split at pit-ins) with lap stats, so they can be read from the logs."""
+    try:
+        async with pool.acquire() as c:
+            laps = await c.fetch("select ts, session, lap_s, pos, gap, laps from laps where kart=$1 and ts > now() - interval '30 hours' order by id", OUR)
+            pits = await c.fetch("select ts, event from pits where kart=$1 and ts > now() - interval '30 hours' order by id", OUR)
+        ins = [p["ts"] for p in pits if p["event"] == "in"]
+        groups = defaultdict(list)
+        for l in laps:
+            k = (l["session"], sum(1 for t in ins if t < l["ts"]))
+            groups[k].append(l)
+        for (sess, i), ls in groups.items():
+            t = sorted(l["lap_s"] for l in ls)
+            clean = [x for x in t if x < t[0] * 1.06]
+            b10 = statistics.mean(t[:10])
+            print(f"OURSTINT {sess} | stint {i + 1} | {ls[0]['ts']:%H:%M}-{ls[-1]['ts']:%H:%M} | laps {len(ls)} | best {t[0]:.3f} | avg10 {b10:.3f} "
+                  f"| median {statistics.median(clean):.3f} | clean {len(clean)} | pos {ls[-1]['pos']} | gap {ls[-1]['gap']} | total {ls[-1]['laps']}", flush=True)
+        for p in pits:
+            print(f"OURPIT {p['ts']:%H:%M:%S} {p['event']}", flush=True)
+    except Exception as e:
+        print("our_stats failed", e, flush=True)
+
+
 async def summary(app):
     """Every 15 min, log a compact summary so it can be read from the Render logs."""
     pool = app["pool"]
     while True:
         await asyncio.sleep(900)
+        await our_stats(pool)
         try:
             async with pool.acquire() as c:
                 n = {t: await c.fetchval(f"select count(*) from {t}") for t in ("raw", "laps", "pits", "events")}
@@ -318,11 +342,7 @@ async def on_start(app):
     async with app["pool"].acquire() as c:
         await c.execute(SCHEMA)
     STATE["started"] = datetime.now(timezone.utc).isoformat()
-    async with app["pool"].acquire() as c:
-        for r in await c.fetch("select ts, lap_s, pos, gap from laps where kart=$1 and ts > now() - interval '30 hours' order by id", OUR):
-            print(f"OURHIST lap {r['ts']:%Y-%m-%d %H:%M:%S} {r['lap_s']:.3f} pos {r['pos']} gap {r['gap']}", flush=True)
-        for r in await c.fetch("select ts, event from pits where kart=$1 and ts > now() - interval '30 hours' order by id", OUR):
-            print(f"OURHIST pit {r['ts']:%Y-%m-%d %H:%M:%S} {r['event']}", flush=True)
+    await our_stats(app["pool"])
     app["tasks"] = [asyncio.create_task(recorder(app)), asyncio.create_task(keepalive(app)),
                    asyncio.create_task(archiver(app)), asyncio.create_task(summary(app)), asyncio.create_task(weather(app))]
 
