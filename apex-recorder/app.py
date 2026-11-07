@@ -283,7 +283,9 @@ async def summary(app):
         try:
             d = await team.build(pool)
             print("TEAMCHECK", "ok" if "stints" in d else d, "stints", len(d.get("stints", [])), "current", d.get("current"), flush=True)
-            blob = live.compact(await live.build(app))
+            ld = await live.build(app)
+            print("LIVETXT " + ";".join(f"{x['no']},{x['cls']},{x['pos']},{x['cpos']},{x['cvpos']},{x['laps']},{x['stops']},{x['vgap_s']:.0f},{x['avg_stint'] or 0},{x['need_stint'] or 0},{int(x['in_pit'])},{x['since'] or 0},{x['best'] or 0},{x['team'][:18]}" for x in ld["rows"]) + f";ref={ld['ref_lap']};t={ld['now'][11:19]}", flush=True)
+            blob = live.compact(ld)
             parts = [blob[i:i + 3000] for i in range(0, len(blob), 3000)]
             for k, p in enumerate(parts):
                 print(f"ARTLIVE {k + 1}/{len(parts)} {p}", flush=True)
