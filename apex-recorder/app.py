@@ -279,6 +279,13 @@ async def summary(app):
         try:
             d = await team.build(pool)
             print("TEAMCHECK", "ok" if "stints" in d else d, "stints", len(d.get("stints", [])), "current", d.get("current"), flush=True)
+            for no in team.TEAMS:
+                dd = d if no == team.OUR else await team.build(pool, no)
+                if "stints" in dd:
+                    blob = team.compact(dd)
+                    parts = [blob[i:i + 3000] for i in range(0, len(blob), 3000)]
+                    for k, p in enumerate(parts):
+                        print(f"ARTDATA {no} {k + 1}/{len(parts)} {p}", flush=True)
             for s in d.get("stints", []):
                 print(f"TEAMSTINT {s['n']} {s['driver']} len {s['length_s']} laps {s['laps']} best {s['best']} avg10 {s['avg10']} med {s['median']} sd {s['sd']} vsfield {s['vs_field']} fade {s['fade']} stop {s['stop_s']} pos {s['pos_end']}", flush=True)
         except Exception as e:
@@ -355,6 +362,13 @@ async def on_start(app):
     try:
         d = await team.build(app["pool"])
         print("TEAMCHECK start", "ok" if "stints" in d else d, len(d.get("stints", [])), flush=True)
+        for no in team.TEAMS:
+            dd = await team.build(app["pool"], no)
+            if "stints" in dd:
+                blob = team.compact(dd)
+                parts = [blob[i:i + 3000] for i in range(0, len(blob), 3000)]
+                for k, p in enumerate(parts):
+                    print(f"ARTDATA {no} {k + 1}/{len(parts)} {p}", flush=True)
     except Exception as e:
         print("TEAMCHECK failed", repr(e), flush=True)
     app["tasks"] = [asyncio.create_task(recorder(app)), asyncio.create_task(keepalive(app)),

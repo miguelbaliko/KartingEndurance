@@ -12,32 +12,37 @@ from aiohttp import web
 
 OUR = os.environ.get("OUR_NO", "56")
 PIN = os.environ.get("TEAM_PIN", "jurassic")
-SEED = os.environ.get("TEAM_DRIVERS", "1:Balikó,2:Lança,3:Luís Diogo,4:Carvalho,5:Ode,6:Ode")
+SEED = os.environ.get("TEAM_DRIVERS", "56/1:Balikó,56/2:Lança,56/3:Luís Diogo,56/4:Carvalho,56/5:Ode,56/6:Ode,56/7:Balikó,56/10:Lança,"
+                      "64/1:Aílton,64/2:Florentino,64/3:Florentino,64/4:Assunção,64/5:Assunção,64/6:Fábio,64/7:Fábio,64/8:Aílton,64/9:Maciel")
+TEAMS = os.environ.get("TEAMS", "56,64").split(",")
 RACE_SESSION = os.environ.get("RACE_SESSION", "Final")
 RACE_HOURS = 26
 STINT_MAX = 60 * 60
 
-SCHEMA = "create table if not exists drivers (stint int primary key, driver text, ts timestamptz default now());"
+SCHEMA = ("create table if not exists drivers (stint int primary key, driver text, ts timestamptz default now());"
+          "create table if not exists team_drivers (team text, stint int, driver text, ts timestamptz default now(), primary key(team, stint));"
+          "insert into team_drivers(team, stint, driver) select '56', stint, driver from drivers on conflict do nothing;")
 
 
 async def setup(pool):
     async with pool.acquire() as c:
         await c.execute(SCHEMA)
         for pair in SEED.split(","):
-            n, _, name = pair.partition(":")
-            if n.strip().isdigit():
-                await c.execute("insert into drivers(stint, driver) values($1,$2) on conflict do nothing", int(n), name.strip())
+            key, _, name = pair.partition(":")
+            team, _, n = key.strip().partition("/")
+            if n.isdigit():
+                await c.execute("insert into team_drivers(team, stint, driver) values($1,$2,$3) on conflict do nothing", team, int(n), name.strip())
 
 
 def med(xs):
     return statistics.median(xs) if xs else None
 
 
-async def build(pool):
+async def build(pool, OUR=OUR):
     async with pool.acquire() as c:
         laps = await c.fetch("select ts, kart, lap_s, pos, gap from laps where session=$1 and ts > now() - interval '30 hours' order by id", RACE_SESSION)
         pits = await c.fetch("select ts, event from pits where kart=$1 and session=$2 and ts > now() - interval '30 hours' order by id", OUR, RACE_SESSION)
-        names = {r["stint"]: r["driver"] for r in await c.fetch("select stint, driver from drivers")}
+        names = {r["stint"]: r["driver"] for r in await c.fetch("select stint, driver from team_drivers where team=$1", OUR)}
     ours = [l for l in laps if l["kart"] == OUR]
     if not ours:
         return {"error": "no race laps for car %s yet" % OUR}
@@ -105,7 +110,9 @@ async def build(pool):
 
 
 async def team_json(request):
-    return web.json_response(await build(request.app["pool"]), dumps=lambda o: json.dumps(o, default=str))
+    no = request.query.get("no", OUR)
+    return web.json_response(await build(request.app["pool"], no), dumps=lambda o: json.dumps(o, default=str),
+                             headers={"Access-Control-Allow-Origin": "*"})
 
 
 async def set_driver(request):
@@ -113,11 +120,12 @@ async def set_driver(request):
     if data.get("pin") != PIN:
         raise web.HTTPForbidden(text="wrong pin")
     n = int(data.get("stint", "0"))
+    team = (data.get("team") or OUR).strip()
     name = (data.get("driver") or "").strip()[:40]
     if n < 1 or not name:
         raise web.HTTPBadRequest(text="stint and driver needed")
     async with request.app["pool"].acquire() as c:
-        await c.execute("insert into drivers(stint, driver) values($1,$2) on conflict (stint) do update set driver=excluded.driver, ts=now()", n, name)
+        await c.execute("insert into team_drivers(team, stint, driver) values($1,$2,$3) on conflict (team, stint) do update set driver=excluded.driver, ts=now()", team, n, name)
     raise web.HTTPFound("/team")
 
 
@@ -190,3 +198,17 @@ async function load(){
 }
 load();setInterval(load,30000);
 </script></body></html>"""
+
+
+def compact(d):
+    """Small export of build() for the shared artifact: lap times per stint, positions, field reference."""
+    import base64, zlib
+    from datetime import datetime as dt
+    t0 = dt.fromisoformat(d["race_start"]).timestamp()
+    rel = lambda iso: round(dt.fromisoformat(iso).timestamp() - t0)
+    out = {"team": d["team"], "start": t0, "now": rel(d["now"]), "stops": d["stops_done"],
+           "stints": [{k: v for k, v in s.items() if k not in ("out", "in", "running")} | {"o": rel(s["out"]), "i": rel(s["in"]) if s["in"] else None}
+                      for s in d["stints"]],
+           "laps": [[rel(l[0]), l[1], l[2]] for l in d["laps"]],
+           "field": [[round(f[0] / 1000 - t0), round(f[1], 3), round(f[2], 3)] for f in d["field"]]}
+    return base64.b64encode(zlib.compress(json.dumps(out, separators=(",", ":"), default=str).encode(), 9)).decode()
