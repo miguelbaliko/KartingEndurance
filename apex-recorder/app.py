@@ -279,7 +279,10 @@ async def weather(app):
         try:
             async with aiohttp.ClientSession() as s:
                 async with s.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
-                    d = (await r.json())["hourly"]
+                    body = await r.json(content_type=None)
+                if "hourly" not in body:
+                    raise RuntimeError(f"{r.status} {str(body)[:200]}")
+                d = body["hourly"]
             now = datetime.now().strftime("%Y-%m-%dT%H")
             for i, t in enumerate(d["time"]):
                 if t[:13] >= now and t[:10] <= "2026-11-08" and (t[:10] < "2026-11-08" or t[11:13] <= "15"):
