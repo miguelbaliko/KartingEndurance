@@ -275,12 +275,18 @@ async def our_stats(pool):
 async def summary(app):
     """Every 15 min, log a compact summary so it can be read from the Render logs."""
     pool = app["pool"]
+    first = True
     while True:
-        await asyncio.sleep(900)
+        await asyncio.sleep(120 if first else 900)
+        first = False
         await our_stats(pool)
         try:
             d = await team.build(pool)
             print("TEAMCHECK", "ok" if "stints" in d else d, "stints", len(d.get("stints", [])), "current", d.get("current"), flush=True)
+            blob = live.compact(await live.build(app))
+            parts = [blob[i:i + 3000] for i in range(0, len(blob), 3000)]
+            for k, p in enumerate(parts):
+                print(f"ARTLIVE {k + 1}/{len(parts)} {p}", flush=True)
             for no in team.TEAMS:
                 dd = d if no == team.OUR else await team.build(pool, no)
                 if "stints" in dd:
