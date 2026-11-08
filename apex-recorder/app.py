@@ -382,7 +382,39 @@ async def on_start(app):
     except Exception as e:
         print("TEAMCHECK failed", repr(e), flush=True)
     app["tasks"] = [asyncio.create_task(recorder(app)), asyncio.create_task(keepalive(app)),
-                   asyncio.create_task(archiver(app)), asyncio.create_task(summary(app)), asyncio.create_task(weather(app))]
+                   asyncio.create_task(archiver(app)), asyncio.create_task(summary(app)), asyncio.create_task(weather(app)), asyncio.create_task(race_dump(app))]
+
+
+async def race_dump(app):
+    """One-off post-race export: print every race lap, pit and event as zlib+base64 chunks (LAPDUMP/PITDUMP/EVTDUMP)."""
+    import base64, zlib
+    if datetime.now(timezone.utc) > datetime(2026, 11, 10, tzinfo=timezone.utc):
+        return
+    await asyncio.sleep(20)
+    t0 = datetime(2026, 11, 7, 11, 0, tzinfo=timezone.utc)
+    t1 = datetime(2026, 11, 8, 13, 30, tzinfo=timezone.utc)
+    try:
+        async with app["pool"].acquire() as c:
+            laps = await c.fetch("select ts, kart, lap_s, pos, flag, s1, s2, s3 from laps where ts between $1 and $2 order by id", t0, t1)
+            pits = await c.fetch("select ts, kart, team, event from pits where ts between $1 and $2 order by id", t0, t1)
+            evts = await c.fetch("select ts, kind, text from events where ts between $1 and $2 and kind in ('com','msg','flag') order by id", t0, t1)
+        base = t0.timestamp()
+        sets = {
+            "LAPDUMP": [[round(r["ts"].timestamp() - base, 1), r["kart"], round(r["lap_s"], 3), r["pos"], r["flag"], r["s1"], r["s2"], r["s3"]] for r in laps],
+            "PITDUMP": [[round(r["ts"].timestamp() - base, 1), r["kart"], r["team"], r["event"]] for r in pits],
+            "EVTDUMP": [[round(r["ts"].timestamp() - base, 1), r["kind"], r["text"]] for r in evts],
+        }
+        for tag, rows in sets.items():
+            blob = base64.b64encode(zlib.compress(json.dumps(rows, separators=(",", ":")).encode(), 9)).decode()
+            parts = [blob[i:i + 3000] for i in range(0, len(blob), 3000)]
+            print(f"{tag} START rows {len(rows)} parts {len(parts)} base {t0.isoformat()}", flush=True)
+            for k, p in enumerate(parts):
+                print(f"{tag} {k + 1}/{len(parts)} {p}", flush=True)
+                if k % 20 == 19:
+                    await asyncio.sleep(1)
+            print(f"{tag} END", flush=True)
+    except Exception as e:
+        print("RACEDUMP failed", repr(e), flush=True)
 
 
 async def status(request):
